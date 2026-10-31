@@ -4,10 +4,10 @@ Background tool that keeps the display of the **Chilkey ND104** keyboard up to
 date with the **current time and weather** – with a tray icon and a modern
 settings/status window.
 
-> 🚧 **Status: beta 0.5.0 (milestone M5).** Tray app with settings window, five weather providers and firmware update check,
-> starts with Windows, installer available from the
-> [releases](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
-> See the [roadmap](#roadmap) and the [changelog](CHANGELOG.md).
+> ✅ **Version 1.0.0 – stable.** Tray app with settings window, five weather
+> providers and firmware update check; installer on the
+> [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
+> See the [changelog](CHANGELOG.md) and the [roadmap](#roadmap).
 
 > 🔌 **Wired USB only.** nd104-sync only supports the keyboard connected with a
 > **USB cable**. 2.4 GHz dongle and Bluetooth modes are **not supported** and
@@ -204,9 +204,10 @@ Summer/winter time: **Auto** (from time-zone rules) · force summer · force win
 ## Installation
 
 All options need Windows 10/11 (64-bit) and the keyboard connected **by USB
-cable**. Every milestone is published as a **beta release** on the
+cable**. Releases are published on the
 [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
-(tag `nd104-sync-vX.Y.Z`; all 0.x versions are beta). Each release has:
+(tag `nd104-sync-vX.Y.Z`; 1.0.0 is the first stable release, 0.x were betas).
+Each release has:
 
 | File | What | When to use |
 |---|---|---|
@@ -279,9 +280,9 @@ instead of misreading it.
 ## Versioning
 
 - nd104-sync uses [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
-  - `0.x.y` while in development: a minor bump may change behaviour or config.
-  - From `1.0.0`: MAJOR = incompatible changes, MINOR = new features,
-    PATCH = fixes.
+  - Since `1.0.0` (stable): MAJOR = incompatible changes, MINOR = new
+    features, PATCH = fixes.
+  - `0.x.y` were the betas of the milestones M1–M5.
 - **One source of truth:** `version` in [`Cargo.toml`](Cargo.toml)
   (`[workspace.package]`). Every crate, the CLI (`nd104-cli --version`) and the
   app UI read it from there.
@@ -453,12 +454,12 @@ npm run tauri build        # app + installers → target/release/bundle/nsis/*.e
 
 ### Making a release (maintainers)
 
-One release per milestone (M1 = 0.1.0, M2 = 0.2.0, …), beta while 0.x.
+Stable releases follow SemVer (MAJOR.MINOR.PATCH); pre-releases use `X.Y.Z-rc.N`.
 
 1. Set the version in `Cargo.toml` (`[workspace.package] version`) and run
    `cargo build` so `Cargo.lock` follows.
 2. In [CHANGELOG.md](CHANGELOG.md), move the `[Unreleased]` entries into a new
-   section `## [X.Y.Z] – YYYY-MM-DD · M<n> · Beta` and add the link at the bottom.
+   section `## [X.Y.Z] – YYYY-MM-DD` and add the link at the bottom.
 3. Commit, then tag and push:
    `git tag nd104-sync-vX.Y.Z` and `git push origin nd104-sync-vX.Y.Z`.
 4. The workflow [`nd104-sync-release.yml`](../../.github/workflows/nd104-sync-release.yml)
@@ -519,14 +520,15 @@ flowchart LR
     M4["<b>M4</b><br/>Providers &amp; secrets<br/>✔ 0.4.0 beta"]:::done
     M5["<b>M5</b><br/>Firmware check &amp; release<br/>✔ 0.5.0 beta"]:::done
     M6["<b>M6</b><br/>Keyboard API survey<br/>✔ done"]:::done
-    M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6
+    V1["<b>1.0.0</b><br/>Stable release<br/>✔ released"]:::current
+    M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> V1
 
     classDef done fill:#1a7f37,stroke:#2ea043,color:#ffffff
     classDef current fill:#0969da,stroke:#54aeff,color:#ffffff,stroke-width:3px
     classDef todo fill:#6e7781,stroke:#8c959f,color:#ffffff
 ```
 
-🟦 current · 🟩 done · ⬜ planned. What each milestone contains:
+🟦 current · 🟩 done. What each milestone contains:
 [docs/PLAN.md § 8](../../docs/PLAN.md#8-milestones). M0 results: [docs/protocol.md § 6](../../docs/protocol.md#6-open-points-for-m0-hardware-verification).
 
 ## Contributing

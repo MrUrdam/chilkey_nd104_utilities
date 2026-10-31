@@ -18,7 +18,7 @@ sync and experiment with themes and images.
 
 | Tool | Description | Platform | Status |
 |---|---|---|---|
-| [nd104-sync](apps/nd104-sync/README.md) | Background tool with a tray icon for the ND104 (architecture open for other models): syncs time and weather to the display, settings/status window, firmware safety lock and firmware update notification | Windows (Linux/macOS prepared) | 🧪 Beta 0.5.0 (tray app, settings window, 5 weather providers, firmware update check, installer), see [releases](https://github.com/MrUrdam/chilkey_nd104_utilities/releases) and [docs/PLAN.md](docs/PLAN.md) |
+| [nd104-sync](apps/nd104-sync/README.md) | Background tool with a tray icon for the ND104 (architecture open for other models): syncs time and weather to the display, settings/status window, firmware safety lock and firmware update notification | Windows (Linux/macOS prepared) | ✅ 1.0.0 stable (tray app, settings window, 5 weather providers, firmware update check, installer), see [releases](https://github.com/MrUrdam/chilkey_nd104_utilities/releases) and [docs/PLAN.md](docs/PLAN.md) |
 
 ## The keyboard
 

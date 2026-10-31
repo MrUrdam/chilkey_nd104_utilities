@@ -6,22 +6,98 @@ All notable changes to nd104-sync are listed here. The format follows
 
 - Release tags: `nd104-sync-vX.Y.Z`. Each tag builds a GitHub release whose
   notes are the matching section below.
-- One release per milestone while in development: M1 = 0.1.0, M2 = 0.2.0, …
-  All 0.x releases are **beta**.
+- 0.1.0–0.5.0 were the beta releases of the milestones M1–M5.
+- **1.0.0 is the first stable release**; from now on: MAJOR = incompatible
+  changes, MINOR = new features, PATCH = fixes.
 
 ## [Unreleased]
 
-### Added
-- [docs/keyboard-api.md](../../docs/keyboard-api.md): what the ND104 offers over
-  USB and what nd104-sync could do in future (M6 survey).
-- `nd104-probe theme` (diagnosis only): sends the display theme command.
+## [1.0.0] – 2026-10-31 · Stable
 
-### Findings
-- **Battery level is not available over the USB interfaces** (no command in
-  the official web driver; the keyboard charges while plugged in). Possible
-  only via Bluetooth, which is outside the wired-only scope.
+> **First stable release.** nd104-sync keeps the display of the
+> **Chilkey ND104** supplied with the current time and weather – from a small
+> tray app with a settings window. **Wired USB only, Windows 10/11.**
+> Unofficial project, not affiliated with Chilkey.
+>
+> This section summarises everything since the start of the project
+> (0.1.0–0.5.0 were the betas of the milestones M1–M5; M0 and M6 were
+> research). Details per beta follow below.
+
+### Keyboard display
+- **Time sync**: PC time, a chosen time zone (default Germany when needed),
+  NTP or a manual offset; summer/winter time automatic or forced; re-sync
+  every hour, on connect, after the PC wakes from sleep and exactly at DST
+  changes.
+- **Weather**: current, high and low temperature plus condition – all **10
+  display icons** including thunderstorm and day/night variants, correct
+  **negative temperatures** (sign + magnitude encoding found on hardware).
+- **Five weather providers**: Open-Meteo (default), Bright Sky (DWD),
+  OpenWeatherMap and WeatherAPI.com (free API keys), Manual/Test; optional
+  fallback provider; retry with backoff; location via city search with an
+  **OpenStreetMap check** or coordinates (default Berlin).
+
+### Safety
+- **Firmware and protocol checks P1–P6** on connect and on every packet:
+  verified firmware runs normally, other firmware runs as *compatible* while
+  every check passes, any deviation **locks immediately** – nothing is sent
+  until the keyboard is re-plugged or re-checked. Unknown but well-formed
+  messages are logged and ignored. No override.
+- Verified on hardware: keyboard **V3.0.14**, display **V1.2.4** (24 h / °C).
+- nd104-sync **never flashes firmware** and never changes keyboard settings.
+
+### Updates
+- **App update check** against the GitHub releases of this repository.
+- **Firmware update check against Chilkey's official download folders**
+  (build date per part, display per variant), with the reviewed list
+  [`firmware/versions.json`](../../firmware/versions.json) as fallback; daily
+  **firmware watch** on GitHub opens an issue when Chilkey publishes new files.
+- One **Check for updates** button for app and firmware; notifications when
+  something new is available.
+
+### App
+- **Tray app** with a colour-coded icon, tooltip with the **version**, a short
+  menu (Sync now, Pause/Resume, Settings, Start with Windows, Quit) and
+  **notifications** (lock, unverified firmware, updates).
+- **Settings window**: Dashboard with a **live preview of the keyboard
+  display**, Weather, Clock, Device & Firmware, General; Apply/Cancel with
+  validation; **dark / light / like Windows**; **German and English**
+  (system language by default).
+- **Start with Windows**, single instance, automatic reload of the config
+  file, rolling log files (7 days).
+- **API keys in the Windows Credential Manager** – never in the config file
+  or the log; request URLs (coordinates, keys) never appear in messages.
+
+### Installation and tools
+- Every release ships an **NSIS installer** (per user, no admin rights), an
+  **MSI**, a **portable zip** and `SHA256SUMS.txt`, built by GitHub Actions.
+- **`nd104-cli`** – the core on the console (`run`, `status`, `sync`,
+  `weather`, `geocode`, `api-key`, `check-update`, `firmware-check`, `config`).
+- **`nd104-probe`** – diagnostic tool for protocol tests on real hardware.
+- Documentation: [protocol](../../docs/protocol.md),
+  [firmware sources](../../docs/firmware.md),
+  [keyboard API capabilities](../../docs/keyboard-api.md),
+  [project plan](../../docs/PLAN.md).
+
+### Findings (M6)
+- **Battery level is not available over the USB interfaces**; only Bluetooth
+  could provide it, which is outside the wired-only scope.
 - The display **theme command is rejected** by screen firmware V1.2.4
-  (status `FC`); themes are therefore not offered in the app.
+  (status `FC`); themes are not offered. `nd104-probe theme` remains for
+  diagnosis.
+
+### Known limitations
+- Wired USB only (no 2.4 GHz, no Bluetooth); Windows only (Linux/macOS
+  prepared, not implemented); Chilkey ND104 only (model interface prepared).
+- No image/GIF upload yet; installers are not code-signed (SmartScreen asks).
+
+### Beta history
+| Version | Milestone | Highlights |
+|---|---|---|
+| [0.1.0](https://github.com/MrUrdam/chilkey_nd104_utilities/releases/tag/nd104-sync-v0.1.0) | M1 | Core, console runner, protocol checks |
+| [0.2.0](https://github.com/MrUrdam/chilkey_nd104_utilities/releases/tag/nd104-sync-v0.2.0) | M2 | Tray app, installers |
+| [0.3.0](https://github.com/MrUrdam/chilkey_nd104_utilities/releases/tag/nd104-sync-v0.3.0) | M3 | Settings window |
+| [0.4.0](https://github.com/MrUrdam/chilkey_nd104_utilities/releases/tag/nd104-sync-v0.4.0) | M4 | More weather providers, API keys |
+| [0.5.0](https://github.com/MrUrdam/chilkey_nd104_utilities/releases/tag/nd104-sync-v0.5.0) | M5 | Firmware update check, slim tray menu |
 
 ## [0.5.0] – 2026-10-31 · M5 · Beta
 
@@ -215,7 +291,8 @@ All notable changes to nd104-sync are listed here. The format follows
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.5.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.0...HEAD
+[1.0.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.5.0...nd104-sync-v1.0.0
 [0.5.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.4.0...nd104-sync-v0.5.0
 [0.4.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.3.0...nd104-sync-v0.4.0
 [0.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.2.0...nd104-sync-v0.3.0
