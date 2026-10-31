@@ -3,28 +3,52 @@
 All notable changes to nd104-sync are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) (see [README → Versioning](README.md#versioning)).
-Release tags: `nd104-sync-vX.Y.Z`.
 
-## [Unreleased] – 0.1.0
+- Release tags: `nd104-sync-vX.Y.Z`. Each tag builds a GitHub release whose
+  notes are the matching section below.
+- One release per milestone while in development: M1 = 0.1.0, M2 = 0.2.0, …
+  All 0.x releases are **beta**.
+
+## [Unreleased]
+
+## [0.1.0] – 2026-10-31 · M1 · Beta
+
+> **Beta – milestone M1: core + console runner.** There is no tray app or
+> settings window yet (that is M2/M3). This release contains the console
+> runner `nd104-cli` and the diagnostic tool `nd104-probe`.
+> **Chilkey ND104 only, wired USB only, Windows 10/11.**
 
 ### Added
-- **M0:** `nd104-protocol` (packet building, CRC, checksums, firmware version
-  queries) and the diagnostic CLI `nd104-probe`. Protocol verified on
-  hardware: keyboard V3.0.14, screen V1.2.4 (24 h / °C).
-- **M1 core** (`nd104-core`):
-  - Keyboard model interface with the Chilkey ND104 as the only model
-  - Device manager with the protocol checks P1–P6: verified / compatible
-    (unverified) / locked; unknown well-formed messages are logged and ignored
-  - Clock sources: system, time zone, NTP (own SNTP client), manual offset;
-    DST auto / force summer / force winter; sync exactly at DST changes
-  - Weather: Open-Meteo (default) and manual/test provider, fallback provider,
-    backoff on errors, city search (Open-Meteo geocoding)
-  - All 10 display icons used, including thunderstorm and day/night variants
-  - Scheduler with device polling, resume-from-sleep detection, pause/resume
-  - TOML configuration (`%APPDATA%\nd104-sync\config.toml`, schema 1)
-  - App update check against the GitHub releases of this repository
-- Defaults: weather location Berlin; time zone Germany (`Europe/Berlin`) for
-  the time-zone and NTP sources, PC time zone otherwise
-- Raw report bytes in the log (debug) and in lock reasons, for analysis
-- Console runner `nd104-cli` (`run`, `status`, `sync`, `weather`, `geocode`,
-  `check-update`, `config`).
+- **Console runner `nd104-cli`**: `run` (keep time and weather in sync until
+  Ctrl+C), `status`, `sync`, `weather`, `geocode` (city search, `--set` stores
+  your location), `check-update`, `config path|show|init`.
+- **Time sync** to the keyboard display: PC time, a chosen time zone, NTP or a
+  manual offset; summer/winter time automatic or forced; re-sync exactly at
+  DST changes, every hour, on connect and after the PC wakes from sleep.
+- **Weather** from Open-Meteo (free, no API key) or manual test values, every
+  15 minutes, with retry/backoff and an optional fallback provider. All 10
+  display icons are used, including thunderstorm and day/night variants.
+- **Firmware and protocol safety** (checks P1–P6): verified firmware runs
+  normally, other firmware runs as "compatible" while every check passes, and
+  any deviation locks immediately – nothing is sent until re-plug or re-check.
+  Unknown but well-formed messages are logged and ignored.
+- **App update check** against the GitHub releases of this repository.
+- **Configuration** in `%APPDATA%\nd104-sync\config.toml`. Defaults: location
+  Berlin, PC time zone (Germany when a time zone is required).
+- **Diagnostic tool `nd104-probe`** (M0) to read firmware versions and test
+  time, weather and icons by hand.
+
+### Verified hardware
+- Chilkey ND104, keyboard firmware **V3.0.14** (`20260710_123331`), screen
+  firmware **V1.2.4** (`Mar 17 2026 21:37:00`, 24 h / °C variant).
+
+### Known limitations
+- No tray app, no settings window, no autostart yet – start `nd104-cli run`
+  yourself (M2).
+- Only Open-Meteo and manual weather; key-based providers come with M4.
+- No firmware update check yet (M5); the app update check works.
+- The keyboard occasionally sends status messages with unknown meaning
+  (`0x35`, `0x3A`); they are logged and ignored.
+
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.1.0...HEAD
+[0.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/releases/tag/nd104-sync-v0.1.0

@@ -4,9 +4,11 @@ Background tool that keeps the display of the **Chilkey ND104** keyboard up to
 date with the **current time and weather** – with a tray icon and a modern
 settings/status window.
 
-> 🚧 **Status: early development – version 0.1.0.** The tray app does not
-> exist yet. The core works and can already be used on the console with
-> [`nd104-cli`](#console-runner-nd104-cli-available-now). See the [roadmap](#roadmap).
+> 🚧 **Status: beta 0.1.0 (milestone M1).** The tray app does not exist yet.
+> The core works and can already be used on the console with
+> [`nd104-cli`](#console-runner-nd104-cli-available-now) – download it from the
+> [releases](https://github.com/MrUrdam/chilkey_nd104_utilities/releases). See the
+> [roadmap](#roadmap) and the [changelog](CHANGELOG.md).
 
 > 🔌 **Wired USB only.** nd104-sync only supports the keyboard connected with a
 > **USB cable**. 2.4 GHz dongle and Bluetooth modes are **not supported** and
@@ -175,13 +177,24 @@ keyboard connected **by USB cable**.
 
 ### Option A – prebuilt release (recommended)
 
-> ⏳ No release has been published yet. The first installer comes with M5.
+Every milestone is published as a **beta release** on the
+[releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
+(tag `nd104-sync-vX.Y.Z`, all 0.x versions are beta). The release notes list
+what is new and what is still missing.
 
-1. Open the [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
-   and pick the newest release tagged `nd104-sync-vX.Y.Z`.
-2. Download the installer (`nd104-sync_X.Y.Z_x64-setup.exe` or `.msi`).
-3. Run it. It installs per user, without admin rights, and starts the app.
-4. On first start the settings window opens: choose your location.
+**Beta builds (now, 0.1.0 = M1):** a zip, no installer yet.
+1. Download `nd104-sync-X.Y.Z-windows-x64.zip` from the newest release.
+2. Optional: check it against the `.sha256` file
+   (`certutil -hashfile nd104-sync-X.Y.Z-windows-x64.zip SHA256`).
+3. Extract it to a folder of your choice, e.g. `%LOCALAPPDATA%\Programs\nd104-sync`.
+4. Set your location once: `nd104-cli geocode "<your city>" --set 1`
+   (without this, Berlin is used).
+5. Start `nd104-cli run` (keeps running until Ctrl+C), or `nd104-cli sync`
+   for a one-time sync.
+
+**From M2/M5 on:** an installer (`nd104-sync_X.Y.Z_x64-setup.exe` / `.msi`)
+that installs per user without admin rights, starts with Windows and opens the
+settings window on first start.
 
 ### Option B – your own build
 
@@ -211,7 +224,9 @@ ignored. If a newer version exists, you get a notification with a link to the
 release. Nothing is downloaded or installed automatically.
 
 **How to update:**
-- **Prebuilt:** download the new installer from the release and run it. It
+- **Prebuilt beta (zip):** download the new zip and replace the files in your
+  folder. The configuration is not in that folder, so it stays.
+- **Prebuilt installer (from M2/M5):** download the new installer and run it. It
   replaces the old version; configuration, location and API keys stay.
 - **Own build:** `git pull`, then build again (see below) and install the new
   installer, or replace `nd104-cli.exe`.
@@ -361,11 +376,23 @@ cargo tauri build      # release build + installer in target/release/bundle/
 
 ### Making a release (maintainers)
 
-1. Update the version in `Cargo.toml` (`[workspace.package]`) and add an entry to
-   [CHANGELOG.md](CHANGELOG.md).
-2. Commit, then tag: `git tag nd104-sync-vX.Y.Z` and push the tag.
-3. The release workflow (M5) builds the installer and publishes the GitHub
-   release, which the app update check then finds.
+One release per milestone (M1 = 0.1.0, M2 = 0.2.0, …), beta while 0.x.
+
+1. Set the version in `Cargo.toml` (`[workspace.package] version`) and run
+   `cargo build` so `Cargo.lock` follows.
+2. In [CHANGELOG.md](CHANGELOG.md), move the `[Unreleased]` entries into a new
+   section `## [X.Y.Z] – YYYY-MM-DD · M<n> · Beta` and add the link at the bottom.
+3. Commit, then tag and push:
+   `git tag nd104-sync-vX.Y.Z` and `git push origin nd104-sync-vX.Y.Z`.
+4. The workflow [`nd104-sync-release.yml`](../../.github/workflows/nd104-sync-release.yml)
+   checks that the tag matches `Cargo.toml`, runs the tests, builds, packs
+   `nd104-sync-X.Y.Z-windows-x64.zip` with a SHA-256 file, and publishes the
+   GitHub release. Its notes are the CHANGELOG section for that version.
+   - `0.x` → title "(beta)", normal release, so the app update check finds it.
+   - `X.Y.Z-rc.N` → GitHub pre-release, ignored by the app update check.
+
+Every push to `main` also runs [`nd104-sync-ci.yml`](../../.github/workflows/nd104-sync-ci.yml):
+format check, clippy (warnings are errors) and tests.
 
 ### Main dependencies
 
@@ -404,8 +431,8 @@ apps/nd104-sync/
 ```mermaid
 flowchart LR
     M0["<b>M0</b><br/>Protocol &amp; firmware check<br/>✔ done"]:::done
-    M1["<b>M1</b><br/>Core, headless<br/>▶ in progress"]:::current
-    M2["<b>M2</b><br/>Tray app"]:::todo
+    M1["<b>M1</b><br/>Core, headless<br/>✔ 0.1.0 beta"]:::done
+    M2["<b>M2</b><br/>Tray app<br/>▶ next"]:::current
     M3["<b>M3</b><br/>Settings UI"]:::todo
     M4["<b>M4</b><br/>Providers &amp; secrets"]:::todo
     M5["<b>M5</b><br/>Update check &amp; release"]:::todo

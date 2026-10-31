@@ -1,6 +1,6 @@
 # nd104-sync – Project Plan
 
-> **Status:** Planning – no code yet. Last update: 2026-10-31
+> **Status:** M0 and M1 done (beta 0.1.0), M2 next. Last update: 2026-10-31
 >
 > User documentation: [apps/nd104-sync/README.md](../apps/nd104-sync/README.md)
 
@@ -421,6 +421,11 @@ trait Platform {
   - Result: notification + About page ("up to date" / "X.Y.Z available" with a
     link / "check failed"). Nothing is downloaded or installed automatically.
   - Can be disabled: `[updates] app_check = false`.
+- **Releases per milestone (beta):** M1 = 0.1.0, M2 = 0.2.0, …; a tag push runs
+  `.github/workflows/nd104-sync-release.yml` (test, build, zip + SHA-256, release
+  notes from the CHANGELOG section). 0.x = "(beta)" in the title but not a GitHub
+  pre-release, so the update check finds it; `-rc.N` versions are pre-releases.
+  CI (`nd104-sync-ci.yml`) runs fmt, clippy and tests on every push.
 - **Updating:** run the newer installer (the config is kept). Config files carry
   `schema`, so newer apps migrate older files and older apps refuse newer files.
 
@@ -498,7 +503,7 @@ Apply/Cancel with validation; *Test* buttons never save.
 | M2 | Tray app | Tauri shell, tray with states, autostart, single instance, notifications, i18n (DE/EN) |
 | M3 | Settings UI | Dashboard, Weather, Clock, Device & Firmware, General; dark/light/auto; design system |
 | M4 | Providers & secrets | Bright Sky, OpenWeatherMap, WeatherAPI, fallback, NTP, keyring |
-| M5 | Firmware update check & release | Manifest, Drive watcher action, firmware update notification, GitHub Actions release build (`nd104-sync-v*` tags), Windows installer |
+| M5 | Firmware update check & installer | Manifest, Drive watcher action, firmware update notification, Windows installer in the release workflow |
 | M6 | Extras | Theme colours, image/GIF upload, more languages, Linux/macOS implementation (if wanted) |
 
 ---
