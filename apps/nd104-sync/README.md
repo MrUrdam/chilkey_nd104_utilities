@@ -9,6 +9,9 @@ settings/status window.
 > [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
 > See the [changelog](CHANGELOG.md) and the [roadmap](#roadmap).
 
+> ⚠️ **Use at your own risk.** No warranty, no guaranteed support.
+> See the [disclaimer](../../README.md#chilkey-nd104-utilities) in the main README.
+
 > 🔌 **Wired USB only.** nd104-sync only supports the keyboard connected with a
 > **USB cable**. 2.4 GHz dongle and Bluetooth modes are **not supported** and
 > not tested.

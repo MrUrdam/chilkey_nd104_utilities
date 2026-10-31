@@ -7,8 +7,20 @@ The main goal is to use the display without the vendor software, for example
 to always show the current weather for your own location, keep the clock in
 sync and experiment with themes and images.
 
-> ⚠️ Unofficial community project, not affiliated with Chilkey.
-> Use at your own risk, especially when flashing firmware.
+> ⚠️ **Disclaimer: use at your own risk**
+>
+> This is an unofficial hobby project. It is not affiliated with or endorsed
+> by Chilkey.
+>
+> You use all tools, scripts and information in this repository **at your own
+> risk**. Sending data to the keyboard over USB, and especially flashing
+> firmware, can make the device unusable and may void your warranty.
+>
+> The software comes **without any warranty** (see [LICENSE](LICENSE)).
+> **Support is not guaranteed.** You're welcome to open issues and pull
+> requests, but I answer them in my free time, when and if I can.
+> For problems with the keyboard itself, please contact
+> [Chilkey support](https://chilkey.com/blogs/updates/nd104-faq-resources).
 
 > 🔌 **Wired USB connection only.** All tools in this repository support the
 > keyboard **only when it is connected with a USB cable**. The 2.4 GHz dongle
