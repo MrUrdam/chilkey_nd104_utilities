@@ -19,22 +19,22 @@ apps/*/ui/dist/
 apps/*/ui/.svelte-kit/
 npm-debug.log*
 
-# Lokale Konfiguration / Secrets (z. B. Standort, API-Keys)
+# Local configuration / secrets (e.g. location, API keys)
 .env
 .env.*
 config.local.*
 
-# Firmware-Binaries (Original-Firmware nicht ins Repo)
+# Firmware binaries (no vendor firmware in the repo)
 firmware/**/*.bin
 firmware/**/*.hex
 firmware/**/*.dfu
 
-# Editoren & IDEs
+# Editors & IDEs
 .vscode/
 .idea/
 *.swp
 
-# Betriebssystem
+# Operating system
 Thumbs.db
 desktop.ini
 .DS_Store

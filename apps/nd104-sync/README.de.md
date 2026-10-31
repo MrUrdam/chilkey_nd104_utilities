@@ -81,8 +81,10 @@ einmal einrichtest: dein Wetterdienst, dein Standort, deine Zeitquelle.
 
 ## Firmware-Schutz
 
-Bevor irgendetwas gesendet wird, liest nd104-sync die Firmware-Version des
-Displays und vergleicht sie mit einer Liste geprüfter Versionen.
+Bevor irgendetwas gesendet wird, liest nd104-sync die Firmware-Versionen von
+Tastatur und Display – mit denselben Abfragen wie der offizielle Web-Treiber
+(siehe [docs/protocol.md § 3](../../docs/protocol.md#3-firmware-version-queries)) –
+und vergleicht sie mit einer Liste geprüfter Versionen.
 
 | Situation | Verhalten |
 |---|---|
@@ -263,6 +265,9 @@ apps/nd104-sync/
 
 Das Protokollwissen basiert auf den
 [ND104-Reverse-Engineering-Notizen](https://gist.github.com/borrougagnou/a21613093f323a05167a92212ab1ff7b)
-von borrougagnou. Inspiriert von [zoom-sync](https://github.com/ozboar/zoom-sync).
+von borrougagnou und einer Analyse des offiziellen
+[Chilkey-Web-Treibers](https://nd104.chilkey.com/) – gesammelt in
+[docs/protocol.md](../../docs/protocol.md). Inspiriert von
+[zoom-sync](https://github.com/ozboar/zoom-sync).
 
 Inoffizielles Projekt, nicht mit Chilkey verbunden. MIT-Lizenz – siehe [LICENSE](../../LICENSE).

@@ -81,8 +81,10 @@ your weather provider, your location, your clock source.
 
 ## Firmware safety
 
-Before sending anything, nd104-sync reads the firmware version of the keyboard
-display and compares it with a list of versions it has been verified against.
+Before sending anything, nd104-sync reads the firmware versions of the keyboard
+and of the display, using the same queries as the official web driver (see
+[docs/protocol.md § 3](../../docs/protocol.md#3-firmware-version-queries)). It
+then compares them with a list of versions it has been verified against.
 
 | Situation | What happens |
 |---|---|
@@ -259,6 +261,9 @@ apps/nd104-sync/
 
 Protocol knowledge is based on the
 [ND104 reverse engineering notes](https://gist.github.com/borrougagnou/a21613093f323a05167a92212ab1ff7b)
-by borrougagnou. Inspired by [zoom-sync](https://github.com/ozboar/zoom-sync).
+by borrougagnou and on an analysis of the official
+[Chilkey web driver](https://nd104.chilkey.com/). Everything is collected in
+[docs/protocol.md](../../docs/protocol.md). Inspired by
+[zoom-sync](https://github.com/ozboar/zoom-sync).
 
 Unofficial project, not affiliated with Chilkey. MIT licensed – see [LICENSE](../../LICENSE).

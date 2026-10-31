@@ -120,16 +120,23 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
 ### 5.1 Protocol (`nd104-protocol`)
 - Pure functions: `time_packet(datetime)`, `weather_packet(icon, current, max, min)`,
   later `theme_packet`, `osd_command`, `image_upload_*`.
-- CRC-16/CCITT-FALSE and the 8-bit checksums, including the documented byte-order
-  quirks (weather CRC low byte first, time CRC big-endian).
-- Packets are 64-byte HID output reports (firmware reads the first 32 bytes).
+- CRC-16/CCITT-FALSE (stored low byte first in every packet, as the official
+  web driver does it) and the 8-bit payload checksum.
+- Temperatures as °C × 10 in **sign + magnitude** encoding (bit 15 = negative),
+  as the web driver does it (the gist assumes two's complement).
+- Version queries for keyboard and screen (§ 5.3).
+- Keyboard packets are 32 bytes, screen packets 64 bytes; see [protocol.md](protocol.md).
 - Every packet builder is covered by golden tests (expected bytes).
 - Protocol knowledge validated on real hardware is documented in `docs/protocol.md`.
 
 ### 5.2 Device manager
-- Finds the screen by VID/PID `5542:0001` **and** vendor usage page `0xFF60`.
-- Wired only: if the screen interface is not present, status = *"Not connected
-  (USB cable required)"*.
+- Opens **both** vendor HID interfaces (usage page `0xFF60`, usage `0x61`):
+  keyboard `6D67:016C` and screen `5542:0001`.
+- Wired only: if one of them is missing, status = *"Not connected (USB cable
+  required)"*.
+- The target for time/weather packets (keyboard, which is what the web driver
+  uses, or screen, which is what the gist uses) is decided in M0 and kept
+  configurable internally.
 - Polls for plug/unplug (e.g. every 3 s); on (re)connect → firmware guard → initial sync.
 - A single writer task serialises all writes (no interleaved packets).
 - Detects a likely conflict with the official Chilkey web driver / weather plugin
@@ -149,11 +156,16 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
 
 - No user override in the UI. Supporting a new firmware = verifying it and adding
   it to the allowlist in a new release.
-- **Open question (M0):** how to read the version. Candidates:
-  1. USB device descriptor (`bcdDevice` / release number via hidapi),
-  2. the query the official web driver uses (it displays the firmware version –
-     capture its WebHID traffic),
-  3. a version field in a screen response report.
+- **How the version is read** (found in the official web driver, see
+  [protocol.md § 3](protocol.md#3-firmware-version-queries)):
+  - keyboard: send `11 02 … CRC` (32 bytes) → answer `0x11`, ASCII in bytes 8–14
+  - screen: send `11 02 00 00 00 00 FD 1B …` (64 bytes) → answer `0x11`, ASCII in bytes 8–13
+  - Only the ASCII answers count. The numeric byte in the screen's `0x1C … FB`
+    answer is ignored; it is most likely why the web driver shows a broken
+    screen version.
+  - Timeout (e.g. 1 s, 3 retries) without an answer → unknown → locked mode.
+- Fallback if the queries turn out unreliable in M0: the USB descriptor
+  release number (`bcdDevice`).
 
 ### 5.4 Firmware update check (R4)
 - Runs once after boot (with a short delay) and then e.g. every 24 h.
@@ -355,7 +367,7 @@ Apply/Cancel with validation; *Test* buttons never save.
 
 | # | Milestone | Deliverable |
 |---|---|---|
-| **M0** | **Protocol & firmware verification** | Small Rust CLI (`nd104-probe`): list devices, read firmware version, send time, send test weather, cycle icons. Results in `docs/protocol.md`, first allowlist entry. **Gate for everything else.** |
+| **M0** | **Protocol & firmware verification** | Small Rust CLI (`nd104-probe`): list devices, read keyboard + screen firmware versions, send time, send test weather (incl. negative temperatures), cycle icons, compare keyboard vs. screen as target. Work through the checklist in [protocol.md § 6](protocol.md#6-open-points-for-m0-hardware-verification), first allowlist entry. **Gate for everything else.** |
 | M1 | Core (headless) | `nd104-protocol` + `nd104-core`: device manager, firmware guard, clock (system/timezone/manual), Open-Meteo + manual provider, scheduler, config; unit tests |
 | M2 | Tray app | Tauri shell, tray with states, autostart, single instance, notifications, i18n (DE/EN) |
 | M3 | Settings UI | Dashboard, Weather, Clock, Device & Firmware, General; dark/light/auto; design system |
@@ -369,7 +381,8 @@ Apply/Cancel with validation; *Test* buttons never save.
 
 | Risk / question | Mitigation |
 |---|---|
-| Firmware version cannot be read | M0 investigates USB descriptor and web-driver traffic; without a reliable version source the tool stays in locked mode |
+| Firmware version cannot be read | Version queries found in the web driver (protocol.md § 3); M0 verifies them; USB descriptor as fallback; otherwise the tool stays locked |
+| Web driver sends to keyboard, gist to screen | M0 tests both paths; device manager supports both |
 | Official Chilkey software writes to the display at the same time | Detect/warn; documentation says to close it |
 | Firmware updates change the protocol | Allowlist + locked mode (R3); protocol crate versioned per firmware |
 | Weather provider changes / rate limits | Provider trait, backoff, fallback provider |

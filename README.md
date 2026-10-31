@@ -1,70 +1,85 @@
 # Chilkey ND104 Utilities
 
-Sammlung von Skripten, Tools und (perspektivisch) Firmware-Experimenten rund um
-die Chilkey ND104 Tastatur – vor allem für das integrierte Display.
+A collection of scripts, tools and (later) firmware experiments for the
+Chilkey ND104 keyboard, with a focus on its built-in display.
 
-Hauptziel: das Display unabhängig von der Hersteller-Software nutzen, z. B. um
-dauerhaft das aktuelle Wetter für den eigenen Standort anzuzeigen, die Uhrzeit
-zu synchronisieren und mit Themes/Bildern zu experimentieren.
+The main goal is to use the display without the vendor software, for example
+to always show the current weather for your own location, keep the clock in
+sync and experiment with themes and images.
 
-> ⚠️ Inoffizielles Community-Projekt, nicht mit Chilkey verbunden.
-> Nutzung auf eigene Gefahr – insbesondere beim Flashen von Firmware.
+> ⚠️ Unofficial community project, not affiliated with Chilkey.
+> Use at your own risk, especially when flashing firmware.
 
-> 🔌 **Fokus: kabelgebundene USB-Verbindung.** Alle Tools in diesem Repo
-> unterstützen die Tastatur ausschließlich per USB-Kabel. 2,4-GHz-Dongle und
-> Bluetooth werden nicht unterstützt.
+> 🔌 **Wired USB connection only.** All tools in this repository support the
+> keyboard **only when it is connected with a USB cable**. The 2.4 GHz dongle
+> and Bluetooth modes are not supported.
 
 ## Tools
 
-| Tool | Beschreibung | Plattform | Status |
+| Tool | Description | Platform | Status |
 |---|---|---|---|
-| [nd104-sync](apps/nd104-sync/README.de.md) ([English](apps/nd104-sync/README.md)) | Hintergrund-Tool mit Tray-Icon: synchronisiert Uhrzeit und Wetter aufs Display, Einstellungs-/Statusfenster, Firmware-Schutz und Firmware-Update-Hinweis | Windows (Linux/macOS vorbereitet) | 🚧 Planung – siehe [docs/PLAN.md](docs/PLAN.md) |
+| [nd104-sync](apps/nd104-sync/README.md) ([Deutsch](apps/nd104-sync/README.de.md)) | Background tool with a tray icon: syncs time and weather to the display, settings/status window, firmware safety lock and firmware update notification | Windows (Linux/macOS prepared) | 🚧 Planning, see [docs/PLAN.md](docs/PLAN.md) |
 
-## Die Tastatur
+## The keyboard
 
-Die [Chilkey ND104](https://chilkey.com/products/nd104-keyboard) ist eine
-Full-Size-Tastatur (104 Tasten) mit Aluminiumgehäuse, Hot-Swap-Sockeln,
-Drehregler und einem 1,47" Farbdisplay.
+The [Chilkey ND104](https://chilkey.com/products/nd104-keyboard) is a full-size
+keyboard (104 keys) with an aluminium case, hot-swap sockets, a rotary knob and
+a 1.47" colour display.
 
-- Verbindung: USB-C, 2,4 GHz, Bluetooth 5.4
-- Display: 320×172 TFT, zeigt Uhrzeit, Wetter, Bilder/GIFs
-- Offizielle Software: [Chilkey Web-Driver / Console](https://chilkey.com/pages/console)
-  (Chrome/Edge)
+- Connection: USB-C, 2.4 GHz, Bluetooth 5.4 (this repo: **USB-C only**)
+- Display: 320×172 TFT, shows time, weather and images/GIFs
+- Official software: [Chilkey web driver](https://nd104.chilkey.com/)
+  (WebHID, Chromium-based browsers only) and the
+  [Chilkey console / downloads](https://chilkey.com/pages/console)
 - Support & FAQ: [ND104 Support & Resources](https://chilkey.com/blogs/updates/nd104-faq-resources)
 
-### Hardware (laut Community Reverse Engineering)
+### Hardware (from community reverse engineering)
 
-| Komponente | Chip / Info | USB VID:PID |
+| Component | Chip / info | USB VID:PID |
 |---|---|---|
-| Tastatur-MCU | WCH CH585 (RISC-V, BLE) | `6d67:016c` |
-| Display-Controller | U-BEST UB32F341S (ARM, RTX + LVGL) | `5542:0001` |
-| Display im DFU-Modus | – | `5542:1000` |
+| Keyboard MCU | WCH CH585 (RISC-V, BLE) | `6d67:016c` |
+| Display controller | U-BEST UB32F341S (ARM, RTX + LVGL) | `5542:0001` |
+| Display in DFU mode | – | `5542:1000` |
+
+Details: [docs/protocol.md](docs/protocol.md).
 
 ## Firmware
 
-| Teil | Aktuelle Version (Chilkey) | Auf meinem Gerät |
+| Part | Latest version (Chilkey) | On my device |
 |---|---|---|
-| Tastatur | V3.0.4 | _tbd_ |
+| Keyboard | V3.0.4 | _tbd_ |
 | Display | V1.2.1 | _tbd_ |
 
-Die installierte Version lässt sich im Chilkey Web-Driver ablesen.
+The installed versions are shown in the info dialog of the
+[web driver](https://nd104.chilkey.com/). The screen version is often shown
+incorrectly there; see
+[docs/protocol.md § 3.3](docs/protocol.md#33-why-the-screen-version-looks-broken-on-the-web-driver).
 
-## Inhalt dieses Repos
+## Repository layout
 
-| Ordner | Inhalt |
+| Folder | Content |
 |---|---|
-| `apps/` | Eigenständige Programme (z. B. `nd104-sync`) |
-| `scripts/` | Kleine Skripte & Experimente für Display & Tastatur |
-| `docs/` | Projektplan, Protokoll- und Hardware-Dokumentation |
-| `firmware/` | Firmware-Notizen und -Experimente |
-| `assets/` | Bilder & GIFs für das Display (320×172) |
+| `apps/` | Standalone programs (e.g. `nd104-sync`) |
+| `scripts/` | Small scripts and experiments for the display and keyboard |
+| `docs/` | Project plan, protocol and hardware documentation |
+| `firmware/` | Firmware notes, version manifest, experiments (no vendor binaries) |
+| `assets/` | Images and GIFs for the display (320×172) |
 
-## Quellen & Danksagung
+## Documentation
 
-- [ND104 Reverse Engineering](https://gist.github.com/borrougagnou/a21613093f323a05167a92212ab1ff7b) – borrougagnou
-- [ND104 Firmware Upgrade Guide](https://gist.github.com/borrougagnou/ab98c68cb6812d76fc0357e57f8541d9) – borrougagnou
-- [zoom-sync](https://github.com/ozboar/zoom-sync) – Vorbild für Wetter/Zeit-Sync
+| Document | Content |
+|---|---|
+| [docs/PLAN.md](docs/PLAN.md) | Detailed plan and architecture of nd104-sync |
+| [docs/protocol.md](docs/protocol.md) | USB HID protocol: devices, checksums, version queries, time and weather packets |
+| [apps/nd104-sync/README.md](apps/nd104-sync/README.md) | nd104-sync usage, build instructions, dependencies, limitations |
 
-## Lizenz
+## Sources & credits
 
-MIT – siehe [LICENSE](LICENSE).
+- [ND104 Reverse Engineering](https://gist.github.com/borrougagnou/a21613093f323a05167a92212ab1ff7b) by borrougagnou
+- [ND104 Firmware Upgrade Guide](https://gist.github.com/borrougagnou/ab98c68cb6812d76fc0357e57f8541d9) by borrougagnou
+- Official [Chilkey web driver](https://nd104.chilkey.com/), analysed for the version queries
+- [zoom-sync](https://github.com/ozboar/zoom-sync), a model for weather and time sync
+
+## License
+
+MIT, see [LICENSE](LICENSE).
