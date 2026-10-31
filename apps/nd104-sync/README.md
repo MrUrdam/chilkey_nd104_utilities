@@ -64,6 +64,9 @@ your weather provider, your location, your clock source.
   independent of it.
 - ❌ **No telemetry.** It only contacts the services you configured
   (see [Privacy](#privacy--network-access)).
+- ❌ **No other keyboard models (yet).** Only the Chilkey ND104 is supported.
+  The architecture has a model interface, so other keyboards with displays can
+  be added later (see [docs/PLAN.md § 4.3](../../docs/PLAN.md#43-keyboard-models-r7)).
 - ❌ **Not meant to run alongside** the official Chilkey weather plugin – both
   would write to the display.
 

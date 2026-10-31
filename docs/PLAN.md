@@ -23,6 +23,7 @@ These rules are non-negotiable and shape every design decision below.
 | R4 | **Read-only towards firmware.** | The tool never flashes, patches or modifies firmware. It only *checks* whether updates exist and tells the user. |
 | R5 | **Extensible by design.** | Weather providers, clock sources, languages and platforms are plug-in points (traits / files), not hard-coded switches. |
 | R6 | **Privacy.** | No telemetry. Network access only to services the user configured (weather, geocoding, NTP) plus the firmware manifest for the update check. |
+| R7 | **ND104 first, other models possible.** | Only the Chilkey ND104 is implemented. Everything model-specific (USB IDs, packets, icons, verified firmware, firmware sources) sits behind a model interface, so other keyboards with displays can be added later without touching the core, scheduler, providers or UI (§ 4.3). |
 
 ---
 
@@ -38,6 +39,8 @@ These rules are non-negotiable and shape every design decision below.
 | UI style | Modern, gamer-inspired but simple; dark/light following Windows, overridable (Auto / Dark / Light) |
 | Firmware | Verified versions → normal; other versions → allowed while protocol checks pass ("compatible, unverified"); any protocol deviation → stop + lock + notification; update check after boot and on demand |
 | Plan location | This file (`docs/PLAN.md`) |
+| Unknown but well-formed messages | Log and ignore; damaged/unknown structure or a bad acknowledgement → lock (§ 5.3) |
+| Keyboard models | Model interface in the architecture; only the ND104 is implemented (R7, § 4.3) |
 
 ---
 
@@ -113,6 +116,59 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
 - a headless CLI (e.g. `nd104-cli`) can reuse the core later,
 - the UI framework could be swapped without touching the logic.
 
+### 4.3 Keyboard models (R7)
+
+The core never talks about "the ND104" directly. It works with a **keyboard
+model**, and the ND104 is the first and, for now, only implementation.
+
+```
+                      ┌──────────────────────────────┐
+ core (scheduler,     │  trait KeyboardModel         │
+ firmware guard,  ───▶│  id, name, USB interfaces,   │
+ device manager)      │  capabilities, firmware,     │
+                      │  encode time / weather,      │
+                      │  check answers               │
+                      └──────────────┬───────────────┘
+                                     │ implemented by
+                 ┌───────────────────┼────────────────────┐
+           Chilkey ND104       (later: other model) (later: …)
+           nd104-protocol      <model>-protocol
+```
+
+Sketch of the interface (lives in `nd104-core`, will be renamed if a second
+model arrives):
+
+```rust
+trait KeyboardModel {
+    fn id(&self) -> &'static str;                 // "chilkey-nd104"
+    fn display_name(&self) -> &'static str;       // "Chilkey ND104"
+    fn interfaces(&self) -> &[InterfaceSpec];     // role, VID/PID, usage page/usage, report length
+    fn capabilities(&self) -> Capabilities;       // time, weather, icon set, °C/°F variant, …
+    fn read_firmware(&self, io: &mut dyn HidIo) -> Result<FirmwareInfo>;
+    fn verified_firmware(&self) -> &[FirmwareId];
+    fn encode_time(&self, time: &LocalTime) -> Result<Packet>;
+    fn encode_weather(&self, weather: &WeatherReport) -> Result<Packet>; // maps neutral Condition → model icon
+    fn check_answer(&self, sent: &Packet, report: &[u8]) -> AnswerCheck; // Ack | Ignored(logged) | Violation
+    fn manifest_key(&self) -> &'static str;       // key in firmware/versions.json, e.g. "nd104"
+}
+```
+
+- **Model registry:** a static list (`[Nd104]` for now). The device manager
+  identifies the connected model by its USB IDs. Keyboards without a known model
+  are shown as "not supported", and nothing is sent to them.
+- **Per-model protocol crate:** `nd104-protocol` now; a second model gets its
+  own crate. Shared helpers (e.g. CRC-16) move into a common crate once they
+  are needed twice.
+- **Neutral data types** (`WeatherReport` with a neutral `Condition`, local
+  time) live in the core. Each model maps them to its own packet format and
+  icon set.
+- **Capabilities drive the UI:** pages and options only appear if the
+  connected model supports them (e.g. icon preview, screen variant).
+- **Firmware manifest and Drive watcher** are keyed by model.
+- **Config:** `[device] model = "auto"` (auto-detect by USB IDs).
+- **Naming:** the app stays `nd104-sync` for now. A neutral name is an open
+  decision for when a second model is actually added.
+
 ---
 
 ## 5. Components
@@ -154,7 +210,7 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
 | P2 | Expected HID report lengths (keyboard 32, screen 64 bytes) | connect |
 | P3 | Version query answered within the timeout with a well-formed `0x11` report and printable ASCII version | connect, after every re-connect |
 | P4 | Writes accepted by the HID stack (no errors, no short writes) | every write |
-| P5 | Answers to time/weather packets match the pattern recorded in M0 (if the firmware answers at all), no unexpected/unknown reports | every write |
+| P5 | Every time/weather packet is acknowledged with the pattern recorded in M0 (`A5 <cmd> 00 02 FE 00 <chk>`, see [protocol.md § 4.1.1](protocol.md#411-answers-acknowledgement-)); every received report is well-formed (valid CRC/checksum, known structure) | every write |
 | P6 | Screen variant (°C / °F) recognised | connect |
 
 - Outcomes:
@@ -166,6 +222,15 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
 | Any check fails – before or during operation | **Locked** – stop sending immediately, tray icon amber, notification with the reason (which check failed), status page explains it |
 | Version cannot be read | Locked (P3 failed) |
 
+- **Unknown but well-formed messages** (valid CRC and checksum, known
+  structure, status OK, but an unknown command, e.g. the unsolicited
+  `A5 35 … FE 00`) are **logged and ignored**. Nothing is sent in reply, and
+  they appear in the log and in the "recent events" list on the status page.
+  This is safe: the official web driver ignores such messages too, and not
+  answering cannot change anything on the device. Decision 2026-10-31.
+- Messages that are **damaged or structurally unknown**, a **missing
+  acknowledgement**, or an acknowledgement with a **status other than OK**
+  still lock immediately.
 - **Only the basic data packets** (time, weather) are ever sent to unverified
   firmware. Anything else (themes, images, menu control, later features) is
   only allowed on verified firmware.
@@ -403,7 +468,7 @@ Apply/Cancel with validation; *Test* buttons never save.
 | # | Milestone | Deliverable |
 |---|---|---|
 | **M0** | **Protocol & firmware verification** | Small Rust CLI (`nd104-probe`): list devices, read keyboard + screen firmware versions, send time, send test weather (incl. negative temperatures), cycle icons, compare keyboard vs. screen as target. Work through the checklist in [protocol.md § 6](protocol.md#6-open-points-for-m0-hardware-verification), record the answer patterns for the protocol checks, first verified firmware entry. **Gate for everything else.** |
-| M1 | Core (headless) | `nd104-protocol` + `nd104-core`: device manager, firmware guard, clock (system/timezone/manual), Open-Meteo + manual provider, scheduler, config; unit tests |
+| M1 | Core (headless) | `nd104-protocol` + `nd104-core`: `KeyboardModel` interface with the ND104 as the only model, device manager, firmware guard, clock (system/timezone/manual), Open-Meteo + manual provider, scheduler, config; unit tests |
 | M2 | Tray app | Tauri shell, tray with states, autostart, single instance, notifications, i18n (DE/EN) |
 | M3 | Settings UI | Dashboard, Weather, Clock, Device & Firmware, General; dark/light/auto; design system |
 | M4 | Providers & secrets | Bright Sky, OpenWeatherMap, WeatherAPI, fallback, NTP, keyring |
