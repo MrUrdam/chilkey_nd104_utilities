@@ -66,13 +66,25 @@ pub enum LocationMode {
     Coordinates,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LocationSettings {
     pub mode: LocationMode,
     pub name: String,
     pub lat: Option<f64>,
     pub lon: Option<f64>,
+}
+
+/// Berlin until the user picks a location.
+impl Default for LocationSettings {
+    fn default() -> Self {
+        Self {
+            mode: LocationMode::Search,
+            name: "Berlin, Germany".into(),
+            lat: Some(52.52),
+            lon: Some(13.405),
+        }
+    }
 }
 
 impl LocationSettings {

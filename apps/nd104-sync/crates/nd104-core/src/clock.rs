@@ -37,7 +37,8 @@ pub enum DstMode {
 #[serde(default)]
 pub struct ClockSettings {
     pub source: ClockSource,
-    /// IANA zone, e.g. `Europe/Berlin`. Empty = PC time zone.
+    /// IANA zone used by the `timezone` and `ntp` sources, e.g. `Europe/Berlin`.
+    /// `system` and `manual` always use the PC time zone.
     pub timezone: String,
     pub dst_mode: DstMode,
     pub ntp_server: String,
@@ -49,7 +50,7 @@ impl Default for ClockSettings {
     fn default() -> Self {
         Self {
             source: ClockSource::System,
-            timezone: String::new(),
+            timezone: Self::DEFAULT_TIMEZONE.into(),
             dst_mode: DstMode::Auto,
             ntp_server: "pool.ntp.org".into(),
             manual_offset_min: 0,
@@ -59,13 +60,19 @@ impl Default for ClockSettings {
 }
 
 impl ClockSettings {
+    /// Zone used when a source needs one and none is configured.
+    pub const DEFAULT_TIMEZONE: &'static str = "Europe/Berlin";
+
     fn zone(&self) -> Result<TimeZone> {
         match self.source {
-            ClockSource::Timezone | ClockSource::Ntp if !self.timezone.trim().is_empty() => {
-                TimeZone::get(self.timezone.trim())
-                    .with_context(|| format!("unknown time zone {:?}", self.timezone))
+            ClockSource::Timezone | ClockSource::Ntp => {
+                let name = match self.timezone.trim() {
+                    "" => Self::DEFAULT_TIMEZONE,
+                    name => name,
+                };
+                TimeZone::get(name).with_context(|| format!("unknown time zone {name:?}"))
             }
-            _ => Ok(TimeZone::system()),
+            ClockSource::System | ClockSource::Manual => Ok(TimeZone::system()),
         }
     }
 
@@ -246,6 +253,23 @@ mod tests {
             berlin(DstMode::ForceSummer).next_transition(ts("2026-10-31T12:00:00Z")),
             None
         );
+    }
+
+    #[test]
+    fn empty_zone_falls_back_to_germany() {
+        let s = ClockSettings {
+            source: ClockSource::Timezone,
+            timezone: String::new(),
+            ..Default::default()
+        };
+        assert_eq!(
+            s.local_time(ts("2026-07-01T10:00:00Z"))
+                .unwrap()
+                .to_string(),
+            "2026-07-01T12:00:00"
+        );
+        assert_eq!(ClockSettings::default().timezone, "Europe/Berlin");
+        assert_eq!(ClockSettings::default().source, ClockSource::System);
     }
 
     #[test]

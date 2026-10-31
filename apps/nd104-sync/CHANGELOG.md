@@ -23,5 +23,8 @@ Release tags: `nd104-sync-vX.Y.Z`.
   - Scheduler with device polling, resume-from-sleep detection, pause/resume
   - TOML configuration (`%APPDATA%\nd104-sync\config.toml`, schema 1)
   - App update check against the GitHub releases of this repository
+- Defaults: weather location Berlin; time zone Germany (`Europe/Berlin`) for
+  the time-zone and NTP sources, PC time zone otherwise
+- Raw report bytes in the log (debug) and in lock reasons, for analysis
 - Console runner `nd104-cli` (`run`, `status`, `sync`, `weather`, `geocode`,
   `check-update`, `config`).

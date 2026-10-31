@@ -373,9 +373,22 @@ impl DeviceManager {
         }
     }
 
+    /// Classifies a report; unusual ones carry the raw bytes for the log.
     fn classify(&self, role: Role, report: &[u8]) -> ReportClass {
         let model = self.active.as_ref().map(|a| a.model).unwrap_or(0);
-        self.models[model].classify_report(role, report)
+        let class = self.models[model].classify_report(role, report);
+        tracing::debug!("{role} report [{}] → {class:?}", hex(report));
+        match class {
+            ReportClass::Malformed(why) => {
+                ReportClass::Malformed(format!("{why} [{}]", hex(report)))
+            }
+            ReportClass::Ignored(what) => ReportClass::Ignored(format!("{what} [{}]", hex(report))),
+            ReportClass::Ack { command, ok } if !ok => {
+                tracing::warn!("{role} error answer [{}]", hex(report));
+                ReportClass::Ack { command, ok }
+            }
+            other => other,
+        }
     }
 
     fn write(&mut self, packet: &Packet) -> Result<()> {
@@ -401,6 +414,16 @@ impl DeviceManager {
         let remaining = deadline.saturating_duration_since(Instant::now());
         channel.read(remaining)
     }
+}
+
+/// Hex dump without trailing zero padding, e.g. `1c 03 00 … c7`.
+fn hex(report: &[u8]) -> String {
+    let end = report.iter().rposition(|&b| b != 0).map_or(0, |i| i + 1);
+    report[..end]
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn find_interface<'a>(

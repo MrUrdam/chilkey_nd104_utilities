@@ -147,6 +147,10 @@ version. Updating stays your decision and is done with Chilkey's tools.
 | [OpenWeatherMap](https://openweathermap.org/) | yes | worldwide | planned |
 | [WeatherAPI.com](https://www.weatherapi.com/) | yes | worldwide | planned |
 
+**Default location:** Berlin, until you pick your own (city search in the
+settings, or `nd104-cli geocode "<city>" --set 1`). Your location is stored only
+in your local config file, never in this repository.
+
 Providers are plug-ins implementing one interface, so more can be added
 (see [docs/PLAN.md § 5.6](../../docs/PLAN.md#56-weather-service)).
 API keys are stored in the Windows Credential Manager, not in the config file.
@@ -155,10 +159,10 @@ API keys are stored in the Windows Credential Manager, not in the config file.
 
 | Source | Description |
 |---|---|
-| System (default) | Local PC time |
-| Time zone | PC time converted to a chosen time zone |
-| NTP | Time from an NTP server (default `pool.ntp.org`) |
-| Manual | System time plus a fixed offset |
+| System (default) | Local PC time in the PC time zone |
+| Time zone | PC time converted to a chosen time zone (default: Germany, `Europe/Berlin`) |
+| NTP | Time from an NTP server (default `pool.ntp.org`) in the chosen time zone (default: Germany) |
+| Manual | PC time plus a fixed offset, PC time zone |
 
 Summer/winter time: **Auto** (from time-zone rules) · force summer · force winter.
 

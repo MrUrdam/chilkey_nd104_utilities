@@ -230,8 +230,16 @@ Recorded examples (keyboard route):
 nd104-sync's protocol check P5 expects exactly this pattern after every write.
 Missing answers, another status or a different structure lock the tool.
 
-**Unsolicited answer seen once:** before the acknowledgement for a time packet,
-`1C 03 00 00 00 07 54 76 A5 35 00 02 FE 00 CA` arrived. That is command `0x35`,
+**Unsolicited answers:** besides the acknowledgements for our packets, the
+keyboard sometimes sends well-formed OK answers for commands we never sent:
+
+| Seen | Frame |
+|---|---|
+| `0x35` (frame kind 03) | `1C 03 00 00 00 07 54 76 A5 35 00 02 FE 00 CA` |
+| `0x35` (frame kind 02) | `1C 02 00 00 00 07 7D F8 A5 35 00 02 FE 00 CA` |
+| `0x3A` (frame kind 03) | `1C 03 00 00 00 07 C5 44 A5 3A 00 02 FE 00 C5` |
+
+The first one arrived That is command `0x35`,
 status OK, which nd104-sync never sends. It is not caused by page changes or by
 the time packet itself, and the web driver has no handling for it either. Its
 origin is still open, see § 6. **nd104-sync logs and ignores it** (decision
