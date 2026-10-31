@@ -57,10 +57,13 @@ pub async fn search(query: &str, language: &str) -> Result<Vec<Place>> {
         ])
         .send()
         .await
+        .map_err(super::without_url)
         .context("geocoding request failed")?
-        .error_for_status()?
+        .error_for_status()
+        .map_err(super::without_url)?
         .text()
-        .await?;
+        .await
+        .map_err(super::without_url)?;
     parse(&body)
 }
 

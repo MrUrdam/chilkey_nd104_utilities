@@ -33,6 +33,8 @@ All notable changes to nd104-sync are listed here. The format follows
   any deviation locks immediately – nothing is sent until re-plug or re-check.
   Unknown but well-formed messages are logged and ignored.
 - **App update check** against the GitHub releases of this repository.
+- **Privacy:** your location is stored only in your local config; error
+  messages in the log contain no request URLs (no coordinates).
 - **Configuration** in `%APPDATA%\nd104-sync\config.toml`. Defaults: location
   Berlin, PC time zone (Germany when a time zone is required).
 - **Diagnostic tool `nd104-probe`** (M0) to read firmware versions and test

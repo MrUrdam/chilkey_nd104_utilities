@@ -196,6 +196,12 @@ pub fn create(id: &str) -> Option<Box<dyn WeatherProvider>> {
 /// HTTP client used for all weather/geocoding requests.
 pub type HttpClient = reqwest::Client;
 
+/// Drops the request URL from an HTTP error: it contains the user's
+/// coordinates or search text, and logs may end up in bug reports.
+pub(crate) fn without_url(e: reqwest::Error) -> reqwest::Error {
+    e.without_url()
+}
+
 pub fn new_http_client() -> Result<HttpClient> {
     Ok(reqwest::Client::builder()
         .user_agent(crate::user_agent())

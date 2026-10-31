@@ -54,11 +54,14 @@ impl WeatherProvider for OpenMeteo {
                 ])
                 .send()
                 .await
+                .map_err(super::without_url)
                 .context("Open-Meteo request failed")?
                 .error_for_status()
+                .map_err(super::without_url)
                 .context("Open-Meteo returned an error")?
                 .text()
-                .await?;
+                .await
+                .map_err(super::without_url)?;
             parse(&body)
         })
     }
