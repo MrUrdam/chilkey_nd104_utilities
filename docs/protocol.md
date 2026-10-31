@@ -270,21 +270,21 @@ shown correctly, including the decimal.
 | Index | Shown on the display | Meaning | WeatherAPI codes used by the web driver |
 |---|---|---|---|
 | 0 | Sun | Clear / sunny (day) | 1000 (day) |
-| 1 | Clouds | Cloudy (see note) | – (unused) |
+| 1 | Two clouds, one behind the other | Overcast | – (unused) |
 | 2 | Cloud + sun | Partly cloudy (day) | 1003 (day) |
-| 3 | Cloud | Cloudy (see note) | – (unused) |
+| 3 | Single cloud | Cloudy | – (unused) |
 | 4 | Cloud + rain | Rain / drizzle | 1063, 1072, 1150–1201, 1240–1246, 1087, 1273, 1276 |
 | 5 | Cloud + snow | Snow / sleet / ice | 1066, 1069, 1114, 1117, 1204–1225, 1249–1258, 1279, 1282 |
 | 6 | Purple moon + stars | Clear (night) | 1000 (after 18:00) |
 | 7 | Cloud + purple moon + stars | Partly cloudy (night) | 1003 (after 18:00) |
-| 8 | Cloud with bars underneath | Fog / mist / overcast | 1006, 1009, 1030, 1135, 1147 |
+| 8 | Cloud with bars underneath | Fog / mist (the web driver also uses it for overcast) | 1006, 1009, 1030, 1135, 1147 |
 | 9 | Cloud + lightning | **Thunderstorm** | – (the web driver maps thunder to 4) |
 
 Notes:
 - **Icon 9 is a real thunderstorm icon.** The web driver and the community
   notes map thunderstorms to rain, but nd104-sync will use 9.
-- The visual difference between 1 ("clouds") and 3 ("cloud") is still to be
-  described.
+- Icons 1 and 3 are not used by the web driver. nd104-sync uses 1 for overcast
+  and 3 for cloudy, and 8 only for fog/mist.
 - Indices above 9 are rejected by `nd104-protocol` and have not been tried on
   purpose.
 
@@ -355,7 +355,7 @@ These are listed only for completeness. nd104-sync never configures the keyboard
 - [x] Negative temperatures are shown correctly with sign + magnitude
       encoding. *(2026-10-31)*
 - [x] The time is shown correctly (two test times, then the current time). *(2026-10-31)*
-- [ ] Visual difference between icon 1 and icon 3.
+- [x] Icon 1 = two clouds (overcast), icon 3 = single cloud (cloudy). *(2026-10-31)*
 - [ ] Origin of the unsolicited `A5 35 … FE 00` answer (§ 4.1.1).
       Not seen again: 25 s while switching pages, 3 time syncs, 5 min idle
       listening (11:39–11:44). Logged and ignored by nd104-sync.

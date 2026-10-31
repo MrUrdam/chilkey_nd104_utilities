@@ -12,12 +12,12 @@ pub struct WeatherIcon(u8);
 impl WeatherIcon {
     /// Sun.
     pub const SUNNY: Self = Self(0);
-    /// Clouds (difference to [`Self::CLOUD`] still to be described).
-    pub const CLOUDS: Self = Self(1);
+    /// Two clouds, one behind the other (overcast).
+    pub const OVERCAST: Self = Self(1);
     /// Cloud + sun.
     pub const PARTLY_CLOUDY: Self = Self(2);
-    /// Cloud.
-    pub const CLOUD: Self = Self(3);
+    /// Single cloud (cloudy).
+    pub const CLOUDY: Self = Self(3);
     /// Cloud + rain.
     pub const RAIN: Self = Self(4);
     /// Cloud + snow.
@@ -26,7 +26,7 @@ impl WeatherIcon {
     pub const CLEAR_NIGHT: Self = Self(6);
     /// Cloud + purple moon + stars.
     pub const PARTLY_CLOUDY_NIGHT: Self = Self(7);
-    /// Cloud with bars underneath (fog / mist / overcast).
+    /// Cloud with bars underneath (fog / mist).
     pub const FOG: Self = Self(8);
     /// Cloud + lightning.
     pub const THUNDERSTORM: Self = Self(9);
