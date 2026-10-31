@@ -129,6 +129,10 @@ pub trait KeyboardModel: Send + Sync {
     fn classify_report(&self, role: Role, report: &[u8]) -> ReportClass;
     /// Key in `firmware/versions.json`.
     fn manifest_key(&self) -> &'static str;
+    /// Build date contained in a firmware version answer, if recognisable.
+    fn firmware_build_date(&self, firmware: &FirmwareInfo) -> Option<jiff::civil::Date>;
+    /// Part key in `firmware/versions.json` for a role (and screen variant).
+    fn manifest_part(&self, role: Role, variant: ScreenVariant) -> Option<&'static str>;
 }
 
 /// All supported models. Only the ND104 for now.

@@ -9,6 +9,7 @@
 //! - [`engine`]: scheduler that ties everything together
 //! - [`app_update`]: check the GitHub repository for new app releases
 //! - [`secrets`]: API keys in the OS credential store
+//! - [`firmware_update`]: compare keyboard firmware with `firmware/versions.json`
 //!
 //! Scope: wired USB only, Windows first.
 
@@ -17,6 +18,7 @@ pub mod clock;
 pub mod config;
 pub mod device;
 pub mod engine;
+pub mod firmware_update;
 pub mod hid;
 pub mod model;
 pub mod secrets;

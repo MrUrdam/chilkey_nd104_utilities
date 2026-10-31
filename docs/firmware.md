@@ -85,11 +85,15 @@ Still open:
 - The firmware update check cannot rely on the version text on the support page.
   It compares the **build date** reported by the device with the date in the
   newest Drive file name, for the matching screen variant.
-- Planned approach (see [PLAN.md § 5.4](PLAN.md#54-firmware-update-check-r4)):
-  1. A **GitHub Action in this repo** checks the Drive folders and support pages
-     every day. When a file name changes, it opens an issue or PR that updates
-     `firmware/versions.json`.
-  2. **nd104-sync only reads `firmware/versions.json`**, which is stable and
-     reviewed, and never scrapes Google Drive itself.
+- Implemented (M5, see [PLAN.md § 5.4](PLAN.md#54-firmware-update-check-r4)):
+  1. The **firmware watch** action ([`firmware-watch.yml`](../.github/workflows/firmware-watch.yml),
+     [`firmware/watch.py`](../firmware/watch.py)) checks the Drive folders and
+     support pages every day and **opens an issue** when files, subfolders or
+     version texts change. Support pages that block automated requests (the AU
+     page answers HTTP 429) only produce warnings.
+  2. A person updates [`firmware/versions.json`](../firmware/versions.json) after
+     review ([process](../firmware/README.md)).
+  3. **nd104-sync only reads `firmware/versions.json`** and never scrapes
+     Google Drive itself.
 - The firmware checks have to recognise the **screen variant** too (°C or °F), not
   just the version.

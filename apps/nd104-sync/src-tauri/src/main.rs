@@ -20,6 +20,7 @@ use nd104_core::app_update::UpdateStatus;
 use nd104_core::config::{self, Config};
 use nd104_core::device::{DeviceHandle, DeviceState, Trust};
 use nd104_core::engine::{self, EngineCommand, Status};
+use nd104_core::firmware_update::PartState;
 use nd104_core::hid::{HidBackend, HidapiBackend};
 use nd104_core::{model, APP_VERSION};
 use tauri::menu::MenuEvent;
@@ -49,6 +50,8 @@ pub(crate) struct AppState {
     items: Mutex<Option<TrayItems>>,
     /// Show the result of the next app update check (manual check).
     pub(crate) manual_update_check: AtomicBool,
+    /// Show the result of the next firmware update check (manual check).
+    pub(crate) manual_firmware_check: AtomicBool,
     /// Modification time of our own last config write (not a user edit).
     own_write: Mutex<Option<SystemTime>>,
 }
@@ -149,6 +152,7 @@ fn main() {
                 status: engine.status.clone(),
                 items: Mutex::new(Some(items)),
                 manual_update_check: AtomicBool::new(false),
+                manual_firmware_check: AtomicBool::new(false),
             });
 
             tauri::async_runtime::spawn(watch_status(handle.clone(), engine.status.clone()));
@@ -268,7 +272,9 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
         "recheck" => send(app, EngineCommand::Recheck),
         "check_updates" => {
             state.manual_update_check.store(true, Ordering::SeqCst);
+            state.manual_firmware_check.store(true, Ordering::SeqCst);
             send(app, EngineCommand::CheckAppUpdate);
+            send(app, EngineCommand::CheckFirmwareUpdate);
         }
         "settings" => open_settings(app),
         "open_logs" => {
@@ -362,6 +368,7 @@ async fn watch_status(app: AppHandle, mut status: watch::Receiver<Status>) {
     let mut previous = status.borrow().clone();
     let mut compatible_notified = false;
     let mut update_notified: Option<String> = None;
+    let mut firmware_notified: Option<String> = None;
 
     while status.changed().await.is_ok() {
         let current = status.borrow().clone();
@@ -432,6 +439,47 @@ async fn watch_status(app: AppHandle, mut status: watch::Receiver<Status>) {
                 Some(Err(error)) if manual => notify(
                     &app,
                     &i18n.t("notify.update_failed_title"),
+                    &i18n.tf("notify.update_failed_body", &[("error", error)]),
+                ),
+                _ => {}
+            }
+        }
+
+        if current.firmware_update_checked != previous.firmware_update_checked {
+            let manual = state.manual_firmware_check.swap(false, Ordering::SeqCst);
+            match &current.firmware_update {
+                Some(Ok(report)) if report.update_available() => {
+                    let parts: Vec<String> = report
+                        .parts
+                        .iter()
+                        .filter(|p| p.state == PartState::UpdateAvailable)
+                        .map(|p| {
+                            let label = p.label.clone().unwrap_or_else(|| p.role.to_string());
+                            let date = p.latest.as_ref().map(|l| l.build_date.to_string());
+                            format!("{label} ({})", date.unwrap_or_default())
+                        })
+                        .collect();
+                    let key = parts.join(", ");
+                    if manual || firmware_notified.as_deref() != Some(&key) {
+                        notify(
+                            &app,
+                            &i18n.t("notify.firmware_title"),
+                            &i18n.tf(
+                                "notify.firmware_body",
+                                &[("model", &report.model_name), ("parts", &key)],
+                            ),
+                        );
+                        firmware_notified = Some(key);
+                    }
+                }
+                Some(Ok(_)) if manual => notify(
+                    &app,
+                    &i18n.t("notify.firmware_ok_title"),
+                    &i18n.t("notify.firmware_ok_body"),
+                ),
+                Some(Err(error)) if manual => notify(
+                    &app,
+                    &i18n.t("notify.firmware_failed_title"),
                     &i18n.tf("notify.update_failed_body", &[("error", error)]),
                 ),
                 _ => {}

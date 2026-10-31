@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "updated": "2026-10-31",
+  "models": {
+    "nd104": {
+      "name": "Chilkey ND104",
+      "instructions_url": "https://chilkey.com/pages/nd104_firmware_flashing_guide",
+      "support_url": "https://chilkey.com/blogs/updates/nd104-faq-resources",
+      "parts": {
+        "keyboard": {
+          "label": "Keyboard",
+          "latest": {
+            "version": "3.0.14",
+            "build_date": "2026-07-10",
+            "file": "VN001_314A108_1V0_RGB_TYPE1_20260710.bin"
+          },
+          "download_url": "https://drive.google.com/drive/folders/1bBRxuqoCmtKGLFP1ONK2jDnFGpARMcl1"
+        },
+        "screen_24h_c": {
+          "label": "Display 24 h / °C",
+          "latest": {
+            "version": "1.2.4",
+            "build_date": "2026-03-17",
+            "file": "ND104_SCREEN_MCU_320_172_V1.0.0_20260317.bin",
+            "ui_file": "ND104_SCREEN_UI_320_172_V1.0.0_20251104.bin"
+          },
+          "download_url": "https://drive.google.com/drive/folders/1E7kkBnX99qMY9dFOu-0rNqluetyRrFCO"
+        },
+        "screen_12h_f": {
+          "label": "Display 12 h / °F",
+          "latest": {
+            "version": null,
+            "build_date": "2026-03-05",
+            "file": "ND104_SCREEN_MCU_CF_320_172_V1.0.0_20260305.bin",
+            "ui_file": "ND104_SCREEN_UI_320_172_V1.0.0_20251230.bin"
+          },
+          "download_url": "https://drive.google.com/drive/folders/1RNgHBBwdc8ynacXeRV3VMKW-bBQ4EJQX"
+        }
+      },
+      "watch": {
+        "drive_folders": [
+          {
+            "id": "1bBRxuqoCmtKGLFP1ONK2jDnFGpARMcl1",
+            "label": "Keyboard firmware",
+            "known_files": ["VN001_314A108_1V0_RGB_TYPE1_20260710.bin"]
+          },
+          {
+            "id": "1OqgGn4GWbKE8EqnmPrfNkhQ2LkfSg_NS",
+            "label": "Screen firmware (variant folders)",
+            "known_subfolders": ["1E7kkBnX99qMY9dFOu-0rNqluetyRrFCO", "1RNgHBBwdc8ynacXeRV3VMKW-bBQ4EJQX"]
+          },
+          {
+            "id": "1E7kkBnX99qMY9dFOu-0rNqluetyRrFCO",
+            "label": "Screen firmware 24 h / °C",
+            "known_files": [
+              "ND104_SCREEN_MCU_320_172_V1.0.0_20260317.bin",
+              "ND104_SCREEN_UI_320_172_V1.0.0_20251104.bin"
+            ]
+          },
+          {
+            "id": "1RNgHBBwdc8ynacXeRV3VMKW-bBQ4EJQX",
+            "label": "Screen firmware 12 h / °F",
+            "known_files": [
+              "ND104_SCREEN_MCU_CF_320_172_V1.0.0_20260305.bin",
+              "ND104_SCREEN_UI_320_172_V1.0.0_20251230.bin"
+            ]
+          }
+        ],
+        "support_pages": [
+          {
+            "url": "https://chilkey.com/blogs/updates/nd104-faq-resources",
+            "known_versions": ["V3.0.4", "V1.2.1"]
+          },
+          {
+            "url": "https://www.chilkey.com.au/blogs/news/nd104-support-resources",
+            "known_versions": ["V3.0.4", "V1.2.1"]
+          }
+        ]
+      }
+    }
+  }
+}

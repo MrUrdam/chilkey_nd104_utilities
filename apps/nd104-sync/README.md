@@ -4,7 +4,7 @@ Background tool that keeps the display of the **Chilkey ND104** keyboard up to
 date with the **current time and weather** – with a tray icon and a modern
 settings/status window.
 
-> 🚧 **Status: beta 0.4.0 (milestone M4).** Tray app with settings window and five weather providers,
+> 🚧 **Status: beta 0.5.0 (milestone M5).** Tray app with settings window, five weather providers and firmware update check,
 > starts with Windows, installer available from the
 > [releases](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
 > See the [roadmap](#roadmap) and the [changelog](CHANGELOG.md).
@@ -130,13 +130,29 @@ verified firmware. A lock is only lifted by re-connecting the keyboard or by
 ## Firmware update check
 
 Chilkey has no machine-readable version list, so the newest firmware is only
-visible through file names in their Google Drive folders. A GitHub Action in this
-repository watches those folders, and the result is kept in a reviewed manifest
-([`firmware/versions.json`](../../firmware/)). Shortly after boot (and then once
-a day) nd104-sync checks that manifest. If Chilkey has
-released a newer firmware, you get a notification with a link to the official
-update instructions – and a hint whether nd104-sync already supports that
-version. Updating stays your decision and is done with Chilkey's tools.
+visible through file names in their Google Drive folders. A GitHub Action in
+this repository checks those folders every day and opens an issue when
+something changes; the reviewed result is kept in
+[`firmware/versions.json`](../../firmware/versions.json)
+([how it is maintained](../../firmware/README.md)).
+
+nd104-sync compares the **build date** your keyboard and display report with
+that list:
+- when the keyboard is first connected, then once a day,
+- on **Check for updates** (tray menu, General, Device & Firmware – the button
+  checks app and firmware together),
+- on the console: `nd104-cli firmware-check`.
+
+The **Device & Firmware** page shows per part: installed, newest in the list,
+state (*up to date*, *update available*, *newer than the list*, *unknown*), the
+download folder and Chilkey's update instructions. If an update is available
+you get a notification once. Updating stays your decision and is done with
+Chilkey's tools – **nd104-sync never downloads or flashes firmware**. After an
+update, nd104-sync checks the new firmware automatically (verified or
+compatible, see [Firmware safety](#firmware-safety)).
+
+The automatic check can be switched off (General → *Check for firmware updates
+automatically*, or `[updates] firmware_check = false`).
 
 ## Weather providers
 
@@ -284,7 +300,7 @@ instead of misreading it.
 | Sync now | Send time and weather immediately (fetches fresh weather) |
 | Pause / Resume updates | Stop / resume all updates |
 | Check keyboard again | Lift a lock and run all protocol checks again |
-| Check for updates | Look for a newer nd104-sync release, shows the result |
+| Check for updates | Look for a newer nd104-sync release **and** newer keyboard firmware, shows the result |
 | Settings… | Opens the settings window |
 | Language ▸ | Automatic (system) / Deutsch / English |
 | Start with Windows | Autostart on/off |
@@ -297,7 +313,8 @@ amber = locked (protocol check failed) · red = weather stale.
 The **tooltip** shows the app version, keyboard, weather and the last sync.
 
 **Notifications:** keyboard locked, unverified firmware detected, new
-nd104-sync version available, result of a manual update check.
+nd104-sync version available, new keyboard firmware available, result of a
+manual update check.
 
 ### Settings window
 
@@ -331,6 +348,7 @@ nd104-cli geocode "Berlin"           # search a city
 nd104-cli geocode "Berlin" --set 1   # store result 1 as your location
 nd104-cli weather                    # fetch and print the weather (nothing sent)
 nd104-cli check-update               # check GitHub for a newer release
+nd104-cli firmware-check             # compare keyboard firmware with the version list
 nd104-cli api-key status             # which providers have a stored key
 nd104-cli api-key set <provider>     # store a key (prompted, not on the command line)
 nd104-cli api-key delete <provider>  # delete a key
@@ -491,8 +509,8 @@ flowchart LR
     M2["<b>M2</b><br/>Tray app<br/>✔ 0.2.0 beta"]:::done
     M3["<b>M3</b><br/>Settings UI<br/>✔ 0.3.0 beta"]:::done
     M4["<b>M4</b><br/>Providers &amp; secrets<br/>✔ 0.4.0 beta"]:::done
-    M5["<b>M5</b><br/>Firmware check &amp; release<br/>▶ next"]:::current
-    M6["<b>M6</b><br/>Extras"]:::todo
+    M5["<b>M5</b><br/>Firmware check &amp; release<br/>✔ 0.5.0 beta"]:::done
+    M6["<b>M6</b><br/>Extras<br/>▶ next"]:::current
     M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6
 
     classDef done fill:#1a7f37,stroke:#2ea043,color:#ffffff

@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { api, type AppInfo, type Config, type FirmwareInfo, type Status } from "../lib/api";
+  import { api, type AppInfo, type Config, type FirmwareInfo, type FirmwarePart, type Status } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
+  import { dateTime } from "../lib/format";
 
   let {
     status,
@@ -15,6 +16,25 @@
 
   function verified(f: FirmwareInfo): boolean {
     return model.verified_firmware.some((v) => v.role === f.role && v.version === f.version);
+  }
+
+  let report = $derived(status.firmware_update && "Ok" in status.firmware_update ? status.firmware_update.Ok : null);
+  let reportError = $derived(status.firmware_update && "Err" in status.firmware_update ? status.firmware_update.Err : null);
+  let checking = $state(false);
+
+  function part(role: string): FirmwarePart | undefined {
+    return report?.parts.find((p) => p.role === role);
+  }
+
+  const stateBadge = { up_to_date: "ok", update_available: "warn", newer: "", unknown: "" } as const;
+
+  async function checkFirmware() {
+    checking = true;
+    try {
+      await api.engine("check_updates");
+    } finally {
+      setTimeout(() => (checking = false), 1500);
+    }
   }
 
   async function recheck() {
@@ -71,6 +91,8 @@
           <th>{t("ui.device.installed")}</th>
           <th>{t("ui.device.verified_versions")}</th>
           <th></th>
+          <th>{t("ui.fw.latest")}</th>
+          <th>{t("ui.fw.state")}</th>
         </tr>
       </thead>
       <tbody>
@@ -90,11 +112,48 @@
                 <span class="badge {verified(f) ? 'ok' : 'warn'}">{t(verified(f) ? "ui.device.ok" : "ui.device.unverified")}</span>
               {/if}
             </td>
+            {#if part(role)}
+              {@const p = part(role)!}
+              <td class="mono small-cell" title={p.latest?.file ?? ""}>
+                {p.latest ? p.latest.build_date : "–"}
+                {#if p.label}<div class="muted">{p.label}</div>{/if}
+              </td>
+              <td>
+                <span class="badge {stateBadge[p.state]}">{t(`ui.fw.${p.state}`)}</span>
+                {#if p.state === "update_available" && p.download_url}
+                  {@const url = p.download_url}
+                  <div><button type="button" class="link" onclick={() => api.open(url)}>{t("ui.fw.download")}</button></div>
+                {/if}
+              </td>
+            {:else}
+              <td>–</td>
+              <td></td>
+            {/if}
           </tr>
         {/each}
       </tbody>
     </table>
+    <div class="row fw-actions">
+      <button class="key" onclick={checkFirmware} disabled={checking}>{checking ? "…" : t("ui.fw.check")}</button>
+      {#if report}
+        <span class="muted small"
+          >{t("ui.fw.list_date", { date: report.manifest_updated, time: dateTime(status.firmware_update_checked) })}</span
+        >
+        {#if report.instructions_url}
+          {@const url = report.instructions_url}
+          <button type="button" class="link" onclick={() => api.open(url)}>{t("ui.fw.instructions")}</button>
+        {/if}
+      {:else if reportError}
+        <span class="error-text selectable">{reportError}</span>
+      {:else}
+        <span class="muted small">{t("ui.fw.not_checked")}</span>
+      {/if}
+    </div>
+    {#if report?.parts.some((p) => p.state === "unknown" && p.role === "screen")}
+      <p class="muted small">{t("ui.fw.unknown_hint")}</p>
+    {/if}
     <p class="muted small">{t("ui.device.firmware_update_hint")}</p>
+    <div class="notice">{t("ui.fw.never_flash")}</div>
   </div>
 
   <div class="card stack">
@@ -143,6 +202,14 @@
     padding: 8px;
     border-bottom: 1px solid var(--border);
     user-select: text;
+  }
+
+  .fw-actions {
+    margin-top: 12px;
+  }
+
+  .small-cell {
+    font-size: 12px;
   }
 
   .narrow {

@@ -72,7 +72,22 @@
         <span class="muted small">{t("ui.general.last_check", { time: dateTime(status.app_update_checked) })}</span>
       {/if}
     </div>
+    {#if status.firmware_update}
+      <div class="row">
+        <span class="label">{t("ui.general.firmware_status")}:</span>
+        {#if "Err" in status.firmware_update}
+          <span class="error-text selectable">{status.firmware_update.Err}</span>
+        {:else if status.firmware_update.Ok.parts.some((p) => p.state === "update_available")}
+          <span class="badge warn">{t("ui.fw.update_available")}</span>
+        {:else}
+          <span class="badge ok">{t("ui.fw.up_to_date")}</span>
+        {/if}
+      </div>
+    {/if}
     <label class="switch"><input type="checkbox" bind:checked={draft.updates.app_check} />{t("ui.general.auto_check")}</label>
+    <label class="switch"
+      ><input type="checkbox" bind:checked={draft.updates.firmware_check} />{t("ui.general.firmware_check")}</label
+    >
     <label class="field narrow"
       >{t("ui.general.check_interval")}
       <input type="number" min="1" step="1" bind:value={draft.updates.check_interval_h} aria-invalid={!!errors["updates.interval"]} />

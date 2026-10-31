@@ -1,0 +1,54 @@
+# Daily check of Chilkey's public firmware sources (Google Drive folders,
+# support pages) against firmware/versions.json. On changes it opens an issue
+# (or comments on the open one); the manifest itself is updated by a person
+# after review. See docs/firmware.md.
+name: firmware watch
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Compare sources with versions.json
+        id: watch
+        run: |
+          set +e
+          python3 firmware/watch.py --report report.md
+          code=$?
+          set -e
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          # 0 = unchanged, 2 = changes, 1 = firmware folders unreadable
+          if [ "$code" != "0" ] && [ "$code" != "2" ] && [ "$code" != "1" ]; then exit "$code"; fi
+
+      - name: Open or update issue
+        if: steps.watch.outputs.code != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ steps.watch.outputs.code }}" = "2" ]; then
+            TITLE="Firmware watch: new Chilkey firmware files"
+          else
+            TITLE="Firmware watch: cannot read the firmware sources"
+          fi
+          gh label create firmware-watch --color 0891b2 --description "Reported by the firmware watch workflow" 2>/dev/null || true
+          NUMBER=$(gh issue list --state open --label firmware-watch --search "in:title \"$TITLE\"" --json number -q '.[0].number')
+          if [ -n "$NUMBER" ]; then
+            # Comment only when something changed since the last report (no daily repeats).
+            LAST=$(gh issue view "$NUMBER" --json body,comments -q '(.comments | last | .body) // .body')
+            if [ "$LAST" != "$(cat report.md)" ]; then
+              gh issue comment "$NUMBER" --body-file report.md
+            fi
+          else
+            gh issue create --title "$TITLE" --label firmware-watch --body-file report.md
+          fi

@@ -95,6 +95,25 @@ export type UpdateStatus =
   | { kind: "up_to_date"; latest: Release | null }
   | ({ kind: "available" } & Release);
 
+export type FirmwarePartState = "up_to_date" | "update_available" | "newer" | "unknown";
+
+export interface FirmwarePart {
+  role: "keyboard" | "screen";
+  label: string | null;
+  installed: string;
+  installed_build: string | null;
+  latest: { version: string | null; build_date: string; file: string; ui_file?: string | null } | null;
+  download_url: string | null;
+  state: FirmwarePartState;
+}
+
+export interface FirmwareReport {
+  model_name: string;
+  manifest_updated: string;
+  instructions_url: string | null;
+  parts: FirmwarePart[];
+}
+
 export interface AppEvent {
   at: string;
   level: "info" | "warning" | "error";
@@ -115,6 +134,8 @@ export interface Status {
   next_weather_fetch: string | null;
   app_update: { Ok: UpdateStatus } | { Err: string } | null;
   app_update_checked: string | null;
+  firmware_update: { Ok: FirmwareReport } | { Err: string } | null;
+  firmware_update_checked: string | null;
   events: AppEvent[];
 }
 

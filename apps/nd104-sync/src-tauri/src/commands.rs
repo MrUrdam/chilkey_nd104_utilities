@@ -214,7 +214,13 @@ pub async fn engine_command(app: AppHandle, command: String) -> CmdResult<()> {
         "resume" => EngineCommand::Resume,
         "recheck" => EngineCommand::Recheck,
         "check_updates" => {
+            // One button for both: app release and keyboard firmware.
             state.manual_update_check.store(true, Ordering::SeqCst);
+            state.manual_firmware_check.store(true, Ordering::SeqCst);
+            state
+                .commands
+                .try_send(EngineCommand::CheckFirmwareUpdate)
+                .map_err(err)?;
             EngineCommand::CheckAppUpdate
         }
         other => return Err(format!("unknown command {other:?}")),
@@ -223,7 +229,8 @@ pub async fn engine_command(app: AppHandle, command: String) -> CmdResult<()> {
 }
 
 /// Opens a known location. URLs are limited to this project on GitHub,
-/// OpenStreetMap markers (location check) and the providers' sign-up pages.
+/// OpenStreetMap markers (location check), the providers' sign-up pages and
+/// Chilkey's firmware pages/folders (firmware update hints).
 #[tauri::command]
 pub async fn open_target(app: AppHandle, target: String) -> CmdResult<()> {
     let state = app.state::<AppState>();
@@ -236,7 +243,10 @@ pub async fn open_target(app: AppHandle, target: String) -> CmdResult<()> {
         }
         url if url.starts_with("https://github.com/MrUrdam/chilkey_nd104_utilities")
             || url.starts_with("https://www.openstreetmap.org/?mlat=")
-            || weather::PROVIDERS.iter().any(|p| p.signup_url == Some(url)) =>
+            || weather::PROVIDERS.iter().any(|p| p.signup_url == Some(url))
+            || url.starts_with("https://chilkey.com/")
+            || url.starts_with("https://www.chilkey.com.au/")
+            || url.starts_with("https://drive.google.com/drive/folders/") =>
         {
             use tauri_plugin_opener::OpenerExt;
             app.opener().open_url(url, None::<&str>).map_err(err)?;

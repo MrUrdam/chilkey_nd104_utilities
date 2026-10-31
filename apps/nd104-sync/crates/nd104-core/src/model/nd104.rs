@@ -252,6 +252,48 @@ impl KeyboardModel for Nd104 {
     fn manifest_key(&self) -> &'static str {
         "nd104"
     }
+
+    fn firmware_build_date(&self, firmware: &FirmwareInfo) -> Option<jiff::civil::Date> {
+        build_date(&firmware.build)
+    }
+
+    fn manifest_part(&self, role: Role, variant: ScreenVariant) -> Option<&'static str> {
+        match (role, variant) {
+            (Role::Keyboard, _) => Some("keyboard"),
+            (Role::Screen, ScreenVariant::Celsius24h) => Some("screen_24h_c"),
+            (Role::Screen, ScreenVariant::Fahrenheit12h) => Some("screen_12h_f"),
+            (Role::Screen, ScreenVariant::Unknown) => None,
+        }
+    }
+}
+
+/// Build date from the version answer: keyboard `20260710_123331`,
+/// screen `Mar 17 2026 21:37:00` (C `__DATE__` format).
+fn build_date(build: &str) -> Option<jiff::civil::Date> {
+    let digits: String = build.chars().take(8).collect();
+    if digits.len() == 8 && digits.chars().all(|c| c.is_ascii_digit()) {
+        let (y, m, d) = (&digits[..4], &digits[4..6], &digits[6..]);
+        return jiff::civil::Date::new(y.parse().ok()?, m.parse().ok()?, d.parse().ok()?).ok();
+    }
+    let mut parts = build.split_whitespace();
+    let month = match parts.next()? {
+        "Jan" => 1,
+        "Feb" => 2,
+        "Mar" => 3,
+        "Apr" => 4,
+        "May" => 5,
+        "Jun" => 6,
+        "Jul" => 7,
+        "Aug" => 8,
+        "Sep" => 9,
+        "Oct" => 10,
+        "Nov" => 11,
+        "Dec" => 12,
+        _ => return None,
+    };
+    let day: i8 = parts.next()?.parse().ok()?;
+    let year: i16 = parts.next()?.parse().ok()?;
+    jiff::civil::Date::new(year, month, day).ok()
 }
 
 #[cfg(test)]
@@ -405,6 +447,16 @@ mod tests {
                 ok: false
             }
         );
+    }
+
+    #[test]
+    fn build_dates() {
+        let d = |s: &str| build_date(s).map(|d| d.to_string());
+        assert_eq!(d("20260710_123331").as_deref(), Some("2026-07-10"));
+        assert_eq!(d("Mar 17 2026 21:37:00").as_deref(), Some("2026-03-17"));
+        assert_eq!(d("Mar  5 2026 10:00:00").as_deref(), Some("2026-03-05"));
+        assert_eq!(d("garbage"), None);
+        assert_eq!(d(""), None);
     }
 
     #[test]

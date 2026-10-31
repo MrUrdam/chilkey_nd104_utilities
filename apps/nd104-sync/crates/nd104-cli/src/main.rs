@@ -51,6 +51,8 @@ enum Command {
     },
     /// Check GitHub for a newer nd104-sync release
     CheckUpdate,
+    /// Compare the keyboard firmware with the version list (wired keyboard needed)
+    FirmwareCheck,
     /// Manage API keys of weather providers (Windows Credential Manager)
     ApiKey {
         #[command(subcommand)]
@@ -110,6 +112,7 @@ async fn main() -> Result<()> {
             language,
         } => geocode(&path, &query, set, &language).await,
         Command::CheckUpdate => check_update().await,
+        Command::FirmwareCheck => firmware_check().await,
         Command::ApiKey { action } => api_key(action),
         Command::Config { action } => config_action(&path, action),
     }
@@ -274,6 +277,48 @@ async fn check_update() -> Result<()> {
             )
         }
     }
+    Ok(())
+}
+
+async fn firmware_check() -> Result<()> {
+    use nd104_core::firmware_update::{self, PartState};
+    let device = device();
+    let (_, state, _) = device.poll().await?;
+    let DeviceState::Ready(d) = state else {
+        bail!("no keyboard ready - connect the ND104 with a USB cable");
+    };
+    let models = model::registry();
+    let model = models
+        .iter()
+        .find(|m| m.id() == d.model_id)
+        .context("unknown model")?;
+    let manifest = firmware_update::fetch_manifest().await?;
+    let report = firmware_update::evaluate(&manifest, model.as_ref(), &d.firmware);
+    println!(
+        "{} - version list from {}",
+        report.model_name, report.manifest_updated
+    );
+    for p in &report.parts {
+        let state = match p.state {
+            PartState::UpToDate => "up to date",
+            PartState::UpdateAvailable => "UPDATE AVAILABLE",
+            PartState::Newer => "newer than the list",
+            PartState::Unknown => "unknown (variant or build not recognised)",
+        };
+        println!("  {:<8} {}  -> {state}", p.role.to_string(), p.installed);
+        if let Some(latest) = &p.latest {
+            println!("           latest: {} ({})", latest.file, latest.build_date);
+        }
+        if p.state == PartState::UpdateAvailable {
+            if let Some(url) = &p.download_url {
+                println!("           download: {url}");
+            }
+        }
+    }
+    if let Some(url) = &report.instructions_url {
+        println!("Update instructions: {url}");
+    }
+    println!("nd104-sync never flashes firmware - use the tools from Chilkey.");
     Ok(())
 }
 

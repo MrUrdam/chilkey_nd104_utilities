@@ -17,6 +17,7 @@ use crate::app_update::{self, UpdateStatus};
 use crate::clock::{ntp_offset, ClockSource};
 use crate::config::Config;
 use crate::device::{DeviceEvent, DeviceHandle, DeviceState, EventLevel};
+use crate::firmware_update::{self, FirmwareReport};
 use crate::model::{self, KeyboardModel};
 use crate::weather::{self, WeatherReport};
 
@@ -50,6 +51,9 @@ pub struct Status {
     pub next_weather_fetch: Option<Timestamp>,
     pub app_update: Option<Result<UpdateStatus, String>>,
     pub app_update_checked: Option<Timestamp>,
+    /// Result of the last firmware update check (versions.json in the repo).
+    pub firmware_update: Option<Result<FirmwareReport, String>>,
+    pub firmware_update_checked: Option<Timestamp>,
     pub events: VecDeque<Event>,
 }
 
@@ -69,6 +73,8 @@ impl Default for Status {
             next_weather_fetch: None,
             app_update: None,
             app_update_checked: None,
+            firmware_update: None,
+            firmware_update_checked: None,
             events: VecDeque::new(),
         }
     }
@@ -86,6 +92,8 @@ pub enum EngineCommand {
     Reload(Box<Config>),
     /// Manual "Check for updates".
     CheckAppUpdate,
+    /// Manual firmware update check.
+    CheckFirmwareUpdate,
     Shutdown,
 }
 
@@ -155,6 +163,11 @@ impl Engine {
                         self.event(EventLevel::Info, "Resumed from sleep, syncing again");
                     }
                     let became_ready = self.poll_device().await;
+                    // First connection: compare the firmware with the version list once.
+                    let never_checked = self.status.borrow().firmware_update_checked.is_none();
+                    if became_ready && never_checked && self.config.updates.firmware_check {
+                        self.check_firmware_update(false).await;
+                    }
                     if (became_ready || resumed) && !paused {
                         next_time = Instant::now();
                         if resumed || !self.push_cached_weather().await {
@@ -174,8 +187,13 @@ impl Engine {
                     let ok = self.update_weather().await;
                     next_weather = Instant::now() + self.weather_delay(ok);
                 }
-                _ = sleep_until(next_app_check), if self.config.updates.app_check => {
-                    self.check_app_update().await;
+                _ = sleep_until(next_app_check), if self.config.updates.app_check || self.config.updates.firmware_check => {
+                    if self.config.updates.app_check {
+                        self.check_app_update().await;
+                    }
+                    if self.config.updates.firmware_check {
+                        self.check_firmware_update(false).await;
+                    }
                     next_app_check = Instant::now() + Duration::from_secs(u64::from(self.config.updates.check_interval_h.max(1)) * 3600);
                 }
                 cmd = rx.recv() => match cmd {
@@ -211,6 +229,7 @@ impl Engine {
                         next_weather = Instant::now();
                     }
                     Some(EngineCommand::CheckAppUpdate) => self.check_app_update().await,
+                    Some(EngineCommand::CheckFirmwareUpdate) => self.check_firmware_update(true).await,
                 },
             }
         }
@@ -495,6 +514,54 @@ impl Engine {
             );
         }
         sent
+    }
+
+    /// Compares the keyboard firmware with `firmware/versions.json`.
+    /// Automatic checks are skipped silently while no keyboard is known.
+    async fn check_firmware_update(&self, manual: bool) {
+        let (firmware, model_id, model_name) = match &self.status.borrow().device {
+            DeviceState::Ready(d) => (d.firmware.clone(), Some(d.model_id), Some(d.model_name)),
+            DeviceState::Locked {
+                firmware,
+                model_name,
+                ..
+            } if !firmware.is_empty() => (firmware.clone(), None, *model_name),
+            _ => (Vec::new(), None, None),
+        };
+        let model = self.models.iter().find(|m| {
+            model_id.is_some_and(|id| m.id() == id)
+                || model_name.is_some_and(|n| m.display_name() == n)
+        });
+        let result = match model {
+            None | Some(_) if firmware.is_empty() => {
+                if !manual {
+                    return;
+                }
+                Err("keyboard not connected – its firmware is unknown".to_string())
+            }
+            None => Err("no version list entry for this keyboard".to_string()),
+            Some(model) => firmware_update::fetch_manifest()
+                .await
+                .map(|m| firmware_update::evaluate(&m, model.as_ref(), &firmware))
+                .map_err(|e| format!("{e:#}")),
+        };
+        match &result {
+            Ok(r) if r.update_available() => {
+                self.event(EventLevel::Warning, "New keyboard firmware is available")
+            }
+            Ok(_) => self.event(
+                EventLevel::Info,
+                "Keyboard firmware checked against the version list",
+            ),
+            Err(e) => self.event(
+                EventLevel::Warning,
+                format!("Firmware update check failed: {e}"),
+            ),
+        }
+        self.status.send_modify(|s| {
+            s.firmware_update = Some(result);
+            s.firmware_update_checked = Some(Timestamp::now());
+        });
     }
 
     async fn check_app_update(&self) {

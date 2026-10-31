@@ -11,6 +11,35 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] – 2026-10-31 · M5 · Beta
+
+> **Beta – milestone M5: firmware update check.**
+> **Chilkey ND104 only, wired USB only, Windows 10/11.**
+
+### Added
+- **Firmware update check:** nd104-sync compares the build date reported by
+  the keyboard and the display with the reviewed version list
+  [`firmware/versions.json`](../../firmware/versions.json) in this repository
+  (display per variant 24 h/°C or 12 h/°F). Runs after the keyboard is first
+  connected, then daily, and with **Check for updates** (tray menu, General,
+  Device & Firmware) – one button now checks both app and firmware.
+- Notification when new keyboard firmware is available (once per new version;
+  manual checks always show the result).
+- **Device & Firmware page:** newest version from the list, state per part
+  (up to date / update available / newer than the list / unknown), link to
+  the download folder and to Chilkey's update instructions.
+- General page: firmware state and a switch for the automatic firmware check.
+- Console: `nd104-cli firmware-check`.
+- **Firmware watch** (GitHub Action, daily): checks Chilkey's Google Drive
+  folders and support pages and opens an issue when files or versions change.
+  The version list is only updated after review (see
+  [firmware/README.md](../../firmware/README.md)).
+- `ND104_FIRMWARE_MANIFEST` environment variable to test a version list
+  (file or URL) before it is published.
+
+### Notes
+- nd104-sync still never downloads or flashes firmware.
+
 ## [0.4.0] – 2026-10-31 · M4 · Beta
 
 > **Beta – milestone M4: more weather providers and API keys.**
@@ -164,7 +193,8 @@ All notable changes to nd104-sync are listed here. The format follows
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.4.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.5.0...HEAD
+[0.5.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.4.0...nd104-sync-v0.5.0
 [0.4.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.3.0...nd104-sync-v0.4.0
 [0.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.2.0...nd104-sync-v0.3.0
 [0.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.1.0...nd104-sync-v0.2.0
