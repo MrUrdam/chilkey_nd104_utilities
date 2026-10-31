@@ -117,6 +117,11 @@
               <td class="mono small-cell" title={p.latest?.file ?? ""}>
                 {p.latest ? p.latest.build_date : "–"}
                 {#if p.label}<div class="muted">{p.label}</div>{/if}
+                {#if p.source}
+                  <div class="source {p.source}" title={p.official_error ?? ""}>
+                    {t(p.source === "official" ? "ui.fw.source_official" : "ui.fw.source_repository")}
+                  </div>
+                {/if}
               </td>
               <td>
                 <span class="badge {stateBadge[p.state]}">{t(`ui.fw.${p.state}`)}</span>
@@ -136,19 +141,20 @@
     <div class="row fw-actions">
       <button class="key" onclick={checkFirmware} disabled={checking}>{checking ? "…" : t("ui.fw.check")}</button>
       {#if report}
-        <span class="muted small"
-          >{t("ui.fw.list_date", { date: report.manifest_updated, time: dateTime(status.firmware_update_checked) })}</span
-        >
-        {#if report.instructions_url}
-          {@const url = report.instructions_url}
-          <button type="button" class="link" onclick={() => api.open(url)}>{t("ui.fw.instructions")}</button>
-        {/if}
+        {@const url = report.instructions_url}
+        <span class="muted small">{t("ui.fw.checked", { time: dateTime(status.firmware_update_checked) })}</span>
+        <button type="button" class="link" onclick={() => api.open(url)}>{t("ui.fw.instructions")}</button>
       {:else if reportError}
         <span class="error-text selectable">{reportError}</span>
       {:else}
         <span class="muted small">{t("ui.fw.not_checked")}</span>
       {/if}
     </div>
+    {#if report?.parts.some((p) => p.source === "repository")}
+      <p class="muted small">
+        {t("ui.fw.fallback_note", { date: report.list_updated ?? "–" })}
+      </p>
+    {/if}
     {#if report?.parts.some((p) => p.state === "unknown" && p.role === "screen")}
       <p class="muted small">{t("ui.fw.unknown_hint")}</p>
     {/if}
@@ -210,6 +216,20 @@
 
   .small-cell {
     font-size: 12px;
+  }
+
+  .source {
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .source.official {
+    color: var(--ok);
+  }
+
+  .source.repository {
+    color: var(--warn);
   }
 
   .narrow {

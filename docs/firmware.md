@@ -93,7 +93,8 @@ Still open:
      page answers HTTP 429) only produce warnings.
   2. A person updates [`firmware/versions.json`](../firmware/versions.json) after
      review ([process](../firmware/README.md)).
-  3. **nd104-sync only reads `firmware/versions.json`** and never scrapes
-     Google Drive itself.
+  3. **The app checks Chilkey's official Drive folders directly** (newest
+     `…_YYYYMMDD.bin` per part) and uses `firmware/versions.json` only as a
+     **fallback** when a folder cannot be read. The source is shown per part.
 - The firmware checks have to recognise the **screen variant** too (°C or °F), not
   just the version.

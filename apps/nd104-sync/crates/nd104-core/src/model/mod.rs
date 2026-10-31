@@ -82,6 +82,20 @@ pub struct VerifiedFirmware {
     pub version: &'static str,
 }
 
+/// An official firmware source of the vendor: a public Google Drive folder
+/// and how to recognise the right file in it (PLAN.md § 5.4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OfficialSource {
+    /// Part key, same as in `firmware/versions.json`.
+    pub part: &'static str,
+    pub label: &'static str,
+    pub drive_folder_id: &'static str,
+    /// File name must contain all of these …
+    pub include: &'static [&'static str],
+    /// … and none of these.
+    pub exclude: &'static [&'static str],
+}
+
 /// A packet ready to be written to one interface.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Packet {
@@ -133,6 +147,10 @@ pub trait KeyboardModel: Send + Sync {
     fn firmware_build_date(&self, firmware: &FirmwareInfo) -> Option<jiff::civil::Date>;
     /// Part key in `firmware/versions.json` for a role (and screen variant).
     fn manifest_part(&self, role: Role, variant: ScreenVariant) -> Option<&'static str>;
+    /// Official firmware download folders of the vendor, checked first.
+    fn official_firmware_sources(&self) -> &'static [OfficialSource];
+    /// Vendor's firmware update instructions.
+    fn firmware_instructions_url(&self) -> &'static str;
 }
 
 /// All supported models. Only the ND104 for now.

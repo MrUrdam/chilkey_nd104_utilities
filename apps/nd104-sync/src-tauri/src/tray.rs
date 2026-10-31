@@ -5,10 +5,10 @@ use nd104_core::engine::Status;
 use nd104_core::weather::Condition;
 use nd104_core::APP_VERSION;
 use tauri::image::Image;
-use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::{AppHandle, Wry};
 
-use crate::i18n::{I18n, LANGUAGES};
+use crate::i18n::I18n;
 
 pub const TRAY_ID: &str = "main";
 
@@ -117,10 +117,11 @@ pub struct TrayItems {
     pub pause: MenuItem<Wry>,
 }
 
+/// Tray menu: only the everyday actions. Everything else (update check,
+/// language, re-check, logs, about) lives in the settings window.
 pub fn build_menu(
     app: &AppHandle,
     i18n: &I18n,
-    language: &str,
     autostart: bool,
     status: &Status,
 ) -> tauri::Result<(Menu<Wry>, TrayItems)> {
@@ -143,37 +144,6 @@ pub fn build_menu(
         None::<&str>,
     )?;
 
-    let auto = CheckMenuItem::with_id(
-        app,
-        "lang:auto",
-        i18n.t("menu.language_auto"),
-        true,
-        language == "auto",
-        None::<&str>,
-    )?;
-    let mut languages = vec![auto];
-    for (code, name) in LANGUAGES {
-        languages.push(CheckMenuItem::with_id(
-            app,
-            format!("lang:{code}"),
-            *name,
-            true,
-            language == *code,
-            None::<&str>,
-        )?);
-    }
-    let language_refs: Vec<&dyn tauri::menu::IsMenuItem<Wry>> = languages
-        .iter()
-        .map(|i| i as &dyn tauri::menu::IsMenuItem<Wry>)
-        .collect();
-    let language_menu = Submenu::with_id_and_items(
-        app,
-        "language",
-        i18n.t("menu.language"),
-        true,
-        &language_refs,
-    )?;
-
     let menu = Menu::with_items(
         app,
         &[
@@ -181,17 +151,8 @@ pub fn build_menu(
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "sync_now", i18n.t("menu.sync_now"), true, None::<&str>)?,
             &pause,
-            &MenuItem::with_id(app, "recheck", i18n.t("menu.recheck"), true, None::<&str>)?,
-            &MenuItem::with_id(
-                app,
-                "check_updates",
-                i18n.t("menu.check_updates"),
-                true,
-                None::<&str>,
-            )?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "settings", i18n.t("menu.settings"), true, None::<&str>)?,
-            &language_menu,
             &CheckMenuItem::with_id(
                 app,
                 "autostart",
@@ -200,21 +161,7 @@ pub fn build_menu(
                 autostart,
                 None::<&str>,
             )?,
-            &MenuItem::with_id(
-                app,
-                "open_logs",
-                i18n.t("menu.open_logs"),
-                true,
-                None::<&str>,
-            )?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(
-                app,
-                "about",
-                i18n.tf("menu.about", &[("version", APP_VERSION)]),
-                true,
-                None::<&str>,
-            )?,
             &MenuItem::with_id(app, "quit", i18n.t("menu.quit"), true, None::<&str>)?,
         ],
     )?;

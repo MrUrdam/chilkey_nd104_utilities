@@ -137,7 +137,7 @@
   "ui.device.verified_versions": "Geprüft mit dieser Version",
   "ui.device.ok": "geprüft",
   "ui.device.unverified": "ungeprüft",
-  "ui.device.firmware_update_hint": "Verglichen mit der Versionsliste im nd104-sync-Repository (wird aktualisiert, sobald Chilkey neue Firmware veröffentlicht).",
+  "ui.device.firmware_update_hint": "Verglichen mit der neuesten Datei in Chilkeys offiziellen Download-Ordnern; die Versionsliste im Repository dieses Projekts dient nur als Ersatz.",
   "ui.device.advanced": "Erweitert",
   "ui.device.poll": "Tastatur alle … Sekunden suchen",
   "ui.general.app": "App",
@@ -200,12 +200,15 @@
   "ui.fw.newer": "neuer als Liste",
   "ui.fw.unknown": "unbekannt",
   "ui.fw.check": "Nach Firmware-Updates suchen",
-  "ui.fw.list_date": "Versionsliste vom {date}, geprüft {time}",
   "ui.fw.not_checked": "Noch nicht geprüft.",
   "ui.fw.download": "Download-Ordner",
   "ui.fw.instructions": "Update-Anleitung von Chilkey",
   "ui.fw.never_flash": "nd104-sync flasht niemals Firmware. Aktualisiere bei Bedarf mit den Tools von Chilkey; danach prüft nd104-sync die neue Firmware automatisch (geprüft oder kompatibel).",
   "ui.fw.unknown_hint": "Die Display-Variante wurde nicht erkannt, daher kann seine Firmware nicht mit der Liste verglichen werden.",
   "ui.general.firmware_status": "Tastatur-Firmware",
-  "ui.general.firmware_check": "Automatisch nach Firmware-Updates suchen"
+  "ui.general.firmware_check": "Automatisch nach Firmware-Updates suchen",
+  "ui.fw.source_official": "Quelle: Chilkey (offiziell)",
+  "ui.fw.source_repository": "Quelle: Repository-Liste (Ersatz)",
+  "ui.fw.checked": "Geprüft {time}",
+  "ui.fw.fallback_note": "Chilkeys Download-Ordner war für manche Teile nicht lesbar, daher wurde ersatzweise die geprüfte Versionsliste dieses Projekts (vom {date}) verwendet."
 }

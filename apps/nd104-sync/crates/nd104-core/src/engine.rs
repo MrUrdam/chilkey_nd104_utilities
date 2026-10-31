@@ -540,19 +540,28 @@ impl Engine {
                 Err("keyboard not connected – its firmware is unknown".to_string())
             }
             None => Err("no version list entry for this keyboard".to_string()),
-            Some(model) => firmware_update::fetch_manifest()
+            Some(model) => firmware_update::check(model.as_ref(), &firmware)
                 .await
-                .map(|m| firmware_update::evaluate(&m, model.as_ref(), &firmware))
                 .map_err(|e| format!("{e:#}")),
         };
         match &result {
             Ok(r) if r.update_available() => {
                 self.event(EventLevel::Warning, "New keyboard firmware is available")
             }
-            Ok(_) => self.event(
-                EventLevel::Info,
-                "Keyboard firmware checked against the version list",
-            ),
+            Ok(r) => {
+                let official = r
+                    .parts
+                    .iter()
+                    .all(|p| p.source == Some(firmware_update::Source::Official));
+                self.event(
+                    EventLevel::Info,
+                    if official {
+                        "Keyboard firmware checked against Chilkey's download folders"
+                    } else {
+                        "Keyboard firmware checked (partly against the repository list)"
+                    },
+                )
+            }
             Err(e) => self.event(
                 EventLevel::Warning,
                 format!("Firmware update check failed: {e}"),

@@ -17,15 +17,18 @@ All notable changes to nd104-sync are listed here. The format follows
 > **Chilkey ND104 only, wired USB only, Windows 10/11.**
 
 ### Added
-- **Firmware update check:** nd104-sync compares the build date reported by
-  the keyboard and the display with the reviewed version list
-  [`firmware/versions.json`](../../firmware/versions.json) in this repository
-  (display per variant 24 h/°C or 12 h/°F). Runs after the keyboard is first
-  connected, then daily, and with **Check for updates** (tray menu, General,
-  Device & Firmware) – one button now checks both app and firmware.
+- **Firmware update check against Chilkey's official sources:** nd104-sync
+  reads Chilkey's public firmware download folders (Google Drive), takes the
+  newest file per part (keyboard, display 24 h/°C or 12 h/°F) and compares its
+  build date with the one reported by the keyboard. Only if a folder cannot be
+  read, the reviewed version list
+  [`firmware/versions.json`](../../firmware/versions.json) of this repository is
+  used as a fallback – the source is shown per part. Runs after the keyboard
+  is first connected, then daily, and with **Check for updates** (settings
+  window) – one button checks both app and firmware.
 - Notification when new keyboard firmware is available (once per new version;
   manual checks always show the result).
-- **Device & Firmware page:** newest version from the list, state per part
+- **Device & Firmware page:** newest version and its source, state per part
   (up to date / update available / newer than the list / unknown), link to
   the download folder and to Chilkey's update instructions.
 - General page: firmware state and a switch for the automatic firmware check.
@@ -37,8 +40,15 @@ All notable changes to nd104-sync are listed here. The format follows
 - `ND104_FIRMWARE_MANIFEST` environment variable to test a version list
   (file or URL) before it is published.
 
+### Changed
+- **Slimmer tray menu:** status, Sync now, Pause/Resume, Settings…, Start with
+  Windows, Quit. Check for updates, Check keyboard again, Language, Open log
+  folder and About are in the settings window only.
+
 ### Notes
 - nd104-sync still never downloads or flashes firmware.
+- The firmware check contacts `drive.google.com` (Chilkey's folders) and, as a
+  fallback, `raw.githubusercontent.com`; no personal data is sent.
 
 ## [0.4.0] – 2026-10-31 · M4 · Beta
 

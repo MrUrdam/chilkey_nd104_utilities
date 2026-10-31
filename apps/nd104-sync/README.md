@@ -129,23 +129,30 @@ verified firmware. A lock is only lifted by re-connecting the keyboard or by
 
 ## Firmware update check
 
-Chilkey has no machine-readable version list, so the newest firmware is only
-visible through file names in their Google Drive folders. A GitHub Action in
-this repository checks those folders every day and opens an issue when
-something changes; the reviewed result is kept in
-[`firmware/versions.json`](../../firmware/versions.json)
-([how it is maintained](../../firmware/README.md)).
+Chilkey publishes firmware only as files in public Google Drive folders (the
+version text on their support pages is outdated). nd104-sync therefore checks
+**Chilkey's official folders directly**: it takes the newest firmware file per
+part – keyboard, display 24 h/°C or 12 h/°F – and compares the build date in
+its name with the build date your keyboard reports.
 
-nd104-sync compares the **build date** your keyboard and display report with
-that list:
+**Fallback:** if a folder cannot be read (no network, Google changed the page,
+folder moved), the reviewed version list
+[`firmware/versions.json`](../../firmware/versions.json) of this repository is
+used for that part. The settings window shows the source per part
+(*Chilkey (official)* or *repository list*). A GitHub Action keeps that list
+up to date: it checks Chilkey's folders every day and opens an issue on
+changes ([details](../../firmware/README.md)).
+
+The check runs:
 - when the keyboard is first connected, then once a day,
-- on **Check for updates** (tray menu, General, Device & Firmware – the button
-  checks app and firmware together),
+- on **Check for updates** (settings window: General or Device & Firmware –
+  the button checks app and firmware together),
 - on the console: `nd104-cli firmware-check`.
 
-The **Device & Firmware** page shows per part: installed, newest in the list,
-state (*up to date*, *update available*, *newer than the list*, *unknown*), the
-download folder and Chilkey's update instructions. If an update is available
+The **Device & Firmware** page shows per part: installed, newest available
+(with source), state (*up to date*, *update available*, *newer than the
+newest file*, *unknown*), the download folder and Chilkey's update
+instructions. If an update is available
 you get a notification once. Updating stays your decision and is done with
 Chilkey's tools – **nd104-sync never downloads or flashes firmware**. After an
 update, nd104-sync checks the new firmware automatically (verified or
@@ -299,14 +306,13 @@ instead of misreading it.
 | Status line | Keyboard, weather and state at a glance |
 | Sync now | Send time and weather immediately (fetches fresh weather) |
 | Pause / Resume updates | Stop / resume all updates |
-| Check keyboard again | Lift a lock and run all protocol checks again |
-| Check for updates | Look for a newer nd104-sync release **and** newer keyboard firmware, shows the result |
 | Settings… | Opens the settings window |
-| Language ▸ | Automatic (system) / Deutsch / English |
 | Start with Windows | Autostart on/off |
-| Open log folder | For troubleshooting |
-| About nd104-sync X.Y.Z | Shows the version, opens the project page |
 | Quit | Exit the app |
+
+Everything else is in the settings window: **Check for updates** (app and
+firmware), **language**, **Check keyboard again** (Device & Firmware), **log
+folder** and **About** with the version (General).
 
 **Tray icon colours:** cyan = connected & synced · grey = not connected ·
 amber = locked (protocol check failed) · red = weather stale.
@@ -382,7 +388,9 @@ nd104-sync connects only to:
   one fails (and Open-Meteo geocoding for city search) – API keys are sent only
   to their own provider,
 - the NTP server, if you selected NTP as clock source,
-- GitHub (raw file of this repo) for the firmware update check – can be disabled,
+- Chilkey's public Google Drive firmware folders (`drive.google.com`) and, as
+  a fallback, the version list in this repository (`raw.githubusercontent.com`)
+  for the firmware update check – can be disabled,
 - the GitHub releases API of this repo for the app update check – can be disabled
   (`[updates] app_check = false`).
 

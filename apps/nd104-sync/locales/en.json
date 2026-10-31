@@ -137,7 +137,7 @@
   "ui.device.verified_versions": "Verified with this version",
   "ui.device.ok": "verified",
   "ui.device.unverified": "unverified",
-  "ui.device.firmware_update_hint": "Compared with the version list in the nd104-sync repository (updated after Chilkey publishes new firmware).",
+  "ui.device.firmware_update_hint": "Compared with the newest file in Chilkey's official download folders; the version list in this project's repository is only used as a fallback.",
   "ui.device.advanced": "Advanced",
   "ui.device.poll": "Check for the keyboard every … seconds",
   "ui.general.app": "App",
@@ -200,12 +200,15 @@
   "ui.fw.newer": "newer than list",
   "ui.fw.unknown": "unknown",
   "ui.fw.check": "Check for firmware updates",
-  "ui.fw.list_date": "Version list from {date}, checked {time}",
   "ui.fw.not_checked": "Not checked yet.",
   "ui.fw.download": "Download folder",
   "ui.fw.instructions": "Chilkey's update instructions",
   "ui.fw.never_flash": "nd104-sync never flashes firmware. Update with Chilkey's tools if you want to; afterwards nd104-sync checks the new firmware automatically (verified or compatible).",
   "ui.fw.unknown_hint": "The display variant could not be recognised, so its firmware cannot be compared with the list.",
   "ui.general.firmware_status": "Keyboard firmware",
-  "ui.general.firmware_check": "Check for firmware updates automatically"
+  "ui.general.firmware_check": "Check for firmware updates automatically",
+  "ui.fw.source_official": "source: Chilkey (official)",
+  "ui.fw.source_repository": "source: repository list (fallback)",
+  "ui.fw.checked": "Checked {time}",
+  "ui.fw.fallback_note": "Chilkey's download folder could not be read for some parts, so the reviewed version list of this project (from {date}) was used instead."
 }

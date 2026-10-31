@@ -28,6 +28,7 @@ use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Theme, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_notification::NotificationExt;
+#[cfg(not(windows))]
 use tauri_plugin_opener::OpenerExt;
 use tokio::sync::{mpsc, watch};
 
@@ -122,13 +123,8 @@ fn main() {
 
             apply_autostart(&handle, config.general.autostart);
             let status = engine.status.borrow().clone();
-            let (menu, items) = tray::build_menu(
-                &handle,
-                &i18n,
-                &config.general.language,
-                config.general.autostart,
-                &status,
-            )?;
+            let (menu, items) =
+                tray::build_menu(&handle, &i18n, config.general.autostart, &status)?;
             TrayIconBuilder::with_id(TRAY_ID)
                 .icon(TrayState::of(&status).icon())
                 .tooltip(tray::tooltip(&i18n, &status))
@@ -269,23 +265,7 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
                 },
             );
         }
-        "recheck" => send(app, EngineCommand::Recheck),
-        "check_updates" => {
-            state.manual_update_check.store(true, Ordering::SeqCst);
-            state.manual_firmware_check.store(true, Ordering::SeqCst);
-            send(app, EngineCommand::CheckAppUpdate);
-            send(app, EngineCommand::CheckFirmwareUpdate);
-        }
         "settings" => open_settings(app),
-        "open_logs" => {
-            if let Ok(dir) = config::log_dir() {
-                let _ = std::fs::create_dir_all(&dir);
-                open_in_shell(app, &dir);
-            }
-        }
-        "about" => {
-            let _ = app.opener().open_url(PROJECT_URL, None::<&str>);
-        }
         "autostart" => {
             let mut config = state.config.lock().unwrap().clone();
             config.general.autostart = !config.general.autostart;
@@ -297,15 +277,7 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
             send(app, EngineCommand::Shutdown);
             app.exit(0);
         }
-        id => {
-            if let Some(language) = id.strip_prefix("lang:") {
-                let mut config = state.config.lock().unwrap().clone();
-                config.general.language = language.to_string();
-                if let Err(e) = apply_config(app, config) {
-                    tracing::warn!("{e:#}");
-                }
-            }
-        }
+        _ => {}
     }
 }
 
@@ -345,13 +317,7 @@ fn rebuild_menu(app: &AppHandle) {
     let config = state.config.lock().unwrap().clone();
     let status = state.status.borrow().clone();
     let i18n = state.i18n.lock().unwrap().clone();
-    match tray::build_menu(
-        app,
-        &i18n,
-        &config.general.language,
-        config.general.autostart,
-        &status,
-    ) {
+    match tray::build_menu(app, &i18n, config.general.autostart, &status) {
         Ok((menu, items)) => {
             if let Some(tray) = app.tray_by_id(TRAY_ID) {
                 let _ = tray.set_menu(Some(menu));

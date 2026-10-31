@@ -438,7 +438,7 @@ trait Platform {
   **locked / firmware mismatch** (amber) · **error** (red). Light/dark variants
   for the Windows taskbar.
 - Tooltip: `nd104-sync 0.1.0 · ND104 · 12.3 °C ☁ · synced 14:05` (includes the app version)
-- Menu: status line · Sync now · Pause/Resume · **Check for updates** (firmware + app) · Settings… · Language ▸ (Auto / Deutsch / English) · Open log folder · Quit
+- Menu (deliberately short): status line · Sync now · Pause/Resume · Settings… · Start with Windows · Quit. Update check, language, re-check, logs and About are only in the settings window.
 
 ### 6.2 Settings / status window
 Tabs (left sidebar):

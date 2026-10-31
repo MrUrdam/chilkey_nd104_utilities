@@ -104,13 +104,15 @@ export interface FirmwarePart {
   installed_build: string | null;
   latest: { version: string | null; build_date: string; file: string; ui_file?: string | null } | null;
   download_url: string | null;
+  source: "official" | "repository" | null;
   state: FirmwarePartState;
+  official_error: string | null;
 }
 
 export interface FirmwareReport {
   model_name: string;
-  manifest_updated: string;
-  instructions_url: string | null;
+  list_updated: string | null;
+  instructions_url: string;
   parts: FirmwarePart[];
 }
 

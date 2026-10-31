@@ -9,8 +9,8 @@ use nd104_protocol::{
 };
 
 use super::{
-    Capabilities, FirmwareInfo, InterfaceSpec, KeyboardModel, Packet, ReportClass, Role,
-    ScreenVariant, VerifiedFirmware,
+    Capabilities, FirmwareInfo, InterfaceSpec, KeyboardModel, OfficialSource, Packet, ReportClass,
+    Role, ScreenVariant, VerifiedFirmware,
 };
 use crate::weather::{Condition, WeatherReport};
 
@@ -45,6 +45,32 @@ static VERIFIED: [VerifiedFirmware; 2] = [
     VerifiedFirmware {
         role: Role::Screen,
         version: "1.2.4",
+    },
+];
+
+/// Chilkey's public firmware folders (docs/firmware.md). The newest file per
+/// part is the one with the latest `_YYYYMMDD.bin` date.
+static OFFICIAL_SOURCES: [OfficialSource; 3] = [
+    OfficialSource {
+        part: "keyboard",
+        label: "Keyboard",
+        drive_folder_id: "1bBRxuqoCmtKGLFP1ONK2jDnFGpARMcl1",
+        include: &[],
+        exclude: &["SCREEN"],
+    },
+    OfficialSource {
+        part: "screen_24h_c",
+        label: "Display 24 h / °C",
+        drive_folder_id: "1E7kkBnX99qMY9dFOu-0rNqluetyRrFCO",
+        include: &["SCREEN_MCU"],
+        exclude: &["_CF_"],
+    },
+    OfficialSource {
+        part: "screen_12h_f",
+        label: "Display 12 h / °F",
+        drive_folder_id: "1RNgHBBwdc8ynacXeRV3VMKW-bBQ4EJQX",
+        include: &["SCREEN_MCU_CF"],
+        exclude: &[],
     },
 ];
 
@@ -255,6 +281,14 @@ impl KeyboardModel for Nd104 {
 
     fn firmware_build_date(&self, firmware: &FirmwareInfo) -> Option<jiff::civil::Date> {
         build_date(&firmware.build)
+    }
+
+    fn official_firmware_sources(&self) -> &'static [OfficialSource] {
+        &OFFICIAL_SOURCES
+    }
+
+    fn firmware_instructions_url(&self) -> &'static str {
+        "https://chilkey.com/pages/nd104_firmware_flashing_guide"
     }
 
     fn manifest_part(&self, role: Role, variant: ScreenVariant) -> Option<&'static str> {

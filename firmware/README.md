@@ -5,7 +5,7 @@ are stored here** – they stay with Chilkey (see [docs/firmware.md](../docs/fir
 
 | File | Purpose |
 |---|---|
-| [`versions.json`](versions.json) | Reviewed version list: newest firmware per model and part (build date, file name, download folder, instructions) plus the sources the watcher checks. nd104-sync downloads this file for its firmware update check. |
+| [`versions.json`](versions.json) | Reviewed version list: newest firmware per model and part (build date, file name, download folder, instructions) plus the sources the watcher checks. nd104-sync checks Chilkey's official folders first and uses this list only as a **fallback**. |
 | [`watch.py`](watch.py) | Firmware watcher: compares Chilkey's Google Drive folders and support pages with `versions.json`. Run by [`firmware-watch.yml`](../.github/workflows/firmware-watch.yml) every day; on changes it opens an issue. |
 
 ## When the watcher reports a change

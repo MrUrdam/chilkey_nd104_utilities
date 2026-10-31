@@ -281,7 +281,7 @@ async fn check_update() -> Result<()> {
 }
 
 async fn firmware_check() -> Result<()> {
-    use nd104_core::firmware_update::{self, PartState};
+    use nd104_core::firmware_update::{self, PartState, Source};
     let device = device();
     let (_, state, _) = device.poll().await?;
     let DeviceState::Ready(d) = state else {
@@ -292,12 +292,8 @@ async fn firmware_check() -> Result<()> {
         .iter()
         .find(|m| m.id() == d.model_id)
         .context("unknown model")?;
-    let manifest = firmware_update::fetch_manifest().await?;
-    let report = firmware_update::evaluate(&manifest, model.as_ref(), &d.firmware);
-    println!(
-        "{} - version list from {}",
-        report.model_name, report.manifest_updated
-    );
+    let report = firmware_update::check(model.as_ref(), &d.firmware).await?;
+    println!("{}", report.model_name);
     for p in &report.parts {
         let state = match p.state {
             PartState::UpToDate => "up to date",
@@ -307,7 +303,24 @@ async fn firmware_check() -> Result<()> {
         };
         println!("  {:<8} {}  -> {state}", p.role.to_string(), p.installed);
         if let Some(latest) = &p.latest {
-            println!("           latest: {} ({})", latest.file, latest.build_date);
+            let source = match p.source {
+                Some(Source::Official) => "Chilkey download folder".to_string(),
+                Some(Source::Repository) => format!(
+                    "repository list{}",
+                    report
+                        .list_updated
+                        .map(|d| format!(" from {d}"))
+                        .unwrap_or_default()
+                ),
+                None => "-".to_string(),
+            };
+            println!(
+                "           latest: {} ({}) - source: {source}",
+                latest.file, latest.build_date
+            );
+        }
+        if let Some(e) = &p.official_error {
+            println!("           official source not readable: {e}");
         }
         if p.state == PartState::UpdateAvailable {
             if let Some(url) = &p.download_url {
@@ -315,9 +328,7 @@ async fn firmware_check() -> Result<()> {
             }
         }
     }
-    if let Some(url) = &report.instructions_url {
-        println!("Update instructions: {url}");
-    }
+    println!("Update instructions: {}", report.instructions_url);
     println!("nd104-sync never flashes firmware - use the tools from Chilkey.");
     Ok(())
 }
