@@ -6,11 +6,20 @@ pub struct UsbId {
 }
 
 /// Keyboard MCU (keys, RGB, settings; also relays display commands).
-pub const KEYBOARD: UsbId = UsbId { vid: 0x6D67, pid: 0x016C };
+pub const KEYBOARD: UsbId = UsbId {
+    vid: 0x6D67,
+    pid: 0x016C,
+};
 /// Display controller.
-pub const SCREEN: UsbId = UsbId { vid: 0x5542, pid: 0x0001 };
+pub const SCREEN: UsbId = UsbId {
+    vid: 0x5542,
+    pid: 0x0001,
+};
 /// Display controller in DFU (firmware update) mode. Never written to.
-pub const SCREEN_DFU: UsbId = UsbId { vid: 0x5542, pid: 0x1000 };
+pub const SCREEN_DFU: UsbId = UsbId {
+    vid: 0x5542,
+    pid: 0x1000,
+};
 
 /// Vendor HID collection used by the web driver on both devices.
 pub const VENDOR_USAGE_PAGE: u16 = 0xFF60;

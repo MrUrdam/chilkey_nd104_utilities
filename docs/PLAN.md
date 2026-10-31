@@ -94,7 +94,7 @@ These rules are non-negotiable and shape every design decision below.
 ```
 apps/nd104-sync/
 ├── Cargo.toml                 # Cargo workspace
-├── README.md / README.de.md
+├── README.md
 ├── crates/
 │   ├── nd104-protocol/        # pure packet building, no I/O, 100 % unit tested
 │   └── nd104-core/            # device, firmware guard, clock, weather,

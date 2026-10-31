@@ -1,8 +1,9 @@
 # ND104 USB HID Protocol Notes
 
 > **Status:** Collected from public sources and static analysis of the official
-> web driver. **Nothing on this page has been verified on hardware by this
-> project yet** – verification is milestone M0 of [nd104-sync](PLAN.md).
+> web driver. Parts marked ✅ have been verified on real hardware (wired USB,
+> keyboard V3.0.14, screen V1.2.4). Everything else is unverified – see the
+> M0 checklist in § 6.
 >
 > Sources:
 > - Official web driver [nd104.chilkey.com](https://nd104.chilkey.com/)
@@ -91,8 +92,23 @@ info dialog. These are the queries behind it.
 | 6–7 | CRC-16 (low, high) | over all 32 bytes, see § 2.1 (= `0x60BC` → `BC 60`) |
 | 8–31 | `0x00` | |
 
-**Response** (input report, byte 0 = `0x11`):
-- bytes **8–14** = ASCII version string, 7 characters → shown as *Device Version*.
+**Response** (input report, 32 bytes). ✅ **Verified on hardware**
+(2026-10-31, keyboard firmware V3.0.14):
+
+```
+11 02 00 00 00 17 91 f6 56 33 2e 30 2e 31 34 20   ........V3.0.14.
+32 30 32 36 30 37 31 30 5f 31 32 33 33 33 31 00   20260710_123331.
+```
+
+| Offset | Value | Meaning |
+|---|---|---|
+| 0–1 | `11 02` | echo of the command |
+| 5 | `0x17` | length of the version text (23) |
+| 6–7 | `91 F6` | CRC-16 over all 32 bytes (bytes 6–7 = 0), **low byte first**. Valid: `0xF691` |
+| 8… | ASCII | `V3.0.14 20260710_123331` → version + build date/time |
+
+The web driver shows only bytes 8–14 (7 characters), i.e. `V3.0.14`.
+nd104-sync reads the full text using the length byte and checks the CRC.
 
 Right after that, the web driver sends `01 00 …` (32 bytes). The answer has
 byte 0 = `0x01`, and byte 2 holds a layout/protocol version that selects the
@@ -112,6 +128,19 @@ key code table. This is not the firmware version.
 | 8–63 | `0x00` |
 
 (`FD 1B` is simply the CRC-16 of this 64-byte packet, low byte first.)
+
+**Response** (input report, 64 bytes). ✅ **Verified on hardware**
+(2026-10-31, screen firmware V1.2.4):
+
+```
+11 02 00 00 00 1b e0 d9 56 31 2e 32 2e 34 20 4d   ........V1.2.4.M
+61 72 20 31 37 20 32 30 32 36 20 32 31 3a 33 37   ar.17.2026.21:37
+3a 30 30 00 …                                     :00 (zero-padded to 64)
+```
+
+The layout is the same as for the keyboard: length `0x1B` (27) at offset 5,
+CRC `0xD9E0` over all 64 bytes, low byte first, at 6–7, and the text
+`V1.2.4 Mar 17 2026 21:37:00` from offset 8.
 
 **Responses handled by the web driver (screen device):**
 
@@ -264,8 +293,12 @@ These are listed only for completeness. nd104-sync never configures the keyboard
 
 ## 6. Open points for M0 (hardware verification)
 
-- [ ] Do the version queries return the expected strings (keyboard `V3.0.4`?,
-      screen `V1.2.1`?) and in which format exactly?
+- [x] Both devices enumerate with the vendor interface `FF60:0061` over USB
+      (keyboard interface 1, screen interface 0). *(2026-10-31)*
+- [x] Version queries work on both devices and return `version + build`, with
+      a length byte and a valid CRC (§ 3.1 / § 3.2): keyboard
+      `V3.0.14 20260710_123331`, screen `V1.2.4 Mar 17 2026 21:37:00`.
+      The support page values (V3.0.4 / V1.2.1) are outdated. *(2026-10-31)*
 - [ ] Should time/weather go to the keyboard device or the screen device, or does either work?
 - [ ] Does icon index at offset 13 work, and how does each index look on the display?
 - [ ] Are negative temperatures shown correctly with sign + magnitude encoding?

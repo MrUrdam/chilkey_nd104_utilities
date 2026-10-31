@@ -4,14 +4,14 @@ use std::time::{Duration, Instant};
 use anyhow::{anyhow, bail, Context, Result};
 use hidapi::{DeviceInfo, HidApi, HidDevice};
 use nd104_protocol::{
-    keyboard_version_query, parse_version_response, screen_version_query, Target, KEYBOARD,
-    SCREEN, SCREEN_DFU, VENDOR_USAGE, VENDOR_USAGE_PAGE,
+    keyboard_version_query, parse_version_response, screen_version_query, FirmwareVersion, Target,
+    KEYBOARD, SCREEN, SCREEN_DFU, VENDOR_USAGE, VENDOR_USAGE_PAGE,
 };
 
-/// Firmware versions as reported by the devices (raw ASCII, not normalized).
+/// Firmware versions as reported by the devices; `None` = no valid answer.
 pub struct Versions {
-    pub keyboard: Option<String>,
-    pub screen: Option<String>,
+    pub keyboard: Option<FirmwareVersion>,
+    pub screen: Option<FirmwareVersion>,
 }
 
 pub struct Probe {
@@ -100,7 +100,7 @@ impl Probe {
 
     /// Queries both devices. Missing devices or silent firmware → `None`.
     pub fn read_versions(&self, timeout: Duration, verbose: bool) -> Versions {
-        let query = |target: Target, packet: Vec<u8>| -> Option<String> {
+        let query = |target: Target, packet: Vec<u8>| -> Option<FirmwareVersion> {
             let device = match self.open(target) {
                 Ok(d) => d,
                 Err(e) => {
@@ -136,7 +136,11 @@ impl Probe {
 
     pub fn listen(&self, target: Target, duration: Duration) -> Result<()> {
         let device = self.open(target)?;
-        println!("Listening on {} for {} s …", target.name(), duration.as_secs());
+        println!(
+            "Listening on {} for {} s …",
+            target.name(),
+            duration.as_secs()
+        );
         for report in device.read_reports(duration) {
             print!("{}", hex_dump(&report));
         }
@@ -148,7 +152,10 @@ impl Device {
     /// Writes one report: report ID 0 + packet, zero-padded to `report_len`.
     pub fn send(&self, packet: &[u8], report_len: usize) -> Result<()> {
         if packet.len() > report_len {
-            bail!("packet ({} bytes) longer than report ({report_len})", packet.len());
+            bail!(
+                "packet ({} bytes) longer than report ({report_len})",
+                packet.len()
+            );
         }
         let mut buf = vec![0u8; report_len + 1];
         buf[1..=packet.len()].copy_from_slice(packet);

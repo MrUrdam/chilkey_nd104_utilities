@@ -30,7 +30,11 @@ pub enum FrameKind {
 /// | 11           | `payload.len()`            |
 /// | 12…          | payload                    |
 /// | 12 + len     | 8-bit checksum of 9..end   |
-pub fn frame(kind: FrameKind, command: u8, payload: &[u8]) -> Result<[u8; FRAME_LEN], ProtocolError> {
+pub fn frame(
+    kind: FrameKind,
+    command: u8,
+    payload: &[u8],
+) -> Result<[u8; FRAME_LEN], ProtocolError> {
     let len = payload.len();
     if len > MAX_PAYLOAD {
         return Err(ProtocolError::PayloadTooLong(len));

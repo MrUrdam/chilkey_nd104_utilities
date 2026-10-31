@@ -18,7 +18,7 @@ sync and experiment with themes and images.
 
 | Tool | Description | Platform | Status |
 |---|---|---|---|
-| [nd104-sync](apps/nd104-sync/README.md) ([Deutsch](apps/nd104-sync/README.de.md)) | Background tool with a tray icon: syncs time and weather to the display, settings/status window, firmware safety lock and firmware update notification | Windows (Linux/macOS prepared) | 🚧 Planning, see [docs/PLAN.md](docs/PLAN.md) |
+| [nd104-sync](apps/nd104-sync/README.md) | Background tool with a tray icon: syncs time and weather to the display, settings/status window, firmware safety lock and firmware update notification | Windows (Linux/macOS prepared) | 🚧 Planning, see [docs/PLAN.md](docs/PLAN.md) |
 
 ## The keyboard
 
@@ -45,10 +45,10 @@ Details: [docs/protocol.md](docs/protocol.md).
 
 ## Firmware
 
-| Part | Support page says | Newest file on Chilkey's Drive | On my device |
+| Part | Support page says | Newest file on Chilkey's Drive | On my device (read 2026-10-31) |
 |---|---|---|---|
-| Keyboard | V3.0.4 | `VN001_314A108_1V0_RGB_TYPE1_20260710.bin` (2026-07-10) | _tbd (nd104-probe)_ |
-| Screen, 24 h / °C | V1.2.1 | MCU `…_V1.0.0_20260317.bin`, UI `…_V1.0.0_20251104.bin` | _tbd (nd104-probe)_ |
+| Keyboard | V3.0.4 | `VN001_314A108_1V0_RGB_TYPE1_20260710.bin` (2026-07-10) | **V3.0.14** `20260710_123331` ✅ latest |
+| Screen, 24 h / °C | V1.2.1 | MCU `…_V1.0.0_20260317.bin`, UI `…_V1.0.0_20251104.bin` | **V1.2.4** `Mar 17 2026 21:37:00` ✅ latest (24 h / °C) |
 | Screen, 12 h / °F | V1.2.1 | MCU `…_CF_…_V1.0.0_20260305.bin`, UI `…_V1.0.0_20251230.bin` | – |
 
 The support page text is outdated. The newest firmware is only visible through

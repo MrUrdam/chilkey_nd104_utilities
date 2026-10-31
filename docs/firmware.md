@@ -10,6 +10,8 @@
   and expects you to pick a local file.
 - The version text on the support pages (**keyboard V3.0.4, screen V1.2.1**) has
   not changed since February 2026. It does **not** match the newest files.
+  The newest firmware reports **keyboard V3.0.14** and **screen V1.2.4**
+  (read from a real device, see below).
 - The **real "latest" source** is the set of file names in Chilkey's public
   Google Drive folders. Each name carries a build date.
 - There are **two screen firmware variants**: 24 h + °C, and 12 h + °F.
@@ -55,19 +57,34 @@
 Both folders also contain `Wuque_toolbox.exe`, a flashing guide and a video.
 The 12 h/°F folder warns that you must use the matching MCU and UI files.
 
-## Open questions (answered by `nd104-probe version`)
+## Reported versions vs. files
 
-- How do the version strings the devices report relate to the file names?
-  - The support page says screen V1.2.1, while the files say V1.0.0 plus a date.
-  - The keyboard file name has no V3.x at all (`314A108`, `1V0`).
-- Can the reported version tell the 24 h/°C screen firmware from the 12 h/°F one
-  (`MCU` vs `MCU_CF`)?
+Read with `nd104-probe version` on 2026-10-31 (wired USB):
+
+| Device | Reported by the device | Matching Drive file | Up to date? |
+|---|---|---|---|
+| Keyboard | `V3.0.14 20260710_123331` | `VN001_314A108_1V0_RGB_TYPE1_20260710.bin` (same build date 2026-07-10) | ✅ yes |
+| Screen MCU | `V1.2.4 Mar 17 2026 21:37:00` | `ND104_SCREEN_MCU_320_172_V1.0.0_20260317.bin` (24 h/°C, same build date 2026-03-17) | ✅ yes |
+
+What this shows:
+- The **build date** in the version answer matches the date in the Drive file
+  name. The update check can compare these dates. The version numbers on the
+  support page and in the file names (`V1.0.0`, `1V0`) are not useful for that.
+- The screen MCU build date also reveals the **variant**. 2026-03-17 is the
+  24 h/°C MCU; the 12 h/°F MCU is from 2026-03-05.
+- The screen UI image (`…_UI_…`) is not part of the version answer, so its
+  version cannot be read this way.
+
+Still open:
+- Is there a variant marker other than the build date (e.g. in another report)?
 - Does the 12 h/°F variant expect temperatures in °F, or does it convert the °C
   values it receives?
 
 ## Consequences for nd104-sync
 
 - The firmware update check cannot rely on the version text on the support page.
+  It compares the **build date** reported by the device with the date in the
+  newest Drive file name, for the matching screen variant.
 - Planned approach (see [PLAN.md § 5.4](PLAN.md#54-firmware-update-check-r4)):
   1. A **GitHub Action in this repo** checks the Drive folders and support pages
      every day. When a file name changes, it opens an issue or PR that updates

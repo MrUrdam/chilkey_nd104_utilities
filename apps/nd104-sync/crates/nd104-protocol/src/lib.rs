@@ -15,11 +15,12 @@ mod version;
 mod weather;
 
 pub use checksum::{checksum8, crc16};
-pub use device::{Target, KEYBOARD, SCREEN, SCREEN_DFU, UsbId, VENDOR_USAGE, VENDOR_USAGE_PAGE};
+pub use device::{Target, UsbId, KEYBOARD, SCREEN, SCREEN_DFU, VENDOR_USAGE, VENDOR_USAGE_PAGE};
 pub use error::ProtocolError;
 pub use frame::{frame, FrameKind, FRAME_LEN};
 pub use time::{time_packet, ClockTime};
 pub use version::{
     keyboard_version_query, normalize_version, parse_version_response, screen_version_query,
+    FirmwareVersion,
 };
 pub use weather::{encode_temperature, weather_packet, Weather, WeatherIcon};

@@ -1,13 +1,11 @@
 # nd104-sync
 
-**English** · [Deutsch](README.de.md)
-
 Background tool that keeps the display of the **Chilkey ND104** keyboard up to
 date with the **current time and weather** – with a tray icon and a modern
 settings/status window.
 
-> 🚧 **Status: planning.** Nothing described here is implemented yet.
-> The detailed plan lives in [docs/PLAN.md](../../docs/PLAN.md).
+> 🚧 **Status: early development.** The app itself does not exist yet; the
+> protocol library and a diagnostic CLI do. See the [roadmap](#roadmap).
 
 > 🔌 **Wired USB only.** nd104-sync only supports the keyboard connected with a
 > **USB cable**. 2.4 GHz dongle and Bluetooth modes are **not supported** and
@@ -82,10 +80,10 @@ your weather provider, your location, your clock source.
 
 ### Supported firmware
 
-| Part | Verified version | Status |
+| Part | Version under test | Status |
 |---|---|---|
-| Keyboard | – | not yet verified (milestone M0) |
-| Screen (24 h / °C) | – | not yet verified (milestone M0) |
+| Keyboard | V3.0.14 (`20260710_123331`) | firmware read ✅, time/weather tests pending |
+| Screen (24 h / °C) | V1.2.4 (`Mar 17 2026 21:37:00`) | firmware read ✅, time/weather tests pending |
 | Screen (12 h / °F) | – | not planned for now |
 
 Firmware sources and the newest files: [docs/firmware.md](../../docs/firmware.md).
@@ -132,11 +130,11 @@ version. Updating stays your decision and is done with Chilkey's tools.
 
 | Provider | API key | Coverage | Status |
 |---|---|---|---|
-| [Open-Meteo](https://open-meteo.com/) (default) | no | worldwide | planned (M1) |
-| Manual / Test | – | – | planned (M1) |
-| [Bright Sky](https://brightsky.dev/) (DWD data) | no | Germany | planned (M4) |
-| [OpenWeatherMap](https://openweathermap.org/) | yes | worldwide | planned (M4) |
-| [WeatherAPI.com](https://www.weatherapi.com/) | yes | worldwide | planned (M4) |
+| [Open-Meteo](https://open-meteo.com/) (default) | no | worldwide | planned |
+| Manual / Test | – | – | planned |
+| [Bright Sky](https://brightsky.dev/) (DWD data) | no | Germany | planned |
+| [OpenWeatherMap](https://openweathermap.org/) | yes | worldwide | planned |
+| [WeatherAPI.com](https://www.weatherapi.com/) | yes | worldwide | planned |
 
 Providers are plug-ins implementing one interface, so more can be added
 (see [docs/PLAN.md § 5.6](../../docs/PLAN.md#56-weather-service)).
@@ -266,13 +264,35 @@ cargo test --workspace # run the unit tests (no hardware needed)
 apps/nd104-sync/
 ├── crates/
 │   ├── nd104-protocol/   # packet building, CRC – pure, unit tested  ✅ exists
-│   ├── nd104-probe/      # M0 diagnostic CLI                         ✅ exists
+│   ├── nd104-probe/      # diagnostic CLI                            ✅ exists
 │   └── nd104-core/       # device, firmware guard, clock, weather, scheduler, config
 ├── src-tauri/            # Tauri app: tray, commands, bundling
 ├── ui/                   # Svelte frontend
 ├── locales/              # en.json, de.json
 └── packaging/            # installer configuration
 ```
+
+## Roadmap
+
+```mermaid
+flowchart LR
+    M0["<b>M0</b><br/>Protocol &amp; firmware check<br/>▶ in progress"]:::current
+    M1["<b>M1</b><br/>Core, headless"]:::todo
+    M2["<b>M2</b><br/>Tray app"]:::todo
+    M3["<b>M3</b><br/>Settings UI"]:::todo
+    M4["<b>M4</b><br/>Providers &amp; secrets"]:::todo
+    M5["<b>M5</b><br/>Update check &amp; release"]:::todo
+    M6["<b>M6</b><br/>Extras"]:::todo
+    M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6
+
+    classDef done fill:#1a7f37,stroke:#2ea043,color:#ffffff
+    classDef current fill:#0969da,stroke:#54aeff,color:#ffffff,stroke-width:3px
+    classDef todo fill:#6e7781,stroke:#8c959f,color:#ffffff
+```
+
+🟦 current · 🟩 done · ⬜ planned. What each milestone contains:
+[docs/PLAN.md § 8](../../docs/PLAN.md#8-milestones). The current milestone's
+open items are in [docs/protocol.md § 6](../../docs/protocol.md#6-open-points-for-m0-hardware-verification).
 
 ## Contributing
 

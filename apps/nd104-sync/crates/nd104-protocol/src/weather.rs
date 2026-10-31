@@ -58,7 +58,11 @@ pub fn encode_temperature(celsius: f32) -> Result<u16, ProtocolError> {
         return Err(ProtocolError::TemperatureOutOfRange(celsius));
     }
     let magnitude = tenths.unsigned_abs() as u16;
-    Ok(if tenths < 0 { magnitude | 0x8000 } else { magnitude })
+    Ok(if tenths < 0 {
+        magnitude | 0x8000
+    } else {
+        magnitude
+    })
 }
 
 /// Builds the 32-byte weather packet (command `FE`, 8 payload bytes):

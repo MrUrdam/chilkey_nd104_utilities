@@ -16,13 +16,17 @@ use nd104_protocol::{
 
 use crate::hid::{hex_dump, Probe};
 
-/// Firmware versions treated as verified. Candidates from the support page
-/// until M0 has confirmed them; other versions run as "compatible (unverified)".
-const KNOWN_KEYBOARD_FIRMWARE: &[&str] = &["3.0.4"];
-const KNOWN_SCREEN_FIRMWARE: &[&str] = &["1.2.1"];
+/// Firmware versions treated as verified (normalized, e.g. "3.0.14"). Empty
+/// until the M0 checklist has passed; until then everything runs as "compatible (unverified)".
+const KNOWN_KEYBOARD_FIRMWARE: &[&str] = &[];
+const KNOWN_SCREEN_FIRMWARE: &[&str] = &[];
 
 #[derive(Parser)]
-#[command(name = "nd104-probe", version, about = "Chilkey ND104 protocol probe (M0, wired USB only)")]
+#[command(
+    name = "nd104-probe",
+    version,
+    about = "Chilkey ND104 protocol probe (M0, wired USB only)"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -119,8 +123,20 @@ fn main() -> Result<()> {
             let probe = Probe::new()?;
             let versions = probe.read_versions(Duration::from_millis(timeout_ms), true);
             println!();
-            println!("Keyboard firmware: {}", versions.keyboard.as_deref().unwrap_or("unknown"));
-            println!("Screen firmware:   {}", versions.screen.as_deref().unwrap_or("unknown"));
+            println!(
+                "Keyboard firmware: {}",
+                versions
+                    .keyboard
+                    .as_ref()
+                    .map_or("unknown", |v| v.raw.as_str())
+            );
+            println!(
+                "Screen firmware:   {}",
+                versions
+                    .screen
+                    .as_ref()
+                    .map_or("unknown", |v| v.raw.as_str())
+            );
             Ok(())
         }
         Command::Listen { device, seconds } => {
@@ -134,10 +150,16 @@ fn main() -> Result<()> {
                 None => jiff::Zoned::now().datetime(),
             };
             let packet = time_packet(&clock_time(now)?)?;
-            println!("Time: {now} (weekday {})", now.weekday());
+            println!("Time: {now} (weekday {:?})", now.weekday());
             send(&write, &[packet.to_vec()], Duration::ZERO)
         }
-        Command::Weather { icon, current, max, min, write } => {
+        Command::Weather {
+            icon,
+            current,
+            max,
+            min,
+            write,
+        } => {
             let packet = weather_packet(&Weather {
                 icon: WeatherIcon::new(icon)?,
                 current_c: current,
@@ -213,17 +235,31 @@ fn send(opts: &WriteOpts, packets: &[Vec<u8>], delay: Duration) -> Result<()> {
 /// protocol looks different → stop.
 fn firmware_gate(probe: &Probe, force: bool) -> Result<()> {
     let versions = probe.read_versions(Duration::from_millis(1000), false);
-    let keyboard = versions.keyboard.as_deref().and_then(normalize_version);
-    let screen = versions.screen.as_deref().and_then(normalize_version);
+    let keyboard = versions
+        .keyboard
+        .as_ref()
+        .and_then(|v| normalize_version(&v.version));
+    let screen = versions
+        .screen
+        .as_ref()
+        .and_then(|v| normalize_version(&v.version));
     println!(
         "Firmware: keyboard {}, screen {}",
-        versions.keyboard.as_deref().unwrap_or("unknown"),
-        versions.screen.as_deref().unwrap_or("unknown")
+        versions
+            .keyboard
+            .as_ref()
+            .map_or("unknown", |v| v.raw.as_str()),
+        versions
+            .screen
+            .as_ref()
+            .map_or("unknown", |v| v.raw.as_str())
     );
 
     let (Some(keyboard), Some(screen)) = (keyboard, screen) else {
         if force {
-            println!("⚠ Version query not answered as expected – writing anyway because of --force.");
+            println!(
+                "⚠ Version query not answered as expected – writing anyway because of --force."
+            );
             return Ok(());
         }
         bail!(

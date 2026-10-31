@@ -16,12 +16,20 @@ impl fmt::Display for ProtocolError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ProtocolError::PayloadTooLong(len) => {
-                write!(f, "payload of {len} bytes does not fit into a frame (max 19)")
+                write!(
+                    f,
+                    "payload of {len} bytes does not fit into a frame (max 19)"
+                )
             }
             ProtocolError::TemperatureOutOfRange(t) => {
-                write!(f, "temperature {t} °C cannot be encoded (allowed: -99.9 to 99.9)")
+                write!(
+                    f,
+                    "temperature {t} °C cannot be encoded (allowed: -99.9 to 99.9)"
+                )
             }
-            ProtocolError::InvalidIcon(i) => write!(f, "weather icon {i} is invalid (allowed: 0–9)"),
+            ProtocolError::InvalidIcon(i) => {
+                write!(f, "weather icon {i} is invalid (allowed: 0–9)")
+            }
             ProtocolError::InvalidTime(field) => write!(f, "invalid time field: {field}"),
         }
     }
