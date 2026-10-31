@@ -11,7 +11,8 @@ use std::time::Duration;
 use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use nd104_protocol::{
-    normalize_version, time_packet, weather_packet, ClockTime, Target, Weather, WeatherIcon,
+    normalize_version, theme_packet, time_packet, weather_packet, ClockTime, Rgb, Target, Theme,
+    Weather, WeatherIcon,
 };
 
 use crate::hid::{hex_dump, Probe};
@@ -79,6 +80,20 @@ enum Command {
         /// Seconds per icon
         #[arg(long, default_value_t = 4)]
         delay_s: u64,
+        #[command(flatten)]
+        write: WriteOpts,
+    },
+    /// Set display theme and colours (web driver defaults: 1, AA7ECC, 000000)
+    Theme {
+        /// 1 = Neon Grid, 2 = Mechanical Age, 3 = Emotional Moment
+        #[arg(long, default_value_t = 1)]
+        theme: u8,
+        /// Background colour as RRGGBB
+        #[arg(long, default_value = "AA7ECC")]
+        background: String,
+        /// Text colour as RRGGBB
+        #[arg(long, default_value = "000000")]
+        text: String,
         #[command(flatten)]
         write: WriteOpts,
     },
@@ -167,6 +182,22 @@ fn main() -> Result<()> {
                 min_c: min,
             })?;
             println!("Weather: icon {icon}, current {current} °C, max {max} °C, min {min} °C");
+            send(&write, &[packet.to_vec()], Duration::ZERO)
+        }
+        Command::Theme {
+            theme,
+            background,
+            text,
+            write,
+        } => {
+            let bg = Rgb::from_hex(&background).context("--background must be RRGGBB")?;
+            let fg = Rgb::from_hex(&text).context("--text must be RRGGBB")?;
+            let packet = theme_packet(Theme::new(theme)?, bg, fg)?;
+            println!(
+                "Theme {theme}, background #{background} (RGB565 {:04X}), text #{text} (RGB565 {:04X})",
+                bg.to_rgb565(),
+                fg.to_rgb565()
+            );
             send(&write, &[packet.to_vec()], Duration::ZERO)
         }
         Command::Icons { delay_s, write } => {

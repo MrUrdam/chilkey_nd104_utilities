@@ -11,6 +11,18 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+- [docs/keyboard-api.md](../../docs/keyboard-api.md): what the ND104 offers over
+  USB and what nd104-sync could do in future (M6 survey).
+- `nd104-probe theme` (diagnosis only): sends the display theme command.
+
+### Findings
+- **Battery level is not available over the USB interfaces** (no command in
+  the official web driver; the keyboard charges while plugged in). Possible
+  only via Bluetooth, which is outside the wired-only scope.
+- The display **theme command is rejected** by screen firmware V1.2.4
+  (status `FC`); themes are therefore not offered in the app.
+
 ## [0.5.0] – 2026-10-31 · M5 · Beta
 
 > **Beta – milestone M5: firmware update check.**

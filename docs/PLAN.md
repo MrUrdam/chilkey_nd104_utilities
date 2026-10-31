@@ -504,7 +504,8 @@ Apply/Cancel with validation; *Test* buttons never save.
 | M3 | Settings UI | Dashboard, Weather, Clock, Device & Firmware, General; dark/light/auto; design system |
 | M4 | Providers & secrets | Bright Sky, OpenWeatherMap, WeatherAPI, fallback, NTP, keyring |
 | M5 | Firmware update check & installer | Manifest, Drive watcher action, firmware update notification, Windows installer in the release workflow |
-| M6 | Extras | Theme colours, image/GIF upload, more languages, Linux/macOS implementation (if wanted) |
+| M6 | Keyboard API survey | Capability list of everything the USB interfaces offer ([keyboard-api.md](keyboard-api.md)): battery not available over USB; display theme command tested and rejected by screen V1.2.4; menu navigation and image upload documented. No app changes. |
+| later | Candidates | Image/GIF upload (own milestone with hardware tests), "next display page" buttons, read-only keymap view, battery via Bluetooth (needs lifting R1), more UI languages, Linux/macOS (see [keyboard-api.md](keyboard-api.md)) |
 
 ---
 

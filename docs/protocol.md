@@ -213,7 +213,7 @@ A5 <cmd> 00 02 <status> 00 <checksum>
 | Field | Value |
 |---|---|
 | `cmd` | echo of the command (`38` time, `FE` weather) |
-| `status` | `FE` = OK (the only value seen so far) |
+| `status` | `FE` = OK; `FC` = rejected (seen for the theme command on screen V1.2.4, display unchanged) |
 | checksum | 8-bit checksum (§ 2.2) over `cmd 00 02 status 00` |
 
 How it arrives depends on the route:
@@ -328,7 +328,11 @@ Local time of the PC is sent, so there is no time-zone information in the packet
 
 | Command | Payload | Meaning |
 |---|---|---|
-| `0x39` | `00 02` (len 2) | unknown, sent from the screen page |
+| `0x39` | `00 01` / `00 02` / `00 03` / `00 04` | display menu navigation: up / down / switch / back (web driver buttons) – not tested |
+| `0xFD` | `00 bgH bgL fgH fgL id` | theme + colours (RGB565 BE, themes 1–3). ❌ **Rejected by screen V1.2.4** (answer status `FC`, display unchanged; tested 2026-10-31). Kept in `nd104-protocol`/`nd104-probe theme` for diagnosis only |
+| `0x34` | `00 01` | sent by the web driver before an image upload ("test/upload mode"), followed by `0xFB` |
+| `0xFB` | – | screen info; answer `1C … FB` with an address and a number |
+| `55 42 01 …` (raw) | width/height, frame count, frame delays | image/GIF upload header, followed by the `BA 06 AA B0` chunks |
 | `0x58` (raw, not wrapped) | `[0x58, n/2, data…]` | debug/raw send; answer `58 xx 00` = done |
 | `BA 06 AA B0 …` | | image/GIF upload (see gist); answers `BA ?? A5 B0/FC …` control chunking (67 or 137 packets per block) |
 
@@ -369,7 +373,10 @@ These are listed only for completeness. nd104-sync never configures the keyboard
       listening (11:39–11:44). Logged and ignored by nd104-sync.
 - [ ] *Not tested on purpose:* does the firmware check the CRC? Sending broken
       packets is an avoidable risk, and nd104-sync always sends a valid CRC.
-- [ ] *Not tested on purpose:* command `0x39 00 02` (unknown). nd104-sync
+- [x] Command `0x39` identified from the web driver: display menu navigation
+      (§ 4.4). Not sent by nd104-sync.
+- [x] Theme command `0xFD` rejected by screen V1.2.4 (status `FC`). *(2026-10-31)*
+- [ ] *Not tested on purpose:* command `0x39` (menu navigation). nd104-sync
       sends no unknown commands.
 
 **Result:** M0 passed for keyboard **V3.0.14** and screen **V1.2.4**

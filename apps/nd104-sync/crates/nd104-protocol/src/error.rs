@@ -10,6 +10,8 @@ pub enum ProtocolError {
     InvalidIcon(u8),
     /// Date/time field outside its valid range.
     InvalidTime(&'static str),
+    /// Theme id outside 1–3.
+    InvalidTheme(u8),
 }
 
 impl fmt::Display for ProtocolError {
@@ -31,6 +33,7 @@ impl fmt::Display for ProtocolError {
                 write!(f, "weather icon {i} is invalid (allowed: 0–9)")
             }
             ProtocolError::InvalidTime(field) => write!(f, "invalid time field: {field}"),
+            ProtocolError::InvalidTheme(id) => write!(f, "theme {id} is invalid (allowed: 1–3)"),
         }
     }
 }

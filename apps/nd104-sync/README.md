@@ -518,7 +518,7 @@ flowchart LR
     M3["<b>M3</b><br/>Settings UI<br/>✔ 0.3.0 beta"]:::done
     M4["<b>M4</b><br/>Providers &amp; secrets<br/>✔ 0.4.0 beta"]:::done
     M5["<b>M5</b><br/>Firmware check &amp; release<br/>✔ 0.5.0 beta"]:::done
-    M6["<b>M6</b><br/>Extras<br/>▶ next"]:::current
+    M6["<b>M6</b><br/>Keyboard API survey<br/>✔ done"]:::done
     M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6
 
     classDef done fill:#1a7f37,stroke:#2ea043,color:#ffffff
