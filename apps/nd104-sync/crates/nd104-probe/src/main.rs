@@ -1,0 +1,238 @@
+//! nd104-probe – milestone M0 diagnostic tool.
+//!
+//! Verifies the Chilkey ND104 USB HID protocol on real hardware before the
+//! actual nd104-sync app is built. Wired USB connection only.
+
+mod hid;
+
+use std::thread;
+use std::time::Duration;
+
+use anyhow::{bail, Context, Result};
+use clap::{Args, Parser, Subcommand, ValueEnum};
+use nd104_protocol::{
+    normalize_version, time_packet, weather_packet, ClockTime, Target, Weather, WeatherIcon,
+};
+
+use crate::hid::{hex_dump, Probe};
+
+/// Firmware versions the probe lets you write to without `--force`.
+/// Candidates only – they become the nd104-sync allowlist once verified.
+const KNOWN_KEYBOARD_FIRMWARE: &[&str] = &["3.0.4"];
+const KNOWN_SCREEN_FIRMWARE: &[&str] = &["1.2.1"];
+
+#[derive(Parser)]
+#[command(name = "nd104-probe", version, about = "Chilkey ND104 protocol probe (M0, wired USB only)")]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// List all ND104 HID interfaces (keyboard, screen, screen DFU)
+    List,
+    /// Read the firmware versions of keyboard and screen
+    Version {
+        /// How long to wait for answers per device
+        #[arg(long, default_value_t = 1000)]
+        timeout_ms: u64,
+    },
+    /// Print every input report a device sends
+    Listen {
+        #[arg(long, value_enum, default_value_t = TargetArg::Keyboard)]
+        device: TargetArg,
+        #[arg(long, default_value_t = 10)]
+        seconds: u64,
+    },
+    /// Send the current local time (or --at) to the display
+    Time {
+        /// Local date/time instead of now, e.g. 2026-10-31T14:05:00
+        #[arg(long)]
+        at: Option<String>,
+        #[command(flatten)]
+        write: WriteOpts,
+    },
+    /// Send weather values to the display
+    Weather {
+        /// Icon index 0–9
+        #[arg(long, default_value_t = 0)]
+        icon: u8,
+        /// Current temperature in °C
+        #[arg(long, allow_negative_numbers = true, default_value_t = 12.3)]
+        current: f32,
+        /// Max temperature in °C
+        #[arg(long, allow_negative_numbers = true, default_value_t = 15.0)]
+        max: f32,
+        /// Min temperature in °C
+        #[arg(long, allow_negative_numbers = true, default_value_t = -3.5)]
+        min: f32,
+        #[command(flatten)]
+        write: WriteOpts,
+    },
+    /// Cycle through all icons 0–9 (current temperature = icon index)
+    Icons {
+        /// Seconds per icon
+        #[arg(long, default_value_t = 4)]
+        delay_s: u64,
+        #[command(flatten)]
+        write: WriteOpts,
+    },
+}
+
+#[derive(Args)]
+struct WriteOpts {
+    /// Device that receives the packet (web driver: keyboard, community notes: screen)
+    #[arg(long, value_enum, default_value_t = TargetArg::Keyboard)]
+    target: TargetArg,
+    /// Only print the packet, do not open any device
+    #[arg(long)]
+    dry_run: bool,
+    /// Write even if the firmware versions are unknown (verification only!)
+    #[arg(long)]
+    force: bool,
+    /// Override the HID output report length (without report ID)
+    #[arg(long)]
+    report_len: Option<usize>,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum TargetArg {
+    Keyboard,
+    Screen,
+}
+
+impl From<TargetArg> for Target {
+    fn from(t: TargetArg) -> Self {
+        match t {
+            TargetArg::Keyboard => Target::Keyboard,
+            TargetArg::Screen => Target::Screen,
+        }
+    }
+}
+
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+    match cli.command {
+        Command::List => Probe::new()?.list(),
+        Command::Version { timeout_ms } => {
+            let probe = Probe::new()?;
+            let versions = probe.read_versions(Duration::from_millis(timeout_ms), true);
+            println!();
+            println!("Keyboard firmware: {}", versions.keyboard.as_deref().unwrap_or("unknown"));
+            println!("Screen firmware:   {}", versions.screen.as_deref().unwrap_or("unknown"));
+            Ok(())
+        }
+        Command::Listen { device, seconds } => {
+            Probe::new()?.listen(device.into(), Duration::from_secs(seconds))
+        }
+        Command::Time { at, write } => {
+            let now = match at {
+                Some(text) => text
+                    .parse::<jiff::civil::DateTime>()
+                    .with_context(|| format!("cannot parse --at {text:?}"))?,
+                None => jiff::Zoned::now().datetime(),
+            };
+            let packet = time_packet(&clock_time(now)?)?;
+            println!("Time: {now} (weekday {})", now.weekday());
+            send(&write, &[packet.to_vec()], Duration::ZERO)
+        }
+        Command::Weather { icon, current, max, min, write } => {
+            let packet = weather_packet(&Weather {
+                icon: WeatherIcon::new(icon)?,
+                current_c: current,
+                max_c: max,
+                min_c: min,
+            })?;
+            println!("Weather: icon {icon}, current {current} °C, max {max} °C, min {min} °C");
+            send(&write, &[packet.to_vec()], Duration::ZERO)
+        }
+        Command::Icons { delay_s, write } => {
+            let packets = (0..=WeatherIcon::MAX_INDEX)
+                .map(|i| {
+                    weather_packet(&Weather {
+                        icon: WeatherIcon::new(i)?,
+                        current_c: i as f32,
+                        max_c: 20.0,
+                        min_c: -5.0,
+                    })
+                    .map(|p| p.to_vec())
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            println!("Cycling icons 0–9, {delay_s} s each (current temperature = icon index)");
+            send(&write, &packets, Duration::from_secs(delay_s))
+        }
+    }
+}
+
+fn clock_time(dt: jiff::civil::DateTime) -> Result<ClockTime> {
+    Ok(ClockTime {
+        year: u16::try_from(dt.year()).context("year out of range")?,
+        month: dt.month() as u8,
+        day: dt.day() as u8,
+        hour: dt.hour() as u8,
+        minute: dt.minute() as u8,
+        second: dt.second() as u8,
+        weekday: dt.weekday().to_sunday_zero_offset() as u8,
+    })
+}
+
+/// Sends packets after the firmware check. Each packet is followed by
+/// `delay` and a short read of any answers.
+fn send(opts: &WriteOpts, packets: &[Vec<u8>], delay: Duration) -> Result<()> {
+    let target: Target = opts.target.into();
+
+    if opts.dry_run {
+        for (i, p) in packets.iter().enumerate() {
+            println!("\nPacket {i} → {} (dry run)", target.name());
+            print!("{}", hex_dump(p));
+        }
+        return Ok(());
+    }
+
+    let probe = Probe::new()?;
+    firmware_gate(&probe, opts.force)?;
+
+    let report_len = opts.report_len.unwrap_or(target.report_len());
+    let device = probe.open(target)?;
+    for (i, p) in packets.iter().enumerate() {
+        println!("\nPacket {i} → {}", target.name());
+        print!("{}", hex_dump(p));
+        device.send(p, report_len)?;
+        device.drain_answers(Duration::from_millis(300));
+        if i + 1 < packets.len() {
+            thread::sleep(delay);
+        }
+    }
+    println!("\nDone. Check the display.");
+    Ok(())
+}
+
+/// Protocol safety: only write when both firmware versions are known.
+fn firmware_gate(probe: &Probe, force: bool) -> Result<()> {
+    let versions = probe.read_versions(Duration::from_millis(1000), false);
+    let keyboard = versions.keyboard.as_deref().and_then(normalize_version);
+    let screen = versions.screen.as_deref().and_then(normalize_version);
+    println!(
+        "Firmware: keyboard {}, screen {}",
+        versions.keyboard.as_deref().unwrap_or("unknown"),
+        versions.screen.as_deref().unwrap_or("unknown")
+    );
+
+    let known = |v: &Option<String>, list: &[&str]| v.as_deref().is_some_and(|v| list.contains(&v));
+    if known(&keyboard, KNOWN_KEYBOARD_FIRMWARE) && known(&screen, KNOWN_SCREEN_FIRMWARE) {
+        return Ok(());
+    }
+    if force {
+        println!("⚠ Firmware not in the known list – writing anyway because of --force.");
+        return Ok(());
+    }
+    bail!(
+        "firmware not in the known list (keyboard {:?}, screen {:?}); nothing was sent.\n\
+         Known: keyboard {:?}, screen {:?}. Use --force only to verify a new firmware.",
+        keyboard,
+        screen,
+        KNOWN_KEYBOARD_FIRMWARE,
+        KNOWN_SCREEN_FIRMWARE
+    )
+}

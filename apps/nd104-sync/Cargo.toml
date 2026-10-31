@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/nd104-protocol",
+    "crates/nd104-probe",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/MrUrdam/chilkey_nd104_utilities"
+rust-version = "1.80"
+
+[workspace.dependencies]
+nd104-protocol = { path = "crates/nd104-protocol" }
+anyhow = "1"
+clap = { version = "4.5", features = ["derive"] }
+hidapi = { version = "2.6", default-features = false, features = ["windows-native"] }
+jiff = "0.2"

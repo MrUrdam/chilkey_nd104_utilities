@@ -1,0 +1,15 @@
+[package]
+name = "nd104-probe"
+description = "M0 diagnostic CLI: verify the Chilkey ND104 USB protocol on real hardware (wired only)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+nd104-protocol.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+hidapi.workspace = true
+jiff.workspace = true

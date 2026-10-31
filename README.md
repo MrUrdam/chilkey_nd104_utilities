@@ -45,14 +45,20 @@ Details: [docs/protocol.md](docs/protocol.md).
 
 ## Firmware
 
-| Part | Latest version (Chilkey) | On my device |
-|---|---|---|
-| Keyboard | V3.0.4 | _tbd_ |
-| Display | V1.2.1 | _tbd_ |
+| Part | Support page says | Newest file on Chilkey's Drive | On my device |
+|---|---|---|---|
+| Keyboard | V3.0.4 | `VN001_314A108_1V0_RGB_TYPE1_20260710.bin` (2026-07-10) | _tbd (nd104-probe)_ |
+| Screen, 24 h / °C | V1.2.1 | MCU `…_V1.0.0_20260317.bin`, UI `…_V1.0.0_20251104.bin` | _tbd (nd104-probe)_ |
+| Screen, 12 h / °F | V1.2.1 | MCU `…_CF_…_V1.0.0_20260305.bin`, UI `…_V1.0.0_20251230.bin` | – |
 
-The installed versions are shown in the info dialog of the
-[web driver](https://nd104.chilkey.com/). The screen version is often shown
-incorrectly there; see
+The support page text is outdated. The newest firmware is only visible through
+the file names in Chilkey's Google Drive folders. Details and links:
+[docs/firmware.md](docs/firmware.md).
+
+The installed versions are read with `nd104-probe version`
+([apps/nd104-sync/crates/nd104-probe](apps/nd104-sync/crates/nd104-probe/README.md)).
+They are also shown in the [web driver](https://nd104.chilkey.com/) info dialog,
+but the screen version is often wrong there; see
 [docs/protocol.md § 3.3](docs/protocol.md#33-why-the-screen-version-looks-broken-on-the-web-driver).
 
 ## Repository layout
@@ -71,6 +77,8 @@ incorrectly there; see
 |---|---|
 | [docs/PLAN.md](docs/PLAN.md) | Detailed plan and architecture of nd104-sync |
 | [docs/protocol.md](docs/protocol.md) | USB HID protocol: devices, checksums, version queries, time and weather packets |
+| [docs/firmware.md](docs/firmware.md) | Where the latest firmware really comes from, screen variants (°C / °F) |
+| [nd104-probe](apps/nd104-sync/crates/nd104-probe/README.md) | M0 diagnostic CLI: read firmware versions, test time/weather packets |
 | [apps/nd104-sync/README.md](apps/nd104-sync/README.md) | nd104-sync usage, build instructions, dependencies, limitations |
 
 ## Sources & credits

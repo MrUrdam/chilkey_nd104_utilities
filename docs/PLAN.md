@@ -168,9 +168,19 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
   release number (`bcdDevice`).
 
 ### 5.4 Firmware update check (R4)
-- Runs once after boot (with a short delay) and then e.g. every 24 h.
-- Source: a small JSON manifest in this repository (`firmware/versions.json`),
-  fetched from GitHub raw:
+- Runs once after boot (with a short delay), then e.g. every 24 h, and
+  **manually** via the "Check for updates" button (Device & Firmware page) or
+  the tray entry *Check for firmware updates*. A manual check always shows a
+  result, including "up to date" and "check failed".
+- Chilkey has no machine-readable source. The real "latest" is only visible in
+  the file names in their Google Drive folders, and the support page text is
+  outdated (see [firmware.md](firmware.md)). Therefore:
+  - a **GitHub Action** in this repo watches the Drive folders and support pages
+    every day and opens an issue or PR when something changes,
+  - nd104-sync reads only the reviewed manifest.
+- Source for the tool: a small JSON manifest in this repository
+  (`firmware/versions.json`), fetched from GitHub raw (the format below is a
+  draft; it will also carry the screen variant °C/°F and the Drive file names):
   ```json
   {
     "nd104": {
@@ -180,8 +190,8 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
     "source": "https://chilkey.com/blogs/updates/nd104-faq-resources"
   }
   ```
-  The manifest is maintained manually in the repo; optionally the tool can also
-  parse the Chilkey support page (best effort, disabled if it breaks).
+  The manifest is maintained in the repo and updated through the watcher
+  action's issues/PRs. The tool itself never scrapes Chilkey or Google Drive.
 - If an update is available → notification after boot + hint on the status page,
   including the warning *"not yet verified with nd104-sync"* when applicable,
   and a link to the official Chilkey instructions.
@@ -315,19 +325,23 @@ trait Platform {
   **locked / firmware mismatch** (amber) · **error** (red). Light/dark variants
   for the Windows taskbar.
 - Tooltip: `ND104 · 12.3 °C ☁ · synced 14:05`
-- Menu: status line · Sync now · Pause/Resume · Settings… · Language ▸ (Auto / Deutsch / English) · Open log folder · Quit
+- Menu: status line · Sync now · Pause/Resume · **Check for firmware updates** · Settings… · Language ▸ (Auto / Deutsch / English) · Open log folder · Quit
 
 ### 6.2 Settings / status window
 Tabs (left sidebar):
 1. **Dashboard** – live preview of the keyboard display (320×172 mock-up showing
-   what was sent), connection, firmware state, last/next sync, recent errors,
-   update hint.
+   what was sent), connection, **installed firmware versions (keyboard + screen,
+   incl. screen variant °C/°F) with a verified/locked badge**, last/next sync,
+   recent errors, update hint.
 2. **Weather** – provider, API key + *Test*, location search with result list,
    interval, fallback provider, °C/°F (UI).
 3. **Clock** – source, time-zone picker, DST mode, NTP server + *Test*, offset,
    preview "time sent to keyboard", *Sync now*.
-4. **Device & Firmware** – detected device, firmware versions, verified versions,
-   update status, "check now", wired-only notice.
+4. **Device & Firmware** – detected devices (USB IDs), **installed firmware
+   versions**, verified versions of this nd104-sync release, latest known
+   versions from the manifest (with Drive file names and dates), update status,
+   "last checked" time, a **"Check for updates" button** (manual check, same as
+   the tray entry), link to Chilkey's update instructions, wired-only notice.
 5. **General** – autostart, language, theme (Auto/Dark/Light), log level, about.
 
 Apply/Cancel with validation; *Test* buttons never save.
@@ -372,7 +386,7 @@ Apply/Cancel with validation; *Test* buttons never save.
 | M2 | Tray app | Tauri shell, tray with states, autostart, single instance, notifications, i18n (DE/EN) |
 | M3 | Settings UI | Dashboard, Weather, Clock, Device & Firmware, General; dark/light/auto; design system |
 | M4 | Providers & secrets | Bright Sky, OpenWeatherMap, WeatherAPI, fallback, NTP, keyring |
-| M5 | Firmware update check & release | Manifest, update notification, GitHub Actions build, Windows installer |
+| M5 | Firmware update check & release | Manifest, Drive watcher action, update notification, GitHub Actions build, Windows installer |
 | M6 | Extras | Theme colours, image/GIF upload, more languages, Linux/macOS implementation (if wanted) |
 
 ---

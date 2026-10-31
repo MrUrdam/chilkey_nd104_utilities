@@ -1,0 +1,10 @@
+[package]
+name = "nd104-protocol"
+description = "Packet building for the Chilkey ND104 keyboard display (pure, no I/O)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]

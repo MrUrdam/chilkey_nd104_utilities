@@ -39,7 +39,10 @@ einmal einrichtest: dein Wetterdienst, dein Standort, deine Zeitquelle.
 - **Status-Dashboard** mit Live-Vorschau dessen, was das Display zeigt
 - **Schützt deine Tastatur:** spricht nur mit geprüften Firmware-Versionen
   (siehe [Firmware-Schutz](#firmware-schutz))
-- **Prüft auf Firmware-Updates** nach dem Start und benachrichtigt dich
+- **Zeigt die installierte Firmware** von Tastatur und Display (Dashboard und
+  Seite „Gerät & Firmware“)
+- **Prüft auf Firmware-Updates** nach dem Start und benachrichtigt dich;
+  Button **„Nach Updates suchen“** in der Oberfläche und im Tray-Menü
 - Oberfläche auf **Deutsch und Englisch** (folgt der Systemsprache, umschaltbar)
 - **Dark / Light Mode** folgt Windows, in den Einstellungen änderbar
 
@@ -54,8 +57,10 @@ einmal einrichtest: dein Wetterdienst, dein Standort, deine Zeitquelle.
 - ❌ **Keine Tastatur-Konfiguration** – Tastenbelegung, RGB, Makros, Drehregler
   usw. bleiben beim offiziellen [Chilkey-Treiber](https://chilkey.com/pages/console).
 - ❌ **Kein Bild-/GIF-Upload** in der ersten Version (später geplant).
-- ❌ **Kein °F auf dem Display** – das Display bekommt °C; °F gibt es nur in der Oberfläche.
-- ❌ **Keine 12/24-h-Umschaltung** – das ist eine Einstellung der Tastatur-Firmware.
+- ❌ **Keine °C/°F- oder 12/24-h-Umschaltung am Display.** Chilkey liefert zwei
+  Display-Firmware-Varianten (24 h + °C, 12 h + °F), und das Tool ändert nicht,
+  welche du installiert hast (siehe [docs/firmware.md](../../docs/firmware.md)).
+  Die Einheit in der Oberfläche ist davon unabhängig.
 - ❌ **Keine Telemetrie.** Es kontaktiert nur die von dir eingestellten Dienste
   (siehe [Datenschutz](#datenschutz--netzwerkzugriffe)).
 - ❌ **Nicht parallel** zum offiziellen Chilkey-Wetter-Plugin gedacht – beide
@@ -76,8 +81,11 @@ einmal einrichtest: dein Wetterdienst, dein Standort, deine Zeitquelle.
 
 | Teil | Geprüfte Version | Status |
 |---|---|---|
-| Tastatur | V3.0.4 | wird geprüft (Meilenstein M0) |
-| Display | V1.2.1 | wird geprüft (Meilenstein M0) |
+| Tastatur | – | noch nicht geprüft (Meilenstein M0) |
+| Display (24 h / °C) | – | noch nicht geprüft (Meilenstein M0) |
+| Display (12 h / °F) | – | vorerst nicht geplant |
+
+Firmware-Quellen und neueste Dateien: [docs/firmware.md](../../docs/firmware.md).
 
 ## Firmware-Schutz
 
@@ -154,6 +162,7 @@ Sommer-/Winterzeit: **Automatisch** (aus den Zeitzonen-Regeln) · Sommerzeit erz
 | Statuszeile | Verbindung, Wetter und letzte Synchronisierung auf einen Blick |
 | Jetzt synchronisieren | Zeit und Wetter sofort senden |
 | Pause / Fortsetzen | Alle Updates anhalten / fortsetzen |
+| Nach Firmware-Updates suchen | Manuelle Prüfung, zeigt das Ergebnis an |
 | Einstellungen… | Einstellungs-/Statusfenster öffnen |
 | Sprache ▸ | Automatisch / Deutsch / English |
 | Log-Ordner öffnen | Zur Fehlersuche |

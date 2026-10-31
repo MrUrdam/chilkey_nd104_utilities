@@ -39,7 +39,10 @@ your weather provider, your location, your clock source.
 - Shows a **status dashboard** with a live preview of what the display shows
 - **Protects your keyboard:** only talks to verified firmware versions
   (see [Firmware safety](#firmware-safety))
-- **Checks for firmware updates** after boot and notifies you
+- **Shows the installed firmware** of keyboard and screen (dashboard and
+  Device & Firmware page)
+- **Checks for firmware updates** after boot and notifies you; manual
+  **"Check for updates"** button in the UI and in the tray menu
 - UI in **German and English** (follows the system language, switchable)
 - **Dark / light mode** following Windows, overridable in settings
 
@@ -54,8 +57,10 @@ your weather provider, your location, your clock source.
 - ❌ **No keyboard configuration** – keymap, RGB lighting, macros, knob etc.
   stay with the official [Chilkey driver](https://chilkey.com/pages/console).
 - ❌ **No image/GIF upload** in the first version (planned later).
-- ❌ **No °F on the display** – the display receives °C; °F is a UI-only option.
-- ❌ **No 12/24 h switching** – that is a keyboard firmware setting.
+- ❌ **No °C/°F or 12/24 h switching on the display.** Chilkey ships two screen
+  firmware variants (24 h + °C, 12 h + °F) and the tool doesn't change which
+  one you have (see [docs/firmware.md](../../docs/firmware.md)). The UI unit is
+  independent of it.
 - ❌ **No telemetry.** It only contacts the services you configured
   (see [Privacy](#privacy--network-access)).
 - ❌ **Not meant to run alongside** the official Chilkey weather plugin – both
@@ -76,8 +81,11 @@ your weather provider, your location, your clock source.
 
 | Part | Verified version | Status |
 |---|---|---|
-| Keyboard | V3.0.4 | to be verified (milestone M0) |
-| Screen | V1.2.1 | to be verified (milestone M0) |
+| Keyboard | – | not yet verified (milestone M0) |
+| Screen (24 h / °C) | – | not yet verified (milestone M0) |
+| Screen (12 h / °F) | – | not planned for now |
+
+Firmware sources and the newest files: [docs/firmware.md](../../docs/firmware.md).
 
 ## Firmware safety
 
@@ -97,8 +105,11 @@ verifying them and releasing an updated nd104-sync.
 
 ## Firmware update check
 
-Shortly after boot (and then once a day) nd104-sync checks a version manifest in
-this repository ([`firmware/versions.json`](../../firmware/)). If Chilkey has
+Chilkey has no machine-readable version list, so the newest firmware is only
+visible through file names in their Google Drive folders. A GitHub Action in this
+repository watches those folders, and the result is kept in a reviewed manifest
+([`firmware/versions.json`](../../firmware/)). Shortly after boot (and then once
+a day) nd104-sync checks that manifest. If Chilkey has
 released a newer firmware, you get a notification with a link to the official
 update instructions – and a hint whether nd104-sync already supports that
 version. Updating stays your decision and is done with Chilkey's tools.
@@ -151,6 +162,7 @@ Summer/winter time: **Auto** (from time-zone rules) · force summer · force win
 | Status line | Connection, weather and last sync at a glance |
 | Sync now | Send time and weather immediately |
 | Pause / Resume | Stop / resume all updates |
+| Check for firmware updates | Manual firmware update check, shows the result |
 | Settings… | Open the settings/status window |
 | Language ▸ | Auto / Deutsch / English |
 | Open log folder | For troubleshooting |
@@ -239,7 +251,8 @@ cargo test --workspace # run the unit tests (no hardware needed)
 ```
 apps/nd104-sync/
 ├── crates/
-│   ├── nd104-protocol/   # packet building, CRC – pure, unit tested
+│   ├── nd104-protocol/   # packet building, CRC – pure, unit tested  ✅ exists
+│   ├── nd104-probe/      # M0 diagnostic CLI                         ✅ exists
 │   └── nd104-core/       # device, firmware guard, clock, weather, scheduler, config
 ├── src-tauri/            # Tauri app: tray, commands, bundling
 ├── ui/                   # Svelte frontend
