@@ -16,10 +16,10 @@ use nd104_protocol::{
 
 use crate::hid::{hex_dump, Probe};
 
-/// Firmware versions treated as verified (normalized, e.g. "3.0.14"). Empty
-/// until the M0 checklist has passed; until then everything runs as "compatible (unverified)".
-const KNOWN_KEYBOARD_FIRMWARE: &[&str] = &[];
-const KNOWN_SCREEN_FIRMWARE: &[&str] = &[];
+/// Firmware versions verified on hardware with the M0 checklist (normalized).
+/// Other versions run as "compatible (unverified)".
+const KNOWN_KEYBOARD_FIRMWARE: &[&str] = &["3.0.14"];
+const KNOWN_SCREEN_FIRMWARE: &[&str] = &["1.2.4"];
 
 #[derive(Parser)]
 #[command(

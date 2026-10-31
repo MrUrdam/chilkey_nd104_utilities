@@ -5,20 +5,31 @@ const WEATHER_COMMAND: u8 = 0xFE;
 
 /// Weather icon index understood by the display firmware.
 ///
-/// Meanings of 0, 2, 4–8 come from the web driver's mapping; 1, 3 and 9 are
-/// accepted by the firmware according to the community notes but their look
-/// is still unknown (to be documented in M0).
+/// All ten icons verified on hardware (screen V1.2.4, 24 h / °C).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WeatherIcon(u8);
 
 impl WeatherIcon {
+    /// Sun.
     pub const SUNNY: Self = Self(0);
+    /// Clouds (difference to [`Self::CLOUD`] still to be described).
+    pub const CLOUDS: Self = Self(1);
+    /// Cloud + sun.
     pub const PARTLY_CLOUDY: Self = Self(2);
+    /// Cloud.
+    pub const CLOUD: Self = Self(3);
+    /// Cloud + rain.
     pub const RAIN: Self = Self(4);
+    /// Cloud + snow.
     pub const SNOW: Self = Self(5);
+    /// Purple moon + stars.
     pub const CLEAR_NIGHT: Self = Self(6);
+    /// Cloud + purple moon + stars.
     pub const PARTLY_CLOUDY_NIGHT: Self = Self(7);
-    pub const CLOUDY: Self = Self(8);
+    /// Cloud with bars underneath (fog / mist / overcast).
+    pub const FOG: Self = Self(8);
+    /// Cloud + lightning.
+    pub const THUNDERSTORM: Self = Self(9);
 
     pub const MAX_INDEX: u8 = 9;
 

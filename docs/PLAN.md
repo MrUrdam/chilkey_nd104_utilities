@@ -134,9 +134,9 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
   keyboard `6D67:016C` and screen `5542:0001`.
 - Wired only: if one of them is missing, status = *"Not connected (USB cable
   required)"*.
-- The target for time/weather packets (keyboard, which is what the web driver
-  uses, or screen, which is what the gist uses) is decided in M0 and kept
-  configurable internally.
+- Time/weather packets go through the **keyboard** device, as the web driver
+  does. M0 showed that both routes work; the screen route stays available
+  internally as a fallback.
 - Polls for plug/unplug (e.g. every 3 s); on (re)connect → firmware guard → initial sync.
 - A single writer task serialises all writes (no interleaved packets).
 - Detects a likely conflict with the official Chilkey web driver / weather plugin
@@ -247,7 +247,9 @@ trait WeatherProvider {
 struct WeatherReport { condition: Condition, current_c: f32, max_c: f32, min_c: f32, observed_at: Timestamp }
 ```
 Each provider maps its own codes to a neutral `Condition` enum; one central
-function maps `Condition` → firmware icon index (0–8; thunderstorm → rain icon).
+function maps `Condition` → firmware icon index (0–9, all verified in M0; day/night
+variants for clear and partly cloudy, 9 = thunderstorm). See
+[protocol.md § 4.2](protocol.md#42-weather-command-0xfe-len-8).
 
 **Provider list:**
 

@@ -80,11 +80,14 @@ your weather provider, your location, your clock source.
 
 ### Supported firmware
 
-| Part | Version under test | Status |
+| Part | Verified version | Status |
 |---|---|---|
-| Keyboard | V3.0.14 (`20260710_123331`) | firmware read ✅, time/weather tests pending |
-| Screen (24 h / °C) | V1.2.4 (`Mar 17 2026 21:37:00`) | firmware read ✅, time/weather tests pending |
-| Screen (12 h / °F) | – | not planned for now |
+| Keyboard | V3.0.14 (`20260710_123331`) | ✅ verified on hardware (2026-10-31) |
+| Screen (24 h / °C) | V1.2.4 (`Mar 17 2026 21:37:00`) | ✅ verified on hardware (2026-10-31) |
+| Screen (12 h / °F) | – | not verified (runs as "compatible" if all checks pass) |
+
+Other versions run as **compatible (unverified)** as long as every protocol
+check passes.
 
 Firmware sources and the newest files: [docs/firmware.md](../../docs/firmware.md).
 
@@ -276,8 +279,8 @@ apps/nd104-sync/
 
 ```mermaid
 flowchart LR
-    M0["<b>M0</b><br/>Protocol &amp; firmware check<br/>▶ in progress"]:::current
-    M1["<b>M1</b><br/>Core, headless"]:::todo
+    M0["<b>M0</b><br/>Protocol &amp; firmware check<br/>✔ done"]:::done
+    M1["<b>M1</b><br/>Core, headless<br/>▶ next"]:::current
     M2["<b>M2</b><br/>Tray app"]:::todo
     M3["<b>M3</b><br/>Settings UI"]:::todo
     M4["<b>M4</b><br/>Providers &amp; secrets"]:::todo
@@ -291,8 +294,7 @@ flowchart LR
 ```
 
 🟦 current · 🟩 done · ⬜ planned. What each milestone contains:
-[docs/PLAN.md § 8](../../docs/PLAN.md#8-milestones). The current milestone's
-open items are in [docs/protocol.md § 6](../../docs/protocol.md#6-open-points-for-m0-hardware-verification).
+[docs/PLAN.md § 8](../../docs/PLAN.md#8-milestones). M0 results: [docs/protocol.md § 6](../../docs/protocol.md#6-open-points-for-m0-hardware-verification).
 
 ## Contributing
 

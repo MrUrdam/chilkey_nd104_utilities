@@ -196,10 +196,44 @@ received within a timeout, the protocol check fails and the tool locks (see PLAN
 
 Order of calculation: fill in the bytes → 8-bit checksum → CRC-16 last.
 
-> ⚠️ **Target device:** the web driver sends time and weather packets to the
-> **keyboard** device (`6D67:016C`). The gist sends them to the **screen**
-> device (`5542:0001`). Both may work, with the keyboard passing packets on to
-> the screen. M0 has to find out which path is reliable.
+✅ **Target device, verified on hardware:** time and weather packets work through
+**both** routes, the **keyboard** (`6D67:016C`, 32-byte report, like the web
+driver) and the **screen** (`5542:0001`, the same 32 bytes zero-padded to 64,
+like the gist). The keyboard passes the packet on to the screen. nd104-sync uses
+the keyboard route, as the web driver does.
+
+### 4.1.1 Answers (acknowledgement) ✅
+
+Every `1C` command is acknowledged. The screen's answer is a small `A5` frame:
+
+```
+A5 <cmd> 00 02 <status> 00 <checksum>
+```
+
+| Field | Value |
+|---|---|
+| `cmd` | echo of the command (`38` time, `FE` weather) |
+| `status` | `FE` = OK (the only value seen so far) |
+| checksum | 8-bit checksum (§ 2.2) over `cmd 00 02 status 00` |
+
+How it arrives depends on the route:
+
+| Route | Answers |
+|---|---|
+| Keyboard | 1. `1C 01 00 00 00 00 EB 24 …`: keyboard "received" (CRC valid)<br>2. `1C <kind> 00 00 00 07 <CRC> A5 <cmd> 00 02 FE 00 <chk> …`: the screen's answer, wrapped in a `1C` frame (kind `03` for time, `02` for weather) |
+| Screen | `A5 <cmd> 00 02 FE 00 <chk> …` directly at offset 0 (64-byte report) |
+
+Recorded examples (keyboard route):
+- time: `1C 03 00 00 00 07 90 7E A5 38 00 02 FE 00 C7`
+- weather: `1C 02 00 00 00 07 8F F0 A5 FE 00 02 FE 00 01`
+
+nd104-sync's protocol check P5 expects exactly this pattern after every write.
+Missing answers, another status or a different structure lock the tool.
+
+**Unsolicited answer seen once:** before the acknowledgement for a time packet,
+`1C 03 00 00 00 07 54 76 A5 35 00 02 FE 00 CA` arrived. That is command `0x35`,
+status OK, which nd104-sync never sends. Its origin is still open (screen
+event? page change?), see § 6.
 
 ### 4.2 Weather (command `0xFE`, len 8)
 
@@ -226,18 +260,31 @@ value = t > 0 ? (t * 10) | 0 : (-t * 10) | 0x8000;   // °C × 10, bit 15 = nega
 -3.5 °C → `0x8023`. The gist assumes a signed int16 (two's complement), which
 would give wrong values below 0 °C.
 
-**Icon index** (mapping in the web driver, from WeatherAPI condition codes):
+✅ **Verified on hardware:** 21.5 / 24 / 12 °C and -3.5 / 1 / -7.2 °C are
+shown correctly, including the decimal.
 
-| Index | Meaning | WeatherAPI codes |
-|---|---|---|
-| 0 | Sunny (day) – also default | 1000 |
-| 2 | Partly cloudy (day) | 1003 |
-| 4 | Rain / drizzle / thunder | 1063, 1072, 1150–1201, 1240–1246, 1087, 1273, 1276 |
-| 5 | Snow / sleet / ice | 1066, 1069, 1114, 1117, 1204–1225, 1249–1258, 1279, 1282 |
-| 6 | Clear (night, after 18:00) | 1000 |
-| 7 | Partly cloudy (night, after 18:00) | 1003 |
-| 8 | Cloudy / overcast / mist / fog | 1006, 1009, 1030, 1135, 1147 |
-| 1, 3 | not used by the web driver (gist: icons 0–9 exist) | – |
+**Icon index.** ✅ All 10 icons verified on hardware (screen V1.2.4, 24 h / °C):
+
+| Index | Shown on the display | Meaning | WeatherAPI codes used by the web driver |
+|---|---|---|---|
+| 0 | Sun | Clear / sunny (day) | 1000 (day) |
+| 1 | Clouds | Cloudy (see note) | – (unused) |
+| 2 | Cloud + sun | Partly cloudy (day) | 1003 (day) |
+| 3 | Cloud | Cloudy (see note) | – (unused) |
+| 4 | Cloud + rain | Rain / drizzle | 1063, 1072, 1150–1201, 1240–1246, 1087, 1273, 1276 |
+| 5 | Cloud + snow | Snow / sleet / ice | 1066, 1069, 1114, 1117, 1204–1225, 1249–1258, 1279, 1282 |
+| 6 | Purple moon + stars | Clear (night) | 1000 (after 18:00) |
+| 7 | Cloud + purple moon + stars | Partly cloudy (night) | 1003 (after 18:00) |
+| 8 | Cloud with bars underneath | Fog / mist / overcast | 1006, 1009, 1030, 1135, 1147 |
+| 9 | Cloud + lightning | **Thunderstorm** | – (the web driver maps thunder to 4) |
+
+Notes:
+- **Icon 9 is a real thunderstorm icon.** The web driver and the community
+  notes map thunderstorms to rain, but nd104-sync will use 9.
+- The visual difference between 1 ("clouds") and 3 ("cloud") is still to be
+  described.
+- Indices above 9 are rejected by `nd104-protocol` and have not been tried on
+  purpose.
 
 > 🐞 In the analysed bundle, the web driver works out the icon index but then
 > sends a **constant `0x02`** at offset 13. The icon is never actually used.
@@ -299,8 +346,19 @@ These are listed only for completeness. nd104-sync never configures the keyboard
       a length byte and a valid CRC (§ 3.1 / § 3.2): keyboard
       `V3.0.14 20260710_123331`, screen `V1.2.4 Mar 17 2026 21:37:00`.
       The support page values (V3.0.4 / V1.2.1) are outdated. *(2026-10-31)*
-- [ ] Should time/weather go to the keyboard device or the screen device, or does either work?
-- [ ] Does icon index at offset 13 work, and how does each index look on the display?
-- [ ] Are negative temperatures shown correctly with sign + magnitude encoding?
-- [ ] Is the CRC actually checked by the firmware (gist: zero CRC often accepted)?
-- [ ] What does command `0x39 00 02` do?
+- [x] Time and weather work through **both** the keyboard and the screen
+      device, and each write is acknowledged (§ 4.1.1). *(2026-10-31)*
+- [x] Icon index at offset 13 works; all 10 icons documented (§ 4.2).
+      Icon 9 = thunderstorm. *(2026-10-31)*
+- [x] Negative temperatures are shown correctly with sign + magnitude
+      encoding. *(2026-10-31)*
+- [x] The time is shown correctly (two test times, then the current time). *(2026-10-31)*
+- [ ] Visual difference between icon 1 and icon 3.
+- [ ] Origin of the unsolicited `A5 35 … FE 00` answer (§ 4.1.1).
+- [ ] *Not tested on purpose:* does the firmware check the CRC? Sending broken
+      packets is an avoidable risk, and nd104-sync always sends a valid CRC.
+- [ ] *Not tested on purpose:* command `0x39 00 02` (unknown). nd104-sync
+      sends no unknown commands.
+
+**Result:** M0 passed for keyboard **V3.0.14** and screen **V1.2.4**
+(24 h / °C). These are the first verified firmware versions.
