@@ -31,7 +31,7 @@ jobs:
       - name: Check tag matches Cargo.toml version
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#nd104-sync-v}"
-          CARGO_VERSION=$(sed -nE 's/^version = "(.*)"/\1/p' Cargo.toml | head -n1)
+          CARGO_VERSION=$(tr -d '\r' < Cargo.toml | sed -nE 's/^version = "(.*)"/\1/p' | head -n1)
           if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match Cargo.toml version $CARGO_VERSION"
             exit 1
@@ -62,7 +62,7 @@ jobs:
             found && /^## \[/ { exit }
             found && /^\[[^]]+\]: / { exit }
             found { print }
-          ' CHANGELOG.md > dist/notes.md
+          ' <(tr -d '\r' < CHANGELOG.md) > dist/notes.md
           if ! grep -q '[^[:space:]]' dist/notes.md; then
             echo "::error::No section '## [${VERSION}]' in CHANGELOG.md"
             exit 1
