@@ -9,6 +9,16 @@ build/
 *.egg-info/
 .pytest_cache/
 
+# Rust
+target/
+**/*.rs.bk
+
+# Node / Frontend
+node_modules/
+apps/*/ui/dist/
+apps/*/ui/.svelte-kit/
+npm-debug.log*
+
 # Lokale Konfiguration / Secrets (z. B. Standort, API-Keys)
 .env
 .env.*

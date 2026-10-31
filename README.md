@@ -10,6 +10,16 @@ zu synchronisieren und mit Themes/Bildern zu experimentieren.
 > ⚠️ Inoffizielles Community-Projekt, nicht mit Chilkey verbunden.
 > Nutzung auf eigene Gefahr – insbesondere beim Flashen von Firmware.
 
+> 🔌 **Fokus: kabelgebundene USB-Verbindung.** Alle Tools in diesem Repo
+> unterstützen die Tastatur ausschließlich per USB-Kabel. 2,4-GHz-Dongle und
+> Bluetooth werden nicht unterstützt.
+
+## Tools
+
+| Tool | Beschreibung | Plattform | Status |
+|---|---|---|---|
+| [nd104-sync](apps/nd104-sync/README.de.md) ([English](apps/nd104-sync/README.md)) | Hintergrund-Tool mit Tray-Icon: synchronisiert Uhrzeit und Wetter aufs Display, Einstellungs-/Statusfenster, Firmware-Schutz und Firmware-Update-Hinweis | Windows (Linux/macOS vorbereitet) | 🚧 Planung – siehe [docs/PLAN.md](docs/PLAN.md) |
+
 ## Die Tastatur
 
 Die [Chilkey ND104](https://chilkey.com/products/nd104-keyboard) ist eine
@@ -43,8 +53,9 @@ Die installierte Version lässt sich im Chilkey Web-Driver ablesen.
 
 | Ordner | Inhalt |
 |---|---|
-| `scripts/` | Python-Skripte für Display & Tastatur |
-| `docs/` | Protokoll- und Hardware-Dokumentation |
+| `apps/` | Eigenständige Programme (z. B. `nd104-sync`) |
+| `scripts/` | Kleine Skripte & Experimente für Display & Tastatur |
+| `docs/` | Projektplan, Protokoll- und Hardware-Dokumentation |
 | `firmware/` | Firmware-Notizen und -Experimente |
 | `assets/` | Bilder & GIFs für das Display (320×172) |
 
