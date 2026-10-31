@@ -12,7 +12,8 @@ use nd104_core::config::{self, Config};
 use nd104_core::device::{DeviceHandle, DeviceState, Trust};
 use nd104_core::engine::{self, EngineCommand, Status};
 use nd104_core::hid::{HidBackend, HidapiBackend};
-use nd104_core::weather::{self, geocoding, FetchContext, LocationMode};
+use nd104_core::secrets;
+use nd104_core::weather::{self, geocoding, LocationMode};
 use nd104_core::{model, APP_VERSION};
 
 #[derive(Parser)]
@@ -50,11 +51,26 @@ enum Command {
     },
     /// Check GitHub for a newer nd104-sync release
     CheckUpdate,
+    /// Manage API keys of weather providers (Windows Credential Manager)
+    ApiKey {
+        #[command(subcommand)]
+        action: KeyAction,
+    },
     /// Configuration helpers
     Config {
         #[command(subcommand)]
         action: ConfigAction,
     },
+}
+
+#[derive(Subcommand)]
+enum KeyAction {
+    /// Store a key; it is read from the console, not from the command line
+    Set { provider: String },
+    /// Delete the stored key
+    Delete { provider: String },
+    /// Show which providers have a stored key
+    Status,
 }
 
 #[derive(Subcommand)]
@@ -94,6 +110,7 @@ async fn main() -> Result<()> {
             language,
         } => geocode(&path, &query, set, &language).await,
         Command::CheckUpdate => check_update().await,
+        Command::ApiKey { action } => api_key(action),
         Command::Config { action } => config_action(&path, action),
     }
 }
@@ -189,12 +206,7 @@ async fn print_weather(path: &Path) -> Result<()> {
     let settings = config.weather;
     let provider = weather::create(&settings.provider)
         .with_context(|| format!("unknown provider {:?}", settings.provider))?;
-    let ctx = FetchContext {
-        client: reqwest_client()?,
-        location: settings.location.location(),
-        api_key: None,
-        settings: settings.clone(),
-    };
+    let ctx = weather::context(provider.as_ref(), &settings, reqwest_client()?, None)?;
     let r = provider.fetch(&ctx).await?;
     println!(
         "{} ({}): {:?} ({}), {:.1} °C, max {:.1} °C, min {:.1} °C",
@@ -260,6 +272,46 @@ async fn check_update() -> Result<()> {
                 "Up to date (no releases published yet: {}).",
                 app_update::RELEASES_PAGE
             )
+        }
+    }
+    Ok(())
+}
+
+fn api_key(action: KeyAction) -> Result<()> {
+    let known = |id: &str| -> Result<()> {
+        match weather::info(id) {
+            Some(p) if p.requires_api_key => Ok(()),
+            Some(p) => bail!("{} needs no API key", p.name),
+            None => bail!(
+                "unknown provider {id:?} – key-based providers: {}",
+                weather::PROVIDERS
+                    .iter()
+                    .filter(|p| p.requires_api_key)
+                    .map(|p| p.id)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        }
+    };
+    match action {
+        KeyAction::Set { provider } => {
+            known(&provider)?;
+            println!("Paste the API key for {provider} and press Enter:");
+            let mut key = String::new();
+            std::io::stdin().read_line(&mut key)?;
+            secrets::set(&provider, &key)?;
+            println!("Stored in the Windows Credential Manager.");
+        }
+        KeyAction::Delete { provider } => {
+            known(&provider)?;
+            secrets::delete(&provider)?;
+            println!("Deleted.");
+        }
+        KeyAction::Status => {
+            for p in weather::PROVIDERS.iter().filter(|p| p.requires_api_key) {
+                let state = if secrets::has(p.id) { "stored" } else { "–" };
+                println!("{:<16} {state}", p.id);
+            }
         }
     }
     Ok(())

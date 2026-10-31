@@ -9,7 +9,7 @@ use nd104_core::clock::{ntp_offset, ClockSettings};
 use nd104_core::config::{self, Config};
 use nd104_core::engine::{EngineCommand, Status};
 use nd104_core::model::{self, VerifiedFirmware};
-use nd104_core::weather::{self, geocoding, FetchContext, WeatherReport, WeatherSettings};
+use nd104_core::weather::{self, geocoding, WeatherReport, WeatherSettings};
 use nd104_core::APP_VERSION;
 use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
@@ -20,13 +20,6 @@ type CmdResult<T> = Result<T, String>;
 
 fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
-}
-
-#[derive(Serialize)]
-pub struct Provider {
-    id: &'static str,
-    name: &'static str,
-    requires_api_key: bool,
 }
 
 #[derive(Serialize)]
@@ -47,7 +40,7 @@ pub struct AppInfo {
     project_url: &'static str,
     releases_url: &'static str,
     changelog_url: &'static str,
-    providers: Vec<Provider>,
+    providers: Vec<weather::ProviderInfo>,
     models: Vec<ModelInfo>,
     min_weather_interval: u32,
 }
@@ -66,14 +59,7 @@ pub fn app_info(state: State<'_, AppState>) -> AppInfo {
         project_url: crate::PROJECT_URL,
         releases_url: app_update::RELEASES_PAGE,
         changelog_url: crate::CHANGELOG_URL,
-        providers: weather::PROVIDERS
-            .iter()
-            .map(|(id, name, key)| Provider {
-                id,
-                name,
-                requires_api_key: *key,
-            })
-            .collect(),
+        providers: weather::PROVIDERS.to_vec(),
         models: model::registry()
             .iter()
             .map(|m| ModelInfo {
@@ -135,17 +121,53 @@ pub async fn search_places(query: String, language: String) -> CmdResult<Vec<geo
 }
 
 /// Fetches weather with unsaved settings (nothing is sent to the keyboard).
+/// `api_key` = a key typed but not saved yet; otherwise the stored key is used.
 #[tauri::command]
-pub async fn test_weather(settings: WeatherSettings) -> CmdResult<WeatherReport> {
+pub async fn test_weather(
+    settings: WeatherSettings,
+    api_key: Option<String>,
+) -> CmdResult<WeatherReport> {
     let provider = weather::create(&settings.provider)
         .ok_or_else(|| format!("unknown weather provider {:?}", settings.provider))?;
-    let ctx = FetchContext {
-        client: weather::new_http_client().map_err(err)?,
-        location: settings.location.location(),
-        api_key: None,
-        settings: settings.clone(),
-    };
+    let client = weather::new_http_client().map_err(err)?;
+    let ctx = weather::context(provider.as_ref(), &settings, client, api_key)
+        .map_err(|e| format!("{e:#}"))?;
     provider.fetch(&ctx).await.map_err(|e| format!("{e:#}"))
+}
+
+fn key_provider(provider: &str) -> CmdResult<()> {
+    match weather::info(provider) {
+        Some(p) if p.requires_api_key => Ok(()),
+        _ => Err(format!("{provider:?} takes no API key")),
+    }
+}
+
+/// Which key-based providers have a stored key. Keys never leave the backend.
+#[tauri::command]
+pub async fn api_key_status() -> std::collections::HashMap<String, bool> {
+    weather::PROVIDERS
+        .iter()
+        .filter(|p| p.requires_api_key)
+        .map(|p| (p.id.to_string(), nd104_core::secrets::has(p.id)))
+        .collect()
+}
+
+#[tauri::command]
+pub async fn set_api_key(app: AppHandle, provider: String, key: String) -> CmdResult<()> {
+    key_provider(&provider)?;
+    nd104_core::secrets::set(&provider, &key).map_err(|e| format!("{e:#}"))?;
+    // Fetch again right away with the new key.
+    let _ = app
+        .state::<AppState>()
+        .commands
+        .try_send(EngineCommand::SyncNow);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_api_key(provider: String) -> CmdResult<()> {
+    key_provider(&provider)?;
+    nd104_core::secrets::delete(&provider).map_err(|e| format!("{e:#}"))
 }
 
 /// Offset of the NTP server against the PC clock, in milliseconds.
@@ -200,8 +222,8 @@ pub async fn engine_command(app: AppHandle, command: String) -> CmdResult<()> {
     state.commands.try_send(cmd).map_err(err)
 }
 
-/// Opens a known location. URLs are limited to this project on GitHub and to
-/// OpenStreetMap markers (location check in the weather settings).
+/// Opens a known location. URLs are limited to this project on GitHub,
+/// OpenStreetMap markers (location check) and the providers' sign-up pages.
 #[tauri::command]
 pub async fn open_target(app: AppHandle, target: String) -> CmdResult<()> {
     let state = app.state::<AppState>();
@@ -213,7 +235,8 @@ pub async fn open_target(app: AppHandle, target: String) -> CmdResult<()> {
             crate::open_in_shell(&app, &dir);
         }
         url if url.starts_with("https://github.com/MrUrdam/chilkey_nd104_utilities")
-            || url.starts_with("https://www.openstreetmap.org/?mlat=") =>
+            || url.starts_with("https://www.openstreetmap.org/?mlat=")
+            || weather::PROVIDERS.iter().any(|p| p.signup_url == Some(url)) =>
         {
             use tauri_plugin_opener::OpenerExt;
             app.opener().open_url(url, None::<&str>).map_err(err)?;

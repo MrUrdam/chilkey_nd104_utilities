@@ -172,5 +172,20 @@
   "ui.err.interval_positive": "A whole number of at least 1.",
   "ui.err.poll": "Between 1 and 60 seconds.",
   "ui.weather.show_map": "Map",
-  "ui.weather.show_map_long": "Show on OpenStreetMap (opens the browser)"
+  "ui.weather.show_map_long": "Show on OpenStreetMap (opens the browser)",
+  "ui.key.title": "API key – {provider}",
+  "ui.key.stored": "stored",
+  "ui.key.missing": "no key stored",
+  "ui.key.get": "Get a free key",
+  "ui.key.placeholder": "Paste the API key",
+  "ui.key.placeholder_replace": "Paste a new key to replace the stored one",
+  "ui.key.save": "Save key",
+  "ui.key.delete": "Delete",
+  "ui.key.saved": "Key stored – the weather is fetched again.",
+  "ui.key.deleted": "Key deleted.",
+  "ui.key.hint": "Stored in the Windows Credential Manager, never in the config file or the log. Saved immediately – no Apply needed.",
+  "ui.key.needs_key": "API key",
+  "ui.key.missing_notice": "This provider needs an API key. Without it, no weather is fetched (or the fallback provider is used).",
+  "ui.coverage.worldwide": "Coverage: worldwide",
+  "ui.coverage.germany": "Coverage: Germany and nearby (data of the German weather service DWD)"
 }

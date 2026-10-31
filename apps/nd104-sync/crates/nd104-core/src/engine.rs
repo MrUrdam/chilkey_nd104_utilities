@@ -18,7 +18,7 @@ use crate::clock::{ntp_offset, ClockSource};
 use crate::config::Config;
 use crate::device::{DeviceEvent, DeviceHandle, DeviceState, EventLevel};
 use crate::model::{self, KeyboardModel};
-use crate::weather::{self, FetchContext, WeatherReport};
+use crate::weather::{self, WeatherReport};
 
 const MAX_EVENTS: usize = 100;
 const STALE_AFTER: SignedDuration = SignedDuration::from_hours(3);
@@ -437,29 +437,31 @@ impl Engine {
 
     async fn fetch_weather(&self) -> Result<WeatherReport> {
         let settings = self.config.weather.clone();
-        let ctx = FetchContext {
-            client: weather::new_http_client()?,
-            location: settings.location.location(),
-            api_key: None, // key-based providers come with M4
-            settings: settings.clone(),
+        let client = weather::new_http_client()?;
+        // Each provider gets its own context: key-based ones need their own key.
+        let fetch = |id: &str| {
+            let provider = weather::create(id);
+            let ctx = provider
+                .as_ref()
+                .map(|p| weather::context(p.as_ref(), &settings, client.clone(), None));
+            let id = id.to_string();
+            async move {
+                let provider =
+                    provider.ok_or_else(|| anyhow!("unknown weather provider {id:?}"))?;
+                provider.fetch(&ctx.expect("created with provider")?).await
+            }
         };
-        let primary = weather::create(&settings.provider)
-            .ok_or_else(|| anyhow!("unknown weather provider {:?}", settings.provider))?;
-        match primary.fetch(&ctx).await {
+        match fetch(&settings.provider).await {
             Ok(r) => Ok(r),
             Err(e) if !settings.fallback_provider.is_empty() => {
-                let fallback = weather::create(&settings.fallback_provider).ok_or_else(|| {
-                    anyhow!("unknown fallback provider {:?}", settings.fallback_provider)
-                })?;
                 self.event(
                     EventLevel::Warning,
                     format!(
                         "{} failed ({e:#}), trying {}",
-                        primary.display_name(),
-                        fallback.display_name()
+                        settings.provider, settings.fallback_provider
                     ),
                 );
-                fallback.fetch(&ctx).await
+                fetch(&settings.fallback_provider).await
             }
             Err(e) => Err(e),
         }

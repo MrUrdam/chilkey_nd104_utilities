@@ -11,6 +11,36 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] – 2026-10-31 · M4 · Beta
+
+> **Beta – milestone M4: more weather providers and API keys.**
+> **Chilkey ND104 only, wired USB only, Windows 10/11.**
+
+### Added
+- **Weather providers:**
+  - **Bright Sky** (data of the German weather service DWD) – no API key,
+    Germany and nearby.
+  - **OpenWeatherMap** – free API key, worldwide; today's max/min from the
+    forecast of the local day.
+  - **WeatherAPI.com** – free API key, worldwide; same condition codes as the
+    official Chilkey plugin.
+- **API keys in the Windows Credential Manager** – never in the config file or
+  the log. In the settings window (Weather): key field per provider with
+  status (stored / not stored), Save, Delete and a link to get a free key. The
+  stored key is never shown again. **Test** also works with a key that has not
+  been saved yet.
+- Fallback provider with its own key: if the main provider fails, the fallback
+  is tried with its key.
+- Console: `nd104-cli api-key set|delete|status` (the key is read from the
+  console, not from the command line, so it does not end up in the shell
+  history).
+- Coverage hint per provider in the settings window.
+
+### Changed
+- HTTP errors name the provider and explain rejected keys (401/403) and rate
+  limits (429). Request URLs – which contain the key or the coordinates – are
+  never included in messages or logs.
+
 ## [0.3.0] – 2026-10-31 · M3 · Beta
 
 > **Beta – milestone M3: settings window.** All settings can now be changed in
@@ -134,7 +164,8 @@ All notable changes to nd104-sync are listed here. The format follows
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.3.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.4.0...HEAD
+[0.4.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.3.0...nd104-sync-v0.4.0
 [0.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.2.0...nd104-sync-v0.3.0
 [0.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.1.0...nd104-sync-v0.2.0
 [0.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/releases/tag/nd104-sync-v0.1.0

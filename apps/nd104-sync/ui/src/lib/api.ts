@@ -127,9 +127,17 @@ export interface AppInfo {
   project_url: string;
   releases_url: string;
   changelog_url: string;
-  providers: { id: string; name: string; requires_api_key: boolean }[];
+  providers: ProviderInfo[];
   models: { id: string; name: string; verified_firmware: { role: string; version: string }[] }[];
   min_weather_interval: number;
+}
+
+export interface ProviderInfo {
+  id: string;
+  name: string;
+  requires_api_key: boolean;
+  coverage: "worldwide" | "germany" | "none";
+  signup_url: string | null;
 }
 
 export interface Place {
@@ -157,7 +165,11 @@ export const api = {
   saveConfig: (config: Config) => invoke<void>("save_config", { config }),
   searchPlaces: (query: string, language: string) =>
     invoke<Place[]>("search_places", { query, language }),
-  testWeather: (settings: WeatherSettings) => invoke<WeatherReport>("test_weather", { settings }),
+  testWeather: (settings: WeatherSettings, apiKey: string | null = null) =>
+    invoke<WeatherReport>("test_weather", { settings, apiKey }),
+  apiKeyStatus: () => invoke<Record<string, boolean>>("api_key_status"),
+  setApiKey: (provider: string, key: string) => invoke<void>("set_api_key", { provider, key }),
+  deleteApiKey: (provider: string) => invoke<void>("delete_api_key", { provider }),
   testNtp: (server: string) => invoke<number>("test_ntp", { server }),
   previewTime: (clock: Config["clock"]) => invoke<TimePreview>("preview_time", { clock }),
   timezones: () => invoke<string[]>("timezones"),

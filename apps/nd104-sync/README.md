@@ -4,7 +4,7 @@ Background tool that keeps the display of the **Chilkey ND104** keyboard up to
 date with the **current time and weather** – with a tray icon and a modern
 settings/status window.
 
-> 🚧 **Status: beta 0.3.0 (milestone M3).** Tray app with settings window,
+> 🚧 **Status: beta 0.4.0 (milestone M4).** Tray app with settings window and five weather providers,
 > starts with Windows, installer available from the
 > [releases](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
 > See the [roadmap](#roadmap) and the [changelog](CHANGELOG.md).
@@ -142,11 +142,11 @@ version. Updating stays your decision and is done with Chilkey's tools.
 
 | Provider | API key | Coverage | Status |
 |---|---|---|---|
-| [Open-Meteo](https://open-meteo.com/) (default) | no | worldwide | ✅ available (core) |
-| Manual / Test | – | – | ✅ available (core) |
-| [Bright Sky](https://brightsky.dev/) (DWD data) | no | Germany | planned |
-| [OpenWeatherMap](https://openweathermap.org/) | yes | worldwide | planned |
-| [WeatherAPI.com](https://www.weatherapi.com/) | yes | worldwide | planned |
+| [Open-Meteo](https://open-meteo.com/) (default) | no | worldwide | ✅ available |
+| [Bright Sky](https://brightsky.dev/) (DWD data) | no | Germany and nearby | ✅ available |
+| [OpenWeatherMap](https://openweathermap.org/) | [free key](https://home.openweathermap.org/users/sign_up) | worldwide | ✅ available |
+| [WeatherAPI.com](https://www.weatherapi.com/) | [free key](https://www.weatherapi.com/signup.aspx) | worldwide | ✅ available |
+| Manual / Test | – | – | ✅ available |
 
 **Default location:** Berlin, until you pick your own (city search in the
 settings, or `nd104-cli geocode "<city>" --set 1`). Your location is stored only
@@ -154,7 +154,16 @@ in your local config file, never in this repository.
 
 Providers are plug-ins implementing one interface, so more can be added
 (see [docs/PLAN.md § 5.6](../../docs/PLAN.md#56-weather-service)).
-API keys are stored in the Windows Credential Manager, not in the config file.
+**API keys** (OpenWeatherMap, WeatherAPI.com):
+- Enter them in the settings window → **Weather** → *API key – …* → **Save key**,
+  or on the console: `nd104-cli api-key set openweathermap` (the key is read
+  from the console, not from the command line).
+- They are stored in the **Windows Credential Manager** (entry
+  `<provider>.nd104-sync`), never in the config file or the log, and are only
+  sent to that provider.
+- The window shows only *stored / not stored*; a stored key is never displayed
+  again. **Test** can check a key before you save it.
+- New OpenWeatherMap keys can take up to two hours to become active.
 
 ## Clock sources
 
@@ -322,6 +331,9 @@ nd104-cli geocode "Berlin"           # search a city
 nd104-cli geocode "Berlin" --set 1   # store result 1 as your location
 nd104-cli weather                    # fetch and print the weather (nothing sent)
 nd104-cli check-update               # check GitHub for a newer release
+nd104-cli api-key status             # which providers have a stored key
+nd104-cli api-key set <provider>     # store a key (prompted, not on the command line)
+nd104-cli api-key delete <provider>  # delete a key
 nd104-cli config path|show|init      # where the config is / print it / create it
 nd104-cli --config other.toml …      # use another config file
 nd104-cli --version
@@ -348,7 +360,9 @@ nd104-sync.exe --settings     # open the settings window right away
 ## Privacy / network access
 
 nd104-sync connects only to:
-- the weather provider you selected (and Open-Meteo geocoding for city search),
+- the weather provider you selected, plus the fallback provider if the first
+  one fails (and Open-Meteo geocoding for city search) – API keys are sent only
+  to their own provider,
 - the NTP server, if you selected NTP as clock source,
 - GitHub (raw file of this repo) for the firmware update check – can be disabled,
 - the GitHub releases API of this repo for the app update check – can be disabled
@@ -445,7 +459,7 @@ and tests.
 | `jiff` | Time zones and DST |
 | (own SNTP client) | NTP time source, no extra dependency |
 | `serde`, `toml`, `directories` | Configuration |
-| `keyring` | API keys in the Credential Manager |
+| `keyring` 3 | API keys in the Windows Credential Manager |
 | `tracing`, `tracing-appender` | Logging |
 | `sys-locale` | System language detection |
 | Svelte 5 + TypeScript + Vite | Settings window (`ui/`) |
@@ -476,8 +490,8 @@ flowchart LR
     M1["<b>M1</b><br/>Core, headless<br/>✔ 0.1.0 beta"]:::done
     M2["<b>M2</b><br/>Tray app<br/>✔ 0.2.0 beta"]:::done
     M3["<b>M3</b><br/>Settings UI<br/>✔ 0.3.0 beta"]:::done
-    M4["<b>M4</b><br/>Providers &amp; secrets<br/>▶ next"]:::current
-    M5["<b>M5</b><br/>Update check &amp; release"]:::todo
+    M4["<b>M4</b><br/>Providers &amp; secrets<br/>✔ 0.4.0 beta"]:::done
+    M5["<b>M5</b><br/>Firmware check &amp; release<br/>▶ next"]:::current
     M6["<b>M6</b><br/>Extras"]:::todo
     M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6
 

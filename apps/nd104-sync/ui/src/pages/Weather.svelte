@@ -3,6 +3,8 @@
   import { t } from "../lib/i18n.svelte";
   import { condition, temperature } from "../lib/format";
   import WeatherIcon from "../components/WeatherIcon.svelte";
+  import ApiKeyField from "../components/ApiKeyField.svelte";
+  import { onMount } from "svelte";
 
   let { draft = $bindable(), info, errors }: { draft: Config; info: AppInfo; errors: Record<string, string> } =
     $props();
@@ -16,6 +18,21 @@
   let testError = $state<string | null>(null);
 
   let w = $derived(draft.weather);
+
+  // API keys: status per provider, keys typed but not saved yet (for Test).
+  let keyStatus = $state<Record<string, boolean>>({});
+  let typedKeys = $state<Record<string, string>>({});
+  async function refreshKeys() {
+    keyStatus = await api.apiKeyStatus();
+  }
+  onMount(refreshKeys);
+
+  let primary = $derived(info.providers.find((p) => p.id === w.provider));
+  let fallback = $derived(info.providers.find((p) => p.id === w.fallback_provider));
+  let keyProviders = $derived(
+    [primary, fallback].filter((p, i, all) => p && p.requires_api_key && all.indexOf(p) === i) as typeof info.providers,
+  );
+  let missingKey = $derived(keyProviders.some((p) => !keyStatus[p.id] && !typedKeys[p.id]?.trim()));
 
   async function search() {
     if (!query.trim()) return;
@@ -43,7 +60,10 @@
     testError = null;
     testResult = null;
     try {
-      testResult = await api.testWeather($state.snapshot(draft.weather) as Config["weather"]);
+      testResult = await api.testWeather(
+        $state.snapshot(draft.weather) as Config["weather"],
+        typedKeys[draft.weather.provider]?.trim() || null,
+      );
     } catch (e) {
       testError = String(e);
     } finally {
@@ -155,8 +175,13 @@
       <label class="field"
         >{t("ui.weather.provider")}
         <select bind:value={draft.weather.provider}>
-          {#each info.providers as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
+          {#each info.providers as p (p.id)}<option value={p.id}
+              >{p.name}{p.requires_api_key ? ` – ${t("ui.key.needs_key")}` : ""}</option
+            >{/each}
         </select>
+        {#if primary && primary.coverage !== "none"}
+          <span class="muted small">{t(`ui.coverage.${primary.coverage}`)}</span>
+        {/if}
       </label>
       <label class="field"
         >{t("ui.weather.fallback")}
@@ -188,6 +213,16 @@
         <span class="muted small">{t("ui.weather.unit_hint")}</span>
       </div>
     </div>
+
+    {#each keyProviders as p (p.id)}
+      <ApiKeyField
+        provider={p}
+        stored={!!keyStatus[p.id]}
+        bind:typed={() => typedKeys[p.id] ?? "", (v) => (typedKeys[p.id] = v)}
+        onchange={refreshKeys}
+      />
+    {/each}
+    {#if missingKey}<div class="notice warn">{t("ui.key.missing_notice")}</div>{/if}
 
     {#if w.provider === "manual"}
       <div class="notice">{t("ui.weather.manual_hint")}</div>

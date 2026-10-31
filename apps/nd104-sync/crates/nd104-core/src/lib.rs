@@ -8,6 +8,7 @@
 //! - [`config`]: TOML configuration
 //! - [`engine`]: scheduler that ties everything together
 //! - [`app_update`]: check the GitHub repository for new app releases
+//! - [`secrets`]: API keys in the OS credential store
 //!
 //! Scope: wired USB only, Windows first.
 
@@ -18,6 +19,7 @@ pub mod device;
 pub mod engine;
 pub mod hid;
 pub mod model;
+pub mod secrets;
 pub mod weather;
 
 /// Version of this build, e.g. `0.1.0`.

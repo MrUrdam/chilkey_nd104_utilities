@@ -172,5 +172,20 @@
   "ui.err.interval_positive": "Eine ganze Zahl ab 1.",
   "ui.err.poll": "Zwischen 1 und 60 Sekunden.",
   "ui.weather.show_map": "Karte",
-  "ui.weather.show_map_long": "Auf OpenStreetMap zeigen (öffnet den Browser)"
+  "ui.weather.show_map_long": "Auf OpenStreetMap zeigen (öffnet den Browser)",
+  "ui.key.title": "API-Key – {provider}",
+  "ui.key.stored": "gespeichert",
+  "ui.key.missing": "kein Key gespeichert",
+  "ui.key.get": "Kostenlosen Key holen",
+  "ui.key.placeholder": "API-Key einfügen",
+  "ui.key.placeholder_replace": "Neuen Key einfügen, um den gespeicherten zu ersetzen",
+  "ui.key.save": "Key speichern",
+  "ui.key.delete": "Löschen",
+  "ui.key.saved": "Key gespeichert – das Wetter wird neu abgerufen.",
+  "ui.key.deleted": "Key gelöscht.",
+  "ui.key.hint": "Wird in der Windows-Anmeldeinformationsverwaltung gespeichert, nie in der Konfigurationsdatei oder im Log. Sofort gespeichert – kein „Übernehmen“ nötig.",
+  "ui.key.needs_key": "API-Key",
+  "ui.key.missing_notice": "Dieser Anbieter braucht einen API-Key. Ohne ihn wird kein Wetter abgerufen (bzw. der Ersatz-Anbieter verwendet).",
+  "ui.coverage.worldwide": "Abdeckung: weltweit",
+  "ui.coverage.germany": "Abdeckung: Deutschland und Umgebung (Daten des Deutschen Wetterdienstes)"
 }
