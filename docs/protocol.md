@@ -357,6 +357,8 @@ These are listed only for completeness. nd104-sync never configures the keyboard
 - [x] The time is shown correctly (two test times, then the current time). *(2026-10-31)*
 - [ ] Visual difference between icon 1 and icon 3.
 - [ ] Origin of the unsolicited `A5 35 … FE 00` answer (§ 4.1.1).
+      Not seen again: 25 s while switching pages, 3 time syncs, 5 min idle
+      listening (11:39–11:44). Logged and ignored by nd104-sync.
 - [ ] *Not tested on purpose:* does the firmware check the CRC? Sending broken
       packets is an avoidable risk, and nd104-sync always sends a valid CRC.
 - [ ] *Not tested on purpose:* command `0x39 00 02` (unknown). nd104-sync
