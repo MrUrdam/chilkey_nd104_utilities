@@ -1,6 +1,6 @@
 # nd104-sync – Project Plan
 
-> **Status:** M0–M2 done (beta 0.2.0), M3 next. Last update: 2026-10-31
+> **Status:** M0–M3 done (beta 0.3.0), M4 next. Last update: 2026-10-31
 >
 > User documentation: [apps/nd104-sync/README.md](../apps/nd104-sync/README.md)
 

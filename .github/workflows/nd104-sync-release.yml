@@ -40,8 +40,17 @@ jobs:
           fi
           echo "VERSION=$CARGO_VERSION" >> "$GITHUB_ENV"
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2" --locked
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/nd104-sync/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
 
       - name: Test
         run: cargo test --workspace --locked
@@ -52,8 +61,8 @@ jobs:
       - name: Build app and installers
         run: |
           case "$VERSION" in
-            *-*) cargo tauri build --bundles nsis ;;
-            *)   cargo tauri build --bundles nsis,msi ;;
+            *-*) npx tauri build --bundles nsis ;;
+            *)   npx tauri build --bundles nsis,msi ;;
           esac
 
       - name: Package

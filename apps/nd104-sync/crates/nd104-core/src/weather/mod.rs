@@ -36,7 +36,7 @@ pub enum Condition {
     Thunderstorm,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct WeatherReport {
     pub condition: Condition,
     /// Day or night at the location (for day/night icons).

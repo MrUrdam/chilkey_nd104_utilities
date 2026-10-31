@@ -3,7 +3,10 @@
   "productName": "nd104-sync",
   "identifier": "io.github.mrurdam.nd104-sync",
   "build": {
-    "frontendDist": "../ui"
+    "frontendDist": "../ui/dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [],
@@ -13,7 +16,10 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
+    "targets": [
+      "nsis",
+      "msi"
+    ],
     "publisher": "MrUrdam",
     "homepage": "https://github.com/MrUrdam/chilkey_nd104_utilities",
     "category": "Utility",
@@ -30,7 +36,10 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["English", "German"],
+        "languages": [
+          "English",
+          "German"
+        ],
         "displayLanguageSelector": false
       },
       "wix": {

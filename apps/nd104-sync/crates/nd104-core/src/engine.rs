@@ -8,6 +8,7 @@ use std::time::Duration;
 use anyhow::{anyhow, Result};
 use jiff::civil::DateTime;
 use jiff::{SignedDuration, Timestamp};
+use serde::Serialize;
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
 use tokio::time::{interval, sleep_until, Instant, MissedTickBehavior};
@@ -25,7 +26,7 @@ const FIRST_UPDATE_CHECK: Duration = Duration::from_secs(30);
 const RESUME_JUMP: SignedDuration = SignedDuration::from_secs(60);
 const FAR_FUTURE: Duration = Duration::from_secs(365 * 24 * 3600);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Event {
     pub at: Timestamp,
     pub level: EventLevel,
@@ -33,7 +34,7 @@ pub struct Event {
 }
 
 /// Snapshot for UI/CLI.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Status {
     pub device: DeviceState,
     pub paused: bool,

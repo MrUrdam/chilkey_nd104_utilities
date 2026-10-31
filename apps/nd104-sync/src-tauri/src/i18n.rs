@@ -34,6 +34,7 @@ pub fn resolve(setting: &str) -> &'static str {
         .unwrap_or(FALLBACK)
 }
 
+#[derive(Clone)]
 pub struct I18n {
     texts: HashMap<String, String>,
     fallback: HashMap<String, String>,
@@ -53,6 +54,13 @@ impl I18n {
             .or_else(|| self.fallback.get(key))
             .cloned()
             .unwrap_or_else(|| key.to_string())
+    }
+
+    /// All texts (fallback language filled in), for the settings window.
+    pub fn all(&self) -> HashMap<String, String> {
+        let mut all = self.fallback.clone();
+        all.extend(self.texts.clone());
+        all
     }
 
     /// Text with `{name}` placeholders replaced.

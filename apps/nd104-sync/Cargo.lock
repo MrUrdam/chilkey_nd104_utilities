@@ -2334,7 +2334,7 @@ dependencies = [
 
 [[package]]
 name = "nd104-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2347,7 +2347,7 @@ dependencies = [
 
 [[package]]
 name = "nd104-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "directories",
@@ -2364,7 +2364,7 @@ dependencies = [
 
 [[package]]
 name = "nd104-probe"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2375,15 +2375,16 @@ dependencies = [
 
 [[package]]
 name = "nd104-protocol"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "nd104-sync"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "jiff",
  "nd104-core",
+ "serde",
  "serde_json",
  "sys-locale",
  "tauri",

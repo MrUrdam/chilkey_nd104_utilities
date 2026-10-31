@@ -11,11 +11,13 @@ pub use nd104::Nd104;
 use std::fmt;
 
 use jiff::civil::DateTime;
+use serde::Serialize;
 
 use crate::weather::WeatherReport;
 
 /// What a USB interface is used for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Role {
     Keyboard,
     Screen,
@@ -43,7 +45,7 @@ pub struct InterfaceSpec {
 }
 
 /// Feature switches the UI uses to show or hide options.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Capabilities {
     pub time: bool,
     pub weather: bool,
@@ -53,7 +55,8 @@ pub struct Capabilities {
 }
 
 /// Screen firmware variant (Chilkey ships 24 h/°C and 12 h/°F builds).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ScreenVariant {
     Celsius24h,
     Fahrenheit12h,
@@ -61,7 +64,7 @@ pub enum ScreenVariant {
 }
 
 /// Firmware of one device as read with the version query.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct FirmwareInfo {
     pub role: Role,
     /// Full text from the device, e.g. `V3.0.14 20260710_123331`.
@@ -73,7 +76,7 @@ pub struct FirmwareInfo {
 }
 
 /// A firmware version verified on real hardware.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct VerifiedFirmware {
     pub role: Role,
     pub version: &'static str,

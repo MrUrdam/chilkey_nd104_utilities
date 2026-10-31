@@ -4,11 +4,10 @@ Background tool that keeps the display of the **Chilkey ND104** keyboard up to
 date with the **current time and weather** – with a tray icon and a modern
 settings/status window.
 
-> 🚧 **Status: beta 0.2.0 (milestone M2).** The tray app runs in the
-> background, starts with Windows and comes with an installer – download it from
-> the [releases](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
-> The settings window follows with M3; until then settings are edited in the
-> config file. See the [roadmap](#roadmap) and the [changelog](CHANGELOG.md).
+> 🚧 **Status: beta 0.3.0 (milestone M3).** Tray app with settings window,
+> starts with Windows, installer available from the
+> [releases](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
+> See the [roadmap](#roadmap) and the [changelog](CHANGELOG.md).
 
 > 🔌 **Wired USB only.** nd104-sync only supports the keyboard connected with a
 > **USB cable**. 2.4 GHz dongle and Bluetooth modes are **not supported** and
@@ -194,10 +193,9 @@ cable**. Every milestone is published as a **beta release** on the
 4. nd104-sync starts and shows its icon in the tray (maybe behind the **^**
    arrow; drag it onto the taskbar to keep it visible). It starts with Windows
    from now on.
-5. Set your location (default: Berlin): tray menu → **Settings…** opens
-   `config.toml`; set `name`, `lat` and `lon` under `[weather.location]` and
-   save. The change is picked up within seconds. Alternatively:
-   `nd104-cli geocode "<your city>" --set 1` (from the zip).
+5. The settings window opens on first start: **Weather → Location** → search
+   your city, check it on the map (🗺) if needed, pick it, **Apply**. Without
+   this, Berlin is used.
 
 ### Option B – portable zip
 
@@ -267,7 +265,7 @@ instead of misreading it.
 2. Close the official Chilkey web driver / weather plugin.
 3. Start nd104-sync (Start menu, or automatically with Windows). The tray icon
    appears and time and weather are sent right away.
-4. Set your location once (see [Installation](#option-a--installer-recommended), step 5).
+4. Set your location once in the settings window (Weather → Location).
 
 **Tray menu**
 
@@ -278,7 +276,7 @@ instead of misreading it.
 | Pause / Resume updates | Stop / resume all updates |
 | Check keyboard again | Lift a lock and run all protocol checks again |
 | Check for updates | Look for a newer nd104-sync release, shows the result |
-| Settings… (config file) | Opens `config.toml`; changes apply automatically (window in M3) |
+| Settings… | Opens the settings window |
 | Language ▸ | Automatic (system) / Deutsch / English |
 | Start with Windows | Autostart on/off |
 | Open log folder | For troubleshooting |
@@ -291,6 +289,24 @@ The **tooltip** shows the app version, keyboard, weather and the last sync.
 
 **Notifications:** keyboard locked, unverified firmware detected, new
 nd104-sync version available, result of a manual update check.
+
+### Settings window
+
+Opens via tray → **Settings…**, on first start, when nd104-sync is started a
+second time, or with `nd104-sync.exe --settings`. Closing it keeps the app
+running in the tray.
+
+| Page | Contents |
+|---|---|
+| **Dashboard** | Live preview of the keyboard display, keyboard and firmware state, last/next syncs (incl. next DST change), weather, recent events; Sync now, Pause/Resume |
+| **Weather** | Location via city search (with OpenStreetMap link to check a result) or coordinates; provider, fallback, interval, °C/°F in the window; Test button (fetches without sending) |
+| **Clock** | Source (System / Time zone / NTP / Manual), time zone, NTP test, summer/winter time mode, sync interval; live preview of the time sent |
+| **Device & Firmware** | Verified / unverified / locked state, installed vs. verified firmware, display variant, Check keyboard again, polling interval |
+| **General** | Start with Windows, language, appearance (like Windows / dark / light), update check, About with version, config file and log folder |
+
+Changes take effect with **Apply** (shown only when something changed);
+invalid fields are marked. The configuration file can still be edited by hand –
+changes are picked up within seconds.
 
 ### Console runner `nd104-cli`
 
@@ -317,8 +333,8 @@ Set `RUST_LOG=debug` for more output.
 
 ```
 nd104-sync.exe                # normal start (tray)
-nd104-sync.exe --minimized    # used by autostart (no window; same as normal start until M3)
-nd104-sync.exe --settings     # planned with M3: open the settings window directly
+nd104-sync.exe --minimized    # used by autostart (tray only)
+nd104-sync.exe --settings     # open the settings window right away
 ```
 
 ### Files
@@ -364,9 +380,8 @@ No telemetry, no analytics, no IP-based location unless you turn it on.
 | [Rust](https://rustup.rs/) | stable, `x86_64-pc-windows-msvc` | everything | install with `rustup-init.exe`, default options |
 | Visual Studio Build Tools | 2022 | everything | workload **"Desktop development with C++"** (linker) |
 | [Git](https://git-scm.com/) | any | getting the code | |
-| Tauri CLI | v2 | tray app + installers | `cargo install tauri-cli --version "^2" --locked` |
-| WebView2 Runtime | current | tray app | pre-installed on Windows 10/11 |
-| [Node.js](https://nodejs.org/) | LTS (≥ 20) | settings UI (from M3) | not needed yet |
+| [Node.js](https://nodejs.org/) | LTS (≥ 20) | settings window, Tauri CLI | the Tauri CLI comes via npm |
+| WebView2 Runtime | current | app | pre-installed on Windows 10/11 |
 
 Quick install with winget (Rust, then the Build Tools with the C++ workload):
 
@@ -383,13 +398,18 @@ winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--pass
 ```bash
 git clone https://github.com/MrUrdam/chilkey_nd104_utilities.git
 cd chilkey_nd104_utilities/apps/nd104-sync
+npm ci                     # frontend + Tauri CLI
+npm run build              # settings window → ui/dist (embedded into the app)
 cargo test --workspace     # unit tests, no hardware needed
 cargo build --release      # → target/release/nd104-sync.exe, nd104-cli.exe, nd104-probe.exe
-cargo tauri build          # tray app + installers → target/release/bundle/nsis/*.exe, bundle/msi/*.msi
+npm run tauri build        # app + installers → target/release/bundle/nsis/*.exe, bundle/msi/*.msi
 ```
 
-`cargo tauri build` downloads NSIS and WiX on first use. Run the app without
-installing: `cargo run -p nd104-sync` (debug build with a console window).
+- `npm run build` must run before any `cargo build` of the app, because the
+  window's files are compiled into `nd104-sync.exe`.
+- `npm run tauri build` downloads NSIS and WiX on first use.
+- Development with hot reload: `npm run tauri dev`.
+- Frontend type check: `npm run check`.
 
 ### Making a release (maintainers)
 
@@ -411,7 +431,8 @@ One release per milestone (M1 = 0.1.0, M2 = 0.2.0, …), beta while 0.x.
      ignored by the app update check.
 
 Every push to `main` also runs [`nd104-sync-ci.yml`](../../.github/workflows/nd104-sync-ci.yml):
-format check, clippy (warnings are errors) and tests.
+frontend type check and build, Rust format check, clippy (warnings are errors)
+and tests.
 
 ### Main dependencies
 
@@ -427,7 +448,9 @@ format check, clippy (warnings are errors) and tests.
 | `keyring` | API keys in the Credential Manager |
 | `tracing`, `tracing-appender` | Logging |
 | `sys-locale` | System language detection |
-| Svelte + TypeScript + Vite | Settings UI |
+| Svelte 5 + TypeScript + Vite | Settings window (`ui/`) |
+| `@tauri-apps/api`, `@tauri-apps/cli` | Window ↔ app calls, build tooling |
+| `@fontsource/rajdhani` | Display font, bundled locally (OFL) |
 
 ### Project structure
 
@@ -440,7 +463,7 @@ apps/nd104-sync/
 │   │                     # clock, weather, scheduler, config, update check  ✅ exists
 │   └── nd104-cli/        # console runner for the core               ✅ exists
 ├── src-tauri/            # Tauri tray app, icons, installer config     ✅ exists
-├── ui/                   # Svelte frontend
+├── ui/                   # Svelte settings window                     ✅ exists
 ├── locales/              # en.json, de.json                          ✅ exists
 └── packaging/            # installer configuration
 ```
@@ -452,8 +475,8 @@ flowchart LR
     M0["<b>M0</b><br/>Protocol &amp; firmware check<br/>✔ done"]:::done
     M1["<b>M1</b><br/>Core, headless<br/>✔ 0.1.0 beta"]:::done
     M2["<b>M2</b><br/>Tray app<br/>✔ 0.2.0 beta"]:::done
-    M3["<b>M3</b><br/>Settings UI<br/>▶ next"]:::current
-    M4["<b>M4</b><br/>Providers &amp; secrets"]:::todo
+    M3["<b>M3</b><br/>Settings UI<br/>✔ 0.3.0 beta"]:::done
+    M4["<b>M4</b><br/>Providers &amp; secrets<br/>▶ next"]:::current
     M5["<b>M5</b><br/>Update check &amp; release"]:::todo
     M6["<b>M6</b><br/>Extras"]:::todo
     M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6

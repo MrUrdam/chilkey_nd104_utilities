@@ -15,6 +15,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Result};
+use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::hid::{HidBackend, HidChannel, HidInterfaceInfo};
@@ -24,7 +25,8 @@ const ANSWER_TIMEOUT: Duration = Duration::from_millis(1000);
 const FIRMWARE_RETRIES: usize = 3;
 
 /// How far the connected firmware is trusted.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Trust {
     /// Version verified on hardware.
     Verified,
@@ -32,7 +34,7 @@ pub enum Trust {
     Compatible,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ConnectedDevice {
     pub model_id: &'static str,
     pub model_name: &'static str,
@@ -41,7 +43,8 @@ pub struct ConnectedDevice {
     pub screen_variant: ScreenVariant,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum DeviceState {
     /// No supported keyboard found (USB cable required).
     NotConnected,
@@ -55,7 +58,8 @@ pub enum DeviceState {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum EventLevel {
     Info,
     Warning,

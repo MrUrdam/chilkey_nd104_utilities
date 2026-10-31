@@ -111,6 +111,7 @@ pub fn tooltip(i18n: &I18n, status: &Status) -> String {
 }
 
 /// Menu entries that change at runtime.
+#[derive(Clone)]
 pub struct TrayItems {
     pub status: MenuItem<Wry>,
     pub pause: MenuItem<Wry>,

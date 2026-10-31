@@ -11,6 +11,49 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] – 2026-10-31 · M3 · Beta
+
+> **Beta – milestone M3: settings window.** All settings can now be changed in
+> a window – no more editing the configuration file by hand.
+> **Chilkey ND104 only, wired USB only, Windows 10/11.**
+
+### Added
+- **Settings window** (tray → **Settings…**; also opens on first start, when
+  nd104-sync is started a second time, or with `--settings`). Closing it keeps
+  the tray app running.
+  - **Dashboard:** live preview of the keyboard display (time keeps running
+    from the last sync, weather icon and temperatures as sent), keyboard state
+    with firmware badge, last/next syncs incl. the next DST change, weather,
+    recent events; Sync now and Pause/Resume.
+  - **Weather:** city search with a result list and an **OpenStreetMap link**
+    per result to check the place, or coordinates by hand; provider and
+    fallback provider, interval, °C/°F for the window, values for the manual
+    test provider, and a **Test** button that fetches without sending.
+  - **Clock:** source (System / Time zone / NTP / Manual), time zone with
+    suggestions, NTP server test, summer/winter time mode, sync interval and a
+    live **preview of the time sent to the keyboard**.
+  - **Device & Firmware:** verified / unverified / locked state with the
+    reason, installed vs. verified firmware, display variant, Check keyboard
+    again, keyboard polling interval.
+  - **General:** start with Windows, language, appearance (**like Windows /
+    dark / light**), app update check with result, About with **version**,
+    links, config file and log folder.
+  - **Apply / Cancel** only appear when something changed; invalid fields are
+    marked and block saving. Changes made in the tray or in the config file
+    show up in the open window.
+- Design: dark graphite with a cyan accent, keycap buttons and status LEDs,
+  light theme with the same accent.
+
+### Changed
+- Tray menu **Settings…** opens the window instead of the config file (the
+  file is still reachable from General → Config file).
+- Starting nd104-sync a second time opens the window of the running instance.
+- Release builds use the Tauri CLI from npm (much faster builds).
+
+### Fixed
+- The app could freeze when settings were applied while the tray updated
+  (lock held during tray updates).
+
 ## [0.2.0] – 2026-10-31 · M2 · Beta
 
 > **Beta – milestone M2: tray app and installer.** nd104-sync now runs in the
@@ -91,6 +134,7 @@ All notable changes to nd104-sync are listed here. The format follows
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.2.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.3.0...HEAD
+[0.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.2.0...nd104-sync-v0.3.0
 [0.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.1.0...nd104-sync-v0.2.0
 [0.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/releases/tag/nd104-sync-v0.1.0

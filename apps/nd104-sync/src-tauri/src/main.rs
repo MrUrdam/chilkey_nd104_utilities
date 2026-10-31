@@ -1,11 +1,12 @@
-//! nd104-sync – tray app (milestone M2).
+//! nd104-sync – tray app with settings window.
 //!
-//! Runs the core engine in the background and shows its state in the system
-//! tray. Settings are edited in the config file until the settings window
-//! arrives with M3; the file is reloaded automatically when it changes.
+//! Runs the core engine in the background, shows its state in the system
+//! tray (M2) and offers a settings/status window (M3). The config file can
+//! still be edited by hand; it is reloaded automatically when it changes.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod commands;
 mod i18n;
 mod logging;
 mod tray;
@@ -23,7 +24,7 @@ use nd104_core::hid::{HidBackend, HidapiBackend};
 use nd104_core::{model, APP_VERSION};
 use tauri::menu::MenuEvent;
 use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Manager, RunEvent};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, Theme, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
@@ -32,19 +33,22 @@ use tokio::sync::{mpsc, watch};
 use crate::i18n::I18n;
 use crate::tray::{TrayItems, TrayState, TRAY_ID};
 
-const PROJECT_URL: &str =
+pub(crate) const PROJECT_URL: &str =
     "https://github.com/MrUrdam/chilkey_nd104_utilities/tree/main/apps/nd104-sync";
+pub(crate) const CHANGELOG_URL: &str =
+    "https://github.com/MrUrdam/chilkey_nd104_utilities/blob/main/apps/nd104-sync/CHANGELOG.md";
 const CONFIG_POLL: Duration = Duration::from_secs(3);
+const SETTINGS_WINDOW: &str = "settings";
 
-struct AppState {
-    config_path: PathBuf,
-    config: Mutex<Config>,
-    i18n: Mutex<I18n>,
-    commands: mpsc::Sender<EngineCommand>,
-    status: watch::Receiver<Status>,
+pub(crate) struct AppState {
+    pub(crate) config_path: PathBuf,
+    pub(crate) config: Mutex<Config>,
+    pub(crate) i18n: Mutex<I18n>,
+    pub(crate) commands: mpsc::Sender<EngineCommand>,
+    pub(crate) status: watch::Receiver<Status>,
     items: Mutex<Option<TrayItems>>,
     /// Show the result of the next app update check (manual check).
-    manual_update_check: AtomicBool,
+    pub(crate) manual_update_check: AtomicBool,
     /// Modification time of our own last config write (not a user edit).
     own_write: Mutex<Option<SystemTime>>,
 }
@@ -60,6 +64,7 @@ fn main() {
             return;
         }
     };
+    let first_run = !config_path.exists();
     let (config, config_error) = match Config::load(&config_path) {
         Ok(c) => (c, None),
         Err(e) => {
@@ -67,22 +72,17 @@ fn main() {
             (Config::default(), Some(format!("{e:#}")))
         }
     };
-    if !config_path.exists() {
+    if first_run {
         if let Err(e) = config.save(&config_path) {
             tracing::warn!("cannot create config file: {e:#}");
         }
     }
+    let show_settings = first_run || std::env::args().any(|a| a == "--settings");
 
     tauri::Builder::default()
-        // must be registered first
+        // must be registered first: a second start opens the window of the first
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            let text = app
-                .state::<AppState>()
-                .i18n
-                .lock()
-                .unwrap()
-                .t("app.already_running");
-            notify(app, "nd104-sync", &text);
+            open_settings(app);
         }))
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
@@ -90,6 +90,20 @@ fn main() {
         ))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            commands::app_info,
+            commands::texts,
+            commands::get_status,
+            commands::get_config,
+            commands::save_config,
+            commands::search_places,
+            commands::test_weather,
+            commands::test_ntp,
+            commands::preview_time,
+            commands::timezones,
+            commands::engine_command,
+            commands::open_target,
+        ])
         .setup(move |app| {
             let handle = app.handle().clone();
             let device = DeviceHandle::spawn(
@@ -135,14 +149,17 @@ fn main() {
             });
 
             tauri::async_runtime::spawn(watch_status(handle.clone(), engine.status.clone()));
-            tauri::async_runtime::spawn(watch_config(handle));
+            tauri::async_runtime::spawn(watch_config(handle.clone()));
+            if show_settings {
+                open_settings(&handle);
+            }
             Ok(())
         })
         .build(tauri::generate_context!())
         .expect("cannot start nd104-sync")
         .run(|app, event| {
             if let RunEvent::ExitRequested { api, code, .. } = event {
-                // No windows: only an explicit "Quit" ends the app.
+                // Closing the window keeps the tray app running; only "Quit" ends it.
                 if code.is_none() {
                     api.prevent_exit();
                 } else {
@@ -151,6 +168,36 @@ fn main() {
                 }
             }
         });
+}
+
+fn window_theme(config: &Config) -> Option<Theme> {
+    match config.general.theme.as_str() {
+        "dark" => Some(Theme::Dark),
+        "light" => Some(Theme::Light),
+        _ => None, // follow Windows
+    }
+}
+
+/// Shows the settings window, creating it if needed.
+pub(crate) fn open_settings(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window(SETTINGS_WINDOW) {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+        return;
+    }
+    let theme = window_theme(&app.state::<AppState>().config.lock().unwrap());
+    let result =
+        WebviewWindowBuilder::new(app, SETTINGS_WINDOW, WebviewUrl::App("index.html".into()))
+            .title(format!("nd104-sync {APP_VERSION}"))
+            .inner_size(1000.0, 680.0)
+            .min_inner_size(820.0, 560.0)
+            .theme(theme)
+            .center()
+            .build();
+    if let Err(e) = result {
+        tracing::error!("cannot open settings window: {e}");
+    }
 }
 
 fn notify(app: &AppHandle, title: &str, body: &str) {
@@ -162,7 +209,7 @@ fn notify(app: &AppHandle, title: &str, body: &str) {
 /// Opens a folder in the file manager or a file with its associated program.
 /// On Windows Explorer is called directly: the opener plugin's shell "open"
 /// reported existing paths as "not available".
-fn open_in_shell(app: &AppHandle, path: &Path) {
+pub(crate) fn open_in_shell(app: &AppHandle, path: &Path) {
     #[cfg(windows)]
     {
         let _ = app;
@@ -220,12 +267,7 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
             state.manual_update_check.store(true, Ordering::SeqCst);
             send(app, EngineCommand::CheckAppUpdate);
         }
-        "settings" => {
-            if !state.config_path.exists() {
-                update_config(app, |_| {});
-            }
-            open_in_shell(app, &state.config_path);
-        }
+        "settings" => open_settings(app),
         "open_logs" => {
             if let Ok(dir) = config::log_dir() {
                 let _ = std::fs::create_dir_all(&dir);
@@ -236,10 +278,11 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
             let _ = app.opener().open_url(PROJECT_URL, None::<&str>);
         }
         "autostart" => {
-            let enabled = !state.config.lock().unwrap().general.autostart;
-            apply_autostart(app, enabled);
-            update_config(app, |c| c.general.autostart = enabled);
-            rebuild_menu(app);
+            let mut config = state.config.lock().unwrap().clone();
+            config.general.autostart = !config.general.autostart;
+            if let Err(e) = apply_config(app, config) {
+                tracing::warn!("{e:#}");
+            }
         }
         "quit" => {
             send(app, EngineCommand::Shutdown);
@@ -247,31 +290,52 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
         }
         id => {
             if let Some(language) = id.strip_prefix("lang:") {
-                let language = language.to_string();
-                update_config(app, |c| c.general.language = language.clone());
-                *state.i18n.lock().unwrap() = I18n::new(&language);
-                rebuild_menu(app);
+                let mut config = state.config.lock().unwrap().clone();
+                config.general.language = language.to_string();
+                if let Err(e) = apply_config(app, config) {
+                    tracing::warn!("{e:#}");
+                }
             }
         }
     }
 }
 
-/// Changes and saves the config from the tray (not treated as a user edit).
-fn update_config(app: &AppHandle, change: impl FnOnce(&mut Config)) {
+/// Saves a changed configuration (tray or window) and applies it everywhere.
+pub(crate) fn apply_config(app: &AppHandle, config: Config) -> anyhow::Result<()> {
     let state = app.state::<AppState>();
-    let mut config = state.config.lock().unwrap();
-    change(&mut config);
-    match config.save(&state.config_path) {
-        Ok(()) => *state.own_write.lock().unwrap() = modified(&state.config_path),
-        Err(e) => tracing::warn!("cannot save config: {e:#}"),
-    }
+    config.save(&state.config_path)?;
+    *state.own_write.lock().unwrap() = modified(&state.config_path);
+    activate_config(app, config);
+    Ok(())
 }
+
+/// Applies a configuration that is already on disk.
+fn activate_config(app: &AppHandle, config: Config) {
+    let state = app.state::<AppState>();
+    let previous = std::mem::replace(&mut *state.config.lock().unwrap(), config.clone());
+    send(app, EngineCommand::Reload(Box::new(config.clone())));
+    if previous.general.autostart != config.general.autostart {
+        apply_autostart(app, config.general.autostart);
+    }
+    if previous.general.language != config.general.language {
+        *state.i18n.lock().unwrap() = I18n::new(&config.general.language);
+    }
+    if let Some(window) = app.get_webview_window(SETTINGS_WINDOW) {
+        let _ = window.set_theme(window_theme(&config));
+    }
+    rebuild_menu(app);
+    let _ = app.emit("config-changed", ());
+}
+
+// Locking rule: never hold a mutex while calling tray/menu/window functions.
+// They run on the main thread, which may itself be waiting for that mutex
+// (deadlock on Apply in 0.3.0 development builds). Copy what is needed first.
 
 fn rebuild_menu(app: &AppHandle) {
     let state = app.state::<AppState>();
     let config = state.config.lock().unwrap().clone();
     let status = state.status.borrow().clone();
-    let i18n = state.i18n.lock().unwrap();
+    let i18n = state.i18n.lock().unwrap().clone();
     match tray::build_menu(
         app,
         &i18n,
@@ -290,7 +354,7 @@ fn rebuild_menu(app: &AppHandle) {
     }
 }
 
-/// Mirrors engine status into the tray and raises notifications.
+/// Mirrors engine status into the tray and window, raises notifications.
 async fn watch_status(app: AppHandle, mut status: watch::Receiver<Status>) {
     let mut previous = status.borrow().clone();
     let mut compatible_notified = false;
@@ -298,8 +362,9 @@ async fn watch_status(app: AppHandle, mut status: watch::Receiver<Status>) {
 
     while status.changed().await.is_ok() {
         let current = status.borrow().clone();
+        let _ = app.emit("status", &current);
         let state = app.state::<AppState>();
-        let i18n = state.i18n.lock().unwrap();
+        let i18n = state.i18n.lock().unwrap().clone();
 
         if let Some(tray) = app.tray_by_id(TRAY_ID) {
             if TrayState::of(&current) != TrayState::of(&previous) {
@@ -307,7 +372,8 @@ async fn watch_status(app: AppHandle, mut status: watch::Receiver<Status>) {
             }
             let _ = tray.set_tooltip(Some(tray::tooltip(&i18n, &current)));
         }
-        if let Some(items) = state.items.lock().unwrap().as_ref() {
+        let items = state.items.lock().unwrap().clone();
+        if let Some(items) = items {
             let _ = items.status.set_text(tray::status_line(&i18n, &current));
             let _ = items.pause.set_text(i18n.t(if current.paused {
                 "menu.resume"
@@ -374,7 +440,7 @@ async fn watch_status(app: AppHandle, mut status: watch::Receiver<Status>) {
     }
 }
 
-/// Reloads the config file when the user edits it.
+/// Reloads the config file when the user edits it by hand.
 async fn watch_config(app: AppHandle) {
     let mut last_seen = modified(&app.state::<AppState>().config_path);
     loop {
@@ -391,16 +457,7 @@ async fn watch_config(app: AppHandle) {
         match Config::load(&state.config_path) {
             Ok(config) => {
                 tracing::info!("config file changed, reloading");
-                let language_changed =
-                    config.general.language != state.config.lock().unwrap().general.language;
-                let autostart = config.general.autostart;
-                *state.config.lock().unwrap() = config.clone();
-                send(&app, EngineCommand::Reload(Box::new(config.clone())));
-                apply_autostart(&app, autostart);
-                if language_changed {
-                    *state.i18n.lock().unwrap() = I18n::new(&config.general.language);
-                }
-                rebuild_menu(&app);
+                activate_config(&app, config);
             }
             Err(e) => {
                 let i18n = state.i18n.lock().unwrap();

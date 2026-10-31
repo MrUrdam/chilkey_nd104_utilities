@@ -1,14 +1,14 @@
 //! City search via the free Open-Meteo geocoding API.
 
 use anyhow::{Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::Location;
 
 const URL: &str = "https://geocoding-api.open-meteo.com/v1/search";
 
 /// One search hit.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Place {
     pub name: String,
     pub latitude: f64,

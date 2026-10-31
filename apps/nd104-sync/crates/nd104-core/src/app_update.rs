@@ -7,14 +7,14 @@
 use std::cmp::Ordering;
 
 use anyhow::{Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub const RELEASES_API: &str =
     "https://api.github.com/repos/MrUrdam/chilkey_nd104_utilities/releases?per_page=50";
 pub const RELEASES_PAGE: &str = "https://github.com/MrUrdam/chilkey_nd104_utilities/releases";
 pub const TAG_PREFIX: &str = "nd104-sync-v";
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Release {
     pub version: String,
     pub tag: String,
@@ -22,7 +22,8 @@ pub struct Release {
     pub published_at: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UpdateStatus {
     UpToDate { latest: Option<Release> },
     Available(Release),
