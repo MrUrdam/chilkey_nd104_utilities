@@ -402,6 +402,28 @@ trait Platform {
   udev rule for `5542:0001`, XDG autostart, logind resume signal; LaunchAgent,
   menu-bar icon, possible HID permission prompt on macOS.
 
+### 5.11 Versioning and app update check
+- **SemVer** `MAJOR.MINOR.PATCH`; `0.x.y` during development. Current: `0.1.0`.
+- **Single source of truth:** `[workspace.package] version` in
+  `apps/nd104-sync/Cargo.toml`. The code reads it via `CARGO_PKG_VERSION`
+  (`nd104_core::APP_VERSION`), so the CLI, the app, the logs and the HTTP user
+  agent always show the same version.
+- **Release tags** `nd104-sync-vX.Y.Z` (prefix because the repo hosts several
+  tools); [CHANGELOG.md](../apps/nd104-sync/CHANGELOG.md) in Keep-a-Changelog format.
+- **Version shown** in: settings window General → About, dashboard footer,
+  tray tooltip, `nd104-cli --version`, first line of each log file.
+- **App update check** (`nd104_core::app_update`, ✅ in M1):
+  - GitHub releases API of this repository; only `nd104-sync-v*` tags,
+    no drafts or pre-releases, numeric SemVer comparison
+  - 30 s after start, then every `check_interval_h` (default 24 h), and
+    manually: "Check for updates" (General → About, tray menu),
+    `nd104-cli check-update`
+  - Result: notification + About page ("up to date" / "X.Y.Z available" with a
+    link / "check failed"). Nothing is downloaded or installed automatically.
+  - Can be disabled: `[updates] app_check = false`.
+- **Updating:** run the newer installer (the config is kept). Config files carry
+  `schema`, so newer apps migrate older files and older apps refuse newer files.
+
 ---
 
 ## 6. User interface
@@ -410,8 +432,8 @@ trait Platform {
 - Icon states: **connected & synced** (accent) · **not connected** (grey) ·
   **locked / firmware mismatch** (amber) · **error** (red). Light/dark variants
   for the Windows taskbar.
-- Tooltip: `ND104 · 12.3 °C ☁ · synced 14:05`
-- Menu: status line · Sync now · Pause/Resume · **Check for firmware updates** · Settings… · Language ▸ (Auto / Deutsch / English) · Open log folder · Quit
+- Tooltip: `nd104-sync 0.1.0 · ND104 · 12.3 °C ☁ · synced 14:05` (includes the app version)
+- Menu: status line · Sync now · Pause/Resume · **Check for updates** (firmware + app) · Settings… · Language ▸ (Auto / Deutsch / English) · Open log folder · Quit
 
 ### 6.2 Settings / status window
 Tabs (left sidebar):
@@ -428,7 +450,11 @@ Tabs (left sidebar):
    versions from the manifest (with Drive file names and dates), update status,
    "last checked" time, a **"Check for updates" button** (manual check, same as
    the tray entry), link to Chilkey's update instructions, wired-only notice.
-5. **General** – autostart, language, theme (Auto/Dark/Light), log level, about.
+5. **General** – autostart, language, theme (Auto/Dark/Light), log level,
+   **About**: app version, build info, "Check for updates" button with the
+   result (app + firmware), links to the repo, changelog and releases.
+
+The **app version** is also shown in the dashboard footer.
 
 Apply/Cancel with validation; *Test* buttons never save.
 
@@ -468,11 +494,11 @@ Apply/Cancel with validation; *Test* buttons never save.
 | # | Milestone | Deliverable |
 |---|---|---|
 | **M0** | **Protocol & firmware verification** | Small Rust CLI (`nd104-probe`): list devices, read keyboard + screen firmware versions, send time, send test weather (incl. negative temperatures), cycle icons, compare keyboard vs. screen as target. Work through the checklist in [protocol.md § 6](protocol.md#6-open-points-for-m0-hardware-verification), record the answer patterns for the protocol checks, first verified firmware entry. **Gate for everything else.** |
-| M1 | Core (headless) | `nd104-protocol` + `nd104-core`: `KeyboardModel` interface with the ND104 as the only model, device manager, firmware guard, clock (system/timezone/manual), Open-Meteo + manual provider, scheduler, config; unit tests |
+| M1 | Core (headless) | `nd104-protocol` + `nd104-core`: `KeyboardModel` interface with the ND104 as the only model, device manager, firmware guard, clock (system/timezone/manual), Open-Meteo + manual provider, scheduler, config, **app update check**, console runner `nd104-cli`; unit tests |
 | M2 | Tray app | Tauri shell, tray with states, autostart, single instance, notifications, i18n (DE/EN) |
 | M3 | Settings UI | Dashboard, Weather, Clock, Device & Firmware, General; dark/light/auto; design system |
 | M4 | Providers & secrets | Bright Sky, OpenWeatherMap, WeatherAPI, fallback, NTP, keyring |
-| M5 | Firmware update check & release | Manifest, Drive watcher action, update notification, GitHub Actions build, Windows installer |
+| M5 | Firmware update check & release | Manifest, Drive watcher action, firmware update notification, GitHub Actions release build (`nd104-sync-v*` tags), Windows installer |
 | M6 | Extras | Theme colours, image/GIF upload, more languages, Linux/macOS implementation (if wanted) |
 
 ---

@@ -4,8 +4,9 @@ Background tool that keeps the display of the **Chilkey ND104** keyboard up to
 date with the **current time and weather** – with a tray icon and a modern
 settings/status window.
 
-> 🚧 **Status: early development.** The app itself does not exist yet; the
-> protocol library and a diagnostic CLI do. See the [roadmap](#roadmap).
+> 🚧 **Status: early development – version 0.1.0.** The tray app does not
+> exist yet. The core works and can already be used on the console with
+> [`nd104-cli`](#console-runner-nd104-cli-available-now). See the [roadmap](#roadmap).
 
 > 🔌 **Wired USB only.** nd104-sync only supports the keyboard connected with a
 > **USB cable**. 2.4 GHz dongle and Bluetooth modes are **not supported** and
@@ -42,6 +43,10 @@ your weather provider, your location, your clock source.
   Device & Firmware page)
 - **Checks for firmware updates** after boot and notifies you; manual
   **"Check for updates"** button in the UI and in the tray menu
+- **Checks for new nd104-sync releases** on GitHub after boot and on demand
+  (see [Updating](#updating))
+- **Shows its version** in the settings window (General → About), in the
+  dashboard footer and in the tray tooltip
 - UI in **German and English** (follows the system language, switchable)
 - **Dark / light mode** following Windows, overridable in settings
 
@@ -136,8 +141,8 @@ version. Updating stays your decision and is done with Chilkey's tools.
 
 | Provider | API key | Coverage | Status |
 |---|---|---|---|
-| [Open-Meteo](https://open-meteo.com/) (default) | no | worldwide | planned |
-| Manual / Test | – | – | planned |
+| [Open-Meteo](https://open-meteo.com/) (default) | no | worldwide | ✅ available (core) |
+| Manual / Test | – | – | ✅ available (core) |
 | [Bright Sky](https://brightsky.dev/) (DWD data) | no | Germany | planned |
 | [OpenWeatherMap](https://openweathermap.org/) | yes | worldwide | planned |
 | [WeatherAPI.com](https://www.weatherapi.com/) | yes | worldwide | planned |
@@ -161,9 +166,70 @@ Summer/winter time: **Auto** (from time-zone rules) · force summer · force win
 
 ## Installation
 
-> Not available yet – releases will be published on the
-> [GitHub releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
-> as a Windows installer (`.msi` / `.exe`).
+There are two ways to get nd104-sync. Both need Windows 10/11 (64-bit) and the
+keyboard connected **by USB cable**.
+
+### Option A – prebuilt release (recommended)
+
+> ⏳ No release has been published yet. The first installer comes with M5.
+
+1. Open the [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
+   and pick the newest release tagged `nd104-sync-vX.Y.Z`.
+2. Download the installer (`nd104-sync_X.Y.Z_x64-setup.exe` or `.msi`).
+3. Run it. It installs per user, without admin rights, and starts the app.
+4. On first start the settings window opens: choose your location.
+
+### Option B – your own build
+
+1. [Build from source](#building-from-source).
+2. Install the generated installer from
+   `apps/nd104-sync/target/release/bundle/` (from M2 on), **or** use the
+   console runner `target/release/nd104-cli.exe` directly (available now).
+
+Either way, your configuration stays in `%APPDATA%\nd104-sync\config.toml`;
+see [Files](#files).
+
+### Uninstall
+
+Windows Settings → Apps → nd104-sync → Uninstall. The configuration and logs
+are kept. Delete `%APPDATA%\nd104-sync` and `%LOCALAPPDATA%\nd104-sync` to
+remove them too.
+
+## Updating
+
+**Update check:** nd104-sync asks GitHub for the newest release shortly after
+start and then once a day. You can also run the check by hand:
+- App: **"Check for updates"** (General → About, or the tray menu)
+- Console: `nd104-cli check-update`
+
+Only releases tagged `nd104-sync-vX.Y.Z` count; drafts and pre-releases are
+ignored. If a newer version exists, you get a notification with a link to the
+release. Nothing is downloaded or installed automatically.
+
+**How to update:**
+- **Prebuilt:** download the new installer from the release and run it. It
+  replaces the old version; configuration, location and API keys stay.
+- **Own build:** `git pull`, then build again (see below) and install the new
+  installer, or replace `nd104-cli.exe`.
+
+Configuration files are versioned (`schema = 1`). A newer app migrates older
+files automatically. An older app refuses a file written by a newer schema
+instead of misreading it.
+
+## Versioning
+
+- nd104-sync uses [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
+  - `0.x.y` while in development: a minor bump may change behaviour or config.
+  - From `1.0.0`: MAJOR = incompatible changes, MINOR = new features,
+    PATCH = fixes.
+- **One source of truth:** `version` in [`Cargo.toml`](Cargo.toml)
+  (`[workspace.package]`). Every crate, the CLI (`nd104-cli --version`) and the
+  app UI read it from there.
+- **Release tags:** `nd104-sync-vX.Y.Z`. The prefix is needed because this
+  repository hosts several tools.
+- **Changes:** listed per version in [CHANGELOG.md](CHANGELOG.md).
+- **Where the version is shown:** settings window (General → About), dashboard
+  footer, tray tooltip, `nd104-cli --version`, and the first line of each log file.
 
 ## Usage
 
@@ -189,7 +255,27 @@ Summer/winter time: **Auto** (from time-zone rules) · force summer · force win
 **Tray icon colours:** accent = connected & synced · grey = not connected ·
 amber = locked (firmware) · red = error.
 
-**Command-line options (planned)**
+### Console runner `nd104-cli` (available now)
+
+Until the tray app exists (M2), the core runs on the console. It uses the same
+configuration file as the app.
+
+```
+nd104-cli                            # run continuously (= nd104-cli run), Ctrl+C to stop
+nd104-cli status                     # keyboard, firmware, protocol check result
+nd104-cli sync                       # send time + weather once, then exit
+nd104-cli geocode "Berlin"           # search a city
+nd104-cli geocode "Berlin" --set 1   # store result 1 as your location
+nd104-cli weather                    # fetch and print the weather (nothing sent)
+nd104-cli check-update               # check GitHub for a newer release
+nd104-cli config path|show|init      # where the config is / print it / create it
+nd104-cli --config other.toml …      # use another config file
+nd104-cli --version
+```
+
+Set `RUST_LOG=debug` for more output.
+
+### App command-line options (planned)
 
 ```
 nd104-sync.exe                # normal start (tray)
@@ -198,7 +284,7 @@ nd104-sync.exe --minimized    # start without window (used by autostart)
 nd104-sync.exe --sync-once    # sync once and exit
 ```
 
-**Files**
+### Files
 
 | What | Where |
 |---|---|
@@ -211,7 +297,9 @@ nd104-sync.exe --sync-once    # sync once and exit
 nd104-sync connects only to:
 - the weather provider you selected (and Open-Meteo geocoding for city search),
 - the NTP server, if you selected NTP as clock source,
-- GitHub (raw file of this repo) for the firmware update check – can be disabled.
+- GitHub (raw file of this repo) for the firmware update check – can be disabled,
+- the GitHub releases API of this repo for the app update check – can be disabled
+  (`[updates] app_check = false`).
 
 No telemetry, no analytics, no IP-based location unless you turn it on.
 
@@ -230,23 +318,50 @@ No telemetry, no analytics, no IP-based location unless you turn it on.
 
 ### Prerequisites (Windows)
 
-| Tool | Version | Notes |
-|---|---|---|
-| [Rust](https://rustup.rs/) | stable, `x86_64-pc-windows-msvc` | via `rustup` |
-| Visual Studio Build Tools | 2022 | workload "Desktop development with C++" |
-| [Node.js](https://nodejs.org/) | LTS (≥ 20) | for the UI build |
-| WebView2 Runtime | current | pre-installed on Windows 11 |
-| Tauri CLI | v2 | `cargo install tauri-cli --version "^2"` |
+| Tool | Version | Needed for | Notes |
+|---|---|---|---|
+| [Rust](https://rustup.rs/) | stable, `x86_64-pc-windows-msvc` | everything | install with `rustup-init.exe`, default options |
+| Visual Studio Build Tools | 2022 | everything | workload **"Desktop development with C++"** (linker) |
+| [Git](https://git-scm.com/) | any | getting the code | |
+| [Node.js](https://nodejs.org/) | LTS (≥ 20) | app UI (from M2) | |
+| WebView2 Runtime | current | app UI (from M2) | pre-installed on Windows 11 |
+| Tauri CLI | v2 | app installer (from M2) | `cargo install tauri-cli --version "^2"` |
 
-### Build
+Quick install with winget (Rust, then the Build Tools with the C++ workload):
+
+```bash
+winget install --id Rustlang.Rustup -e
+```
+
+```bash
+winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--passive --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+```
+
+### Build the core and the console runner (now)
+
+```bash
+git clone https://github.com/MrUrdam/chilkey_nd104_utilities.git
+cd chilkey_nd104_utilities/apps/nd104-sync
+cargo test --workspace            # unit tests, no hardware needed
+cargo build --release             # → target/release/nd104-cli.exe, nd104-probe.exe
+```
+
+### Build the app and installer (from M2)
 
 ```bash
 cd apps/nd104-sync
 npm install --prefix ui
 cargo tauri dev        # run in development mode with hot reload
-cargo tauri build      # release build + installer in src-tauri/target/release/bundle
-cargo test --workspace # run the unit tests (no hardware needed)
+cargo tauri build      # release build + installer in target/release/bundle/
 ```
+
+### Making a release (maintainers)
+
+1. Update the version in `Cargo.toml` (`[workspace.package]`) and add an entry to
+   [CHANGELOG.md](CHANGELOG.md).
+2. Commit, then tag: `git tag nd104-sync-vX.Y.Z` and push the tag.
+3. The release workflow (M5) builds the installer and publishes the GitHub
+   release, which the app update check then finds.
 
 ### Main dependencies
 
@@ -257,7 +372,7 @@ cargo test --workspace # run the unit tests (no hardware needed)
 | `tokio` | Async runtime, scheduler |
 | `reqwest` (rustls) | HTTP for weather / geocoding / manifest |
 | `jiff` | Time zones and DST |
-| `sntpc` | NTP client |
+| (own SNTP client) | NTP time source, no extra dependency |
 | `serde`, `toml`, `directories` | Configuration |
 | `keyring` | API keys in the Credential Manager |
 | `tracing`, `tracing-appender` | Logging |
@@ -270,8 +385,10 @@ cargo test --workspace # run the unit tests (no hardware needed)
 apps/nd104-sync/
 ├── crates/
 │   ├── nd104-protocol/   # packet building, CRC – pure, unit tested  ✅ exists
-│   ├── nd104-probe/      # diagnostic CLI                            ✅ exists
-│   └── nd104-core/       # device, firmware guard, clock, weather, scheduler, config
+│   ├── nd104-probe/      # diagnostic CLI (M0)                       ✅ exists
+│   ├── nd104-core/       # model interface, device + firmware guard,
+│   │                     # clock, weather, scheduler, config, update check  ✅ exists
+│   └── nd104-cli/        # console runner for the core               ✅ exists
 ├── src-tauri/            # Tauri app: tray, commands, bundling
 ├── ui/                   # Svelte frontend
 ├── locales/              # en.json, de.json
@@ -283,7 +400,7 @@ apps/nd104-sync/
 ```mermaid
 flowchart LR
     M0["<b>M0</b><br/>Protocol &amp; firmware check<br/>✔ done"]:::done
-    M1["<b>M1</b><br/>Core, headless<br/>▶ next"]:::current
+    M1["<b>M1</b><br/>Core, headless<br/>▶ in progress"]:::current
     M2["<b>M2</b><br/>Tray app"]:::todo
     M3["<b>M3</b><br/>Settings UI"]:::todo
     M4["<b>M4</b><br/>Providers &amp; secrets"]:::todo
