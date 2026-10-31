@@ -13,6 +13,9 @@ build/
 target/
 **/*.rs.bk
 
+# Tauri (generated on build)
+apps/*/src-tauri/gen/
+
 # Node / Frontend
 node_modules/
 apps/*/ui/dist/

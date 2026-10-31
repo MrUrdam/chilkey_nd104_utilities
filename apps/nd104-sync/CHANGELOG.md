@@ -11,6 +11,45 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] – 2026-10-31 · M2 · Beta
+
+> **Beta – milestone M2: tray app and installer.** nd104-sync now runs in the
+> background with a tray icon and starts with Windows. There is no settings
+> window yet (M3): **Settings…** opens the configuration file, and changes are
+> picked up automatically. **Chilkey ND104 only, wired USB only, Windows 10/11.**
+
+### Added
+- **Tray app `nd104-sync.exe`** built on the M1 core:
+  - Tray icon colour shows the state: cyan = connected and synced, grey = not
+    connected, amber = locked (protocol check failed), red = weather stale.
+  - Tooltip with **app version**, keyboard, weather, firmware state and last sync.
+  - Menu: status line, Sync now, Pause/Resume, Check keyboard again, Check for
+    updates, Settings… (config file), Language, Start with Windows, Open log
+    folder, About (version, opens the project page), Quit.
+- **Notifications** when the keyboard locks, when unverified firmware is
+  detected, when a new nd104-sync version is available, and for the result of
+  a manual update check.
+- **German and English**, following the system language; switchable in the
+  tray menu (Language).
+- **Start with Windows** (on by default, switchable in the tray menu).
+- **Config file reload:** edits to `config.toml` take effect within seconds.
+- **Log files** in `%LOCALAPPDATA%\nd104-sync\logs` (daily, kept 7 days; the
+  first line of a run shows the version).
+- **Single instance:** a second start shows a notification instead.
+- **Installers** in every release: NSIS setup (`…_x64-setup.exe`, per user, no
+  admin rights, English/German) and MSI (`…_x64_en-US.msi`). The portable zip
+  now also contains the tray app. One `SHA256SUMS.txt` covers all downloads.
+- App icon and tray icons.
+
+### Known limitations
+- No settings window yet – edit the configuration file via **Settings…** (M3).
+- Installers are not code-signed: Windows SmartScreen asks for confirmation.
+- When nd104-sync is started from a packaged (MSIX) app such as some terminals
+  or IDE integrations, Windows redirects its AppData files into that app's
+  package folder. Start it from the Start menu or via autostart instead.
+- Key-based weather providers (M4) and the firmware update check (M5) are
+  still missing.
+
 ## [0.1.0] – 2026-10-31 · M1 · Beta
 
 > **Beta – milestone M1: core + console runner.** There is no tray app or
@@ -52,5 +91,6 @@ All notable changes to nd104-sync are listed here. The format follows
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.1.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.2.0...HEAD
+[0.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.1.0...nd104-sync-v0.2.0
 [0.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/releases/tag/nd104-sync-v0.1.0

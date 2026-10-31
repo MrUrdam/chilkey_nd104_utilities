@@ -4,11 +4,11 @@ Background tool that keeps the display of the **Chilkey ND104** keyboard up to
 date with the **current time and weather** – with a tray icon and a modern
 settings/status window.
 
-> 🚧 **Status: beta 0.1.0 (milestone M1).** The tray app does not exist yet.
-> The core works and can already be used on the console with
-> [`nd104-cli`](#console-runner-nd104-cli-available-now) – download it from the
-> [releases](https://github.com/MrUrdam/chilkey_nd104_utilities/releases). See the
-> [roadmap](#roadmap) and the [changelog](CHANGELOG.md).
+> 🚧 **Status: beta 0.2.0 (milestone M2).** The tray app runs in the
+> background, starts with Windows and comes with an installer – download it from
+> the [releases](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
+> The settings window follows with M3; until then settings are edited in the
+> config file. See the [roadmap](#roadmap) and the [changelog](CHANGELOG.md).
 
 > 🔌 **Wired USB only.** nd104-sync only supports the keyboard connected with a
 > **USB cable**. 2.4 GHz dongle and Bluetooth modes are **not supported** and
@@ -172,64 +172,75 @@ Summer/winter time: **Auto** (from time-zone rules) · force summer · force win
 
 ## Installation
 
-There are two ways to get nd104-sync. Both need Windows 10/11 (64-bit) and the
-keyboard connected **by USB cable**.
-
-### Option A – prebuilt release (recommended)
-
-Every milestone is published as a **beta release** on the
+All options need Windows 10/11 (64-bit) and the keyboard connected **by USB
+cable**. Every milestone is published as a **beta release** on the
 [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
-(tag `nd104-sync-vX.Y.Z`, all 0.x versions are beta). The release notes list
-what is new and what is still missing.
+(tag `nd104-sync-vX.Y.Z`; all 0.x versions are beta). Each release has:
 
-**Beta builds (now, 0.1.0 = M1):** a zip, no installer yet.
-1. Download `nd104-sync-X.Y.Z-windows-x64.zip` from the newest release.
-2. Optional: check it against the `.sha256` file
-   (`certutil -hashfile nd104-sync-X.Y.Z-windows-x64.zip SHA256`).
-3. Extract it to a folder of your choice, e.g. `%LOCALAPPDATA%\Programs\nd104-sync`.
-4. Set your location once: `nd104-cli geocode "<your city>" --set 1`
-   (without this, Berlin is used).
-5. Start `nd104-cli run` (keeps running until Ctrl+C), or `nd104-cli sync`
-   for a one-time sync.
+| File | What | When to use |
+|---|---|---|
+| `nd104-sync_X.Y.Z_x64-setup.exe` | **Installer (recommended)** – per user, no admin rights, English/German | normal use |
+| `nd104-sync_X.Y.Z_x64_en-US.msi` | MSI installer – per machine, needs admin rights | managed PCs, software deployment |
+| `nd104-sync-X.Y.Z-windows-x64.zip` | Portable: `nd104-sync.exe` (tray app), `nd104-cli.exe`, `nd104-probe.exe` | no installation, testing |
+| `SHA256SUMS.txt` | Checksums of all files | verifying downloads |
 
-**From M2/M5 on:** an installer (`nd104-sync_X.Y.Z_x64-setup.exe` / `.msi`)
-that installs per user without admin rights, starts with Windows and opens the
-settings window on first start.
+### Option A – installer (recommended)
 
-### Option B – your own build
+1. Download `nd104-sync_X.Y.Z_x64-setup.exe` from the newest release.
+2. Optional: compare its checksum with `SHA256SUMS.txt`:
+   `certutil -hashfile nd104-sync_X.Y.Z_x64-setup.exe SHA256`
+3. Run it. The installer is not code-signed yet, so Windows SmartScreen may
+   warn: **More info → Run anyway**.
+4. nd104-sync starts and shows its icon in the tray (maybe behind the **^**
+   arrow; drag it onto the taskbar to keep it visible). It starts with Windows
+   from now on.
+5. Set your location (default: Berlin): tray menu → **Settings…** opens
+   `config.toml`; set `name`, `lat` and `lon` under `[weather.location]` and
+   save. The change is picked up within seconds. Alternatively:
+   `nd104-cli geocode "<your city>" --set 1` (from the zip).
+
+### Option B – portable zip
+
+1. Download and extract `nd104-sync-X.Y.Z-windows-x64.zip`, e.g. to
+   `%LOCALAPPDATA%\Programs\nd104-sync`.
+2. Start `nd104-sync.exe` (tray app) – it enables "Start with Windows" for
+   the exe at this location – or use the console runner `nd104-cli.exe`.
+
+### Option C – your own build
 
 1. [Build from source](#building-from-source).
-2. Install the generated installer from
-   `apps/nd104-sync/target/release/bundle/` (from M2 on), **or** use the
-   console runner `target/release/nd104-cli.exe` directly (available now).
+2. Install `target/release/bundle/nsis/nd104-sync_X.Y.Z_x64-setup.exe`, or run
+   `target/release/nd104-sync.exe` directly.
 
-Either way, your configuration stays in `%APPDATA%\nd104-sync\config.toml`;
-see [Files](#files).
+In every case the configuration lives in `%APPDATA%\nd104-sync\config.toml`
+and the logs in `%LOCALAPPDATA%\nd104-sync\logs` – see [Files](#files).
 
 ### Uninstall
 
-Windows Settings → Apps → nd104-sync → Uninstall. The configuration and logs
-are kept. Delete `%APPDATA%\nd104-sync` and `%LOCALAPPDATA%\nd104-sync` to
-remove them too.
+Quit nd104-sync (tray → Quit), then Windows Settings → Apps → nd104-sync →
+Uninstall. The configuration and logs are kept. Delete `%APPDATA%\nd104-sync`
+and `%LOCALAPPDATA%\nd104-sync` to remove them too. For the portable zip,
+untick "Start with Windows" in the tray menu first, then delete the folder.
 
 ## Updating
 
-**Update check:** nd104-sync asks GitHub for the newest release shortly after
-start and then once a day. You can also run the check by hand:
-- App: **"Check for updates"** (General → About, or the tray menu)
+**Update check:** nd104-sync asks GitHub for the newest release 30 seconds
+after start and then once a day. If a newer version exists, you get a
+notification with a link to the release. Nothing is downloaded or installed
+automatically. Check by hand:
+- Tray menu → **Check for updates** (always shows a result)
 - Console: `nd104-cli check-update`
 
 Only releases tagged `nd104-sync-vX.Y.Z` count; drafts and pre-releases are
-ignored. If a newer version exists, you get a notification with a link to the
-release. Nothing is downloaded or installed automatically.
+ignored.
 
 **How to update:**
-- **Prebuilt beta (zip):** download the new zip and replace the files in your
-  folder. The configuration is not in that folder, so it stays.
-- **Prebuilt installer (from M2/M5):** download the new installer and run it. It
-  replaces the old version; configuration, location and API keys stay.
-- **Own build:** `git pull`, then build again (see below) and install the new
-  installer, or replace `nd104-cli.exe`.
+- **Installer:** download the new `…-setup.exe` and run it. It replaces the
+  installed version (quit nd104-sync first if the installer asks).
+  Configuration, location and API keys stay.
+- **MSI:** run the new `.msi`; it upgrades the installed version.
+- **Portable zip:** quit nd104-sync, replace the files in your folder.
+- **Own build:** `git pull`, build again, install or replace the exe.
 
 Configuration files are versioned (`schema = 1`). A newer app migrates older
 files automatically. An older app refuses a file written by a newer schema
@@ -254,30 +265,38 @@ instead of misreading it.
 
 1. Connect the ND104 with a **USB cable**.
 2. Close the official Chilkey web driver / weather plugin.
-3. Start nd104-sync. On first start the settings window opens – choose your
-   location (city search) and, if you like, another weather provider.
-4. From then on nd104-sync starts with Windows and runs in the tray.
+3. Start nd104-sync (Start menu, or automatically with Windows). The tray icon
+   appears and time and weather are sent right away.
+4. Set your location once (see [Installation](#option-a--installer-recommended), step 5).
 
 **Tray menu**
 
 | Entry | Action |
 |---|---|
-| Status line | Connection, weather and last sync at a glance |
-| Sync now | Send time and weather immediately |
-| Pause / Resume | Stop / resume all updates |
-| Check for firmware updates | Manual firmware update check, shows the result |
-| Settings… | Open the settings/status window |
-| Language ▸ | Auto / Deutsch / English |
+| Status line | Keyboard, weather and state at a glance |
+| Sync now | Send time and weather immediately (fetches fresh weather) |
+| Pause / Resume updates | Stop / resume all updates |
+| Check keyboard again | Lift a lock and run all protocol checks again |
+| Check for updates | Look for a newer nd104-sync release, shows the result |
+| Settings… (config file) | Opens `config.toml`; changes apply automatically (window in M3) |
+| Language ▸ | Automatic (system) / Deutsch / English |
+| Start with Windows | Autostart on/off |
 | Open log folder | For troubleshooting |
+| About nd104-sync X.Y.Z | Shows the version, opens the project page |
 | Quit | Exit the app |
 
-**Tray icon colours:** accent = connected & synced · grey = not connected ·
-amber = locked (firmware) · red = error.
+**Tray icon colours:** cyan = connected & synced · grey = not connected ·
+amber = locked (protocol check failed) · red = weather stale.
+The **tooltip** shows the app version, keyboard, weather and the last sync.
 
-### Console runner `nd104-cli` (available now)
+**Notifications:** keyboard locked, unverified firmware detected, new
+nd104-sync version available, result of a manual update check.
 
-Until the tray app exists (M2), the core runs on the console. It uses the same
-configuration file as the app.
+### Console runner `nd104-cli`
+
+Runs the same core on the console – useful for testing and for setting the
+location. It uses the same configuration file as the app. Do not run it at the
+same time as the tray app (both would send to the keyboard).
 
 ```
 nd104-cli                            # run continuously (= nd104-cli run), Ctrl+C to stop
@@ -294,13 +313,12 @@ nd104-cli --version
 
 Set `RUST_LOG=debug` for more output.
 
-### App command-line options (planned)
+### App command-line options
 
 ```
 nd104-sync.exe                # normal start (tray)
-nd104-sync.exe --settings     # open settings window directly
-nd104-sync.exe --minimized    # start without window (used by autostart)
-nd104-sync.exe --sync-once    # sync once and exit
+nd104-sync.exe --minimized    # used by autostart (no window; same as normal start until M3)
+nd104-sync.exe --settings     # planned with M3: open the settings window directly
 ```
 
 ### Files
@@ -327,7 +345,11 @@ No telemetry, no analytics, no IP-based location unless you turn it on.
 | Problem | Fix |
 |---|---|
 | "Not connected" | Use a USB **cable** (wireless is not supported); try another port; avoid unpowered hubs |
-| Amber icon / locked | A protocol check failed (the reason is on the Device & Firmware page). Re-connect the cable or press "Check again"; if it stays locked, your firmware behaves differently – please open an issue with the log |
+| Amber icon / locked | A protocol check failed (the reason is in the tray status line, the notification and the log). Re-connect the cable or use "Check keyboard again"; if it stays locked, your firmware behaves differently – please open an issue with the log |
+| No tray icon | It may be hidden behind the **^** arrow in the taskbar; drag it out. Is nd104-sync running (Task Manager)? |
+| SmartScreen blocks the installer | The installer is not code-signed yet: **More info → Run anyway** |
+| Config or log folder "not available" / settings not found | nd104-sync was started from a packaged (MSIX) app, e.g. some terminals or IDE integrations; Windows then redirects its AppData into that app's package folder (`%LOCALAPPDATA%\Packages\<app>\LocalCache\…`). Start nd104-sync from the Start menu or via autostart instead |
+| Tray app and `nd104-cli run` at the same time | Only run one of them |
 | Display shows other values | The official Chilkey weather plugin is probably still running – close it |
 | Wrong time after DST change | Check time zone / DST mode in the Clock tab |
 
@@ -342,9 +364,9 @@ No telemetry, no analytics, no IP-based location unless you turn it on.
 | [Rust](https://rustup.rs/) | stable, `x86_64-pc-windows-msvc` | everything | install with `rustup-init.exe`, default options |
 | Visual Studio Build Tools | 2022 | everything | workload **"Desktop development with C++"** (linker) |
 | [Git](https://git-scm.com/) | any | getting the code | |
-| [Node.js](https://nodejs.org/) | LTS (≥ 20) | app UI (from M2) | |
-| WebView2 Runtime | current | app UI (from M2) | pre-installed on Windows 11 |
-| Tauri CLI | v2 | app installer (from M2) | `cargo install tauri-cli --version "^2"` |
+| Tauri CLI | v2 | tray app + installers | `cargo install tauri-cli --version "^2" --locked` |
+| WebView2 Runtime | current | tray app | pre-installed on Windows 10/11 |
+| [Node.js](https://nodejs.org/) | LTS (≥ 20) | settings UI (from M3) | not needed yet |
 
 Quick install with winget (Rust, then the Build Tools with the C++ workload):
 
@@ -356,23 +378,18 @@ winget install --id Rustlang.Rustup -e
 winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--passive --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 ```
 
-### Build the core and the console runner (now)
+### Build
 
 ```bash
 git clone https://github.com/MrUrdam/chilkey_nd104_utilities.git
 cd chilkey_nd104_utilities/apps/nd104-sync
-cargo test --workspace            # unit tests, no hardware needed
-cargo build --release             # → target/release/nd104-cli.exe, nd104-probe.exe
+cargo test --workspace     # unit tests, no hardware needed
+cargo build --release      # → target/release/nd104-sync.exe, nd104-cli.exe, nd104-probe.exe
+cargo tauri build          # tray app + installers → target/release/bundle/nsis/*.exe, bundle/msi/*.msi
 ```
 
-### Build the app and installer (from M2)
-
-```bash
-cd apps/nd104-sync
-npm install --prefix ui
-cargo tauri dev        # run in development mode with hot reload
-cargo tauri build      # release build + installer in target/release/bundle/
-```
+`cargo tauri build` downloads NSIS and WiX on first use. Run the app without
+installing: `cargo run -p nd104-sync` (debug build with a console window).
 
 ### Making a release (maintainers)
 
@@ -385,11 +402,13 @@ One release per milestone (M1 = 0.1.0, M2 = 0.2.0, …), beta while 0.x.
 3. Commit, then tag and push:
    `git tag nd104-sync-vX.Y.Z` and `git push origin nd104-sync-vX.Y.Z`.
 4. The workflow [`nd104-sync-release.yml`](../../.github/workflows/nd104-sync-release.yml)
-   checks that the tag matches `Cargo.toml`, runs the tests, builds, packs
-   `nd104-sync-X.Y.Z-windows-x64.zip` with a SHA-256 file, and publishes the
-   GitHub release. Its notes are the CHANGELOG section for that version.
+   checks that the tag matches `Cargo.toml`, runs the tests, builds the
+   console tools and the tray app, creates the **NSIS setup and the MSI**, packs
+   the portable zip, writes `SHA256SUMS.txt` and publishes the GitHub release.
+   Its notes are the CHANGELOG section for that version plus a download list.
    - `0.x` → title "(beta)", normal release, so the app update check finds it.
-   - `X.Y.Z-rc.N` → GitHub pre-release, ignored by the app update check.
+   - `X.Y.Z-rc.N` → GitHub pre-release without MSI (WiX needs a plain version),
+     ignored by the app update check.
 
 Every push to `main` also runs [`nd104-sync-ci.yml`](../../.github/workflows/nd104-sync-ci.yml):
 format check, clippy (warnings are errors) and tests.
@@ -420,9 +439,9 @@ apps/nd104-sync/
 │   ├── nd104-core/       # model interface, device + firmware guard,
 │   │                     # clock, weather, scheduler, config, update check  ✅ exists
 │   └── nd104-cli/        # console runner for the core               ✅ exists
-├── src-tauri/            # Tauri app: tray, commands, bundling
+├── src-tauri/            # Tauri tray app, icons, installer config     ✅ exists
 ├── ui/                   # Svelte frontend
-├── locales/              # en.json, de.json
+├── locales/              # en.json, de.json                          ✅ exists
 └── packaging/            # installer configuration
 ```
 
@@ -432,8 +451,8 @@ apps/nd104-sync/
 flowchart LR
     M0["<b>M0</b><br/>Protocol &amp; firmware check<br/>✔ done"]:::done
     M1["<b>M1</b><br/>Core, headless<br/>✔ 0.1.0 beta"]:::done
-    M2["<b>M2</b><br/>Tray app<br/>▶ next"]:::current
-    M3["<b>M3</b><br/>Settings UI"]:::todo
+    M2["<b>M2</b><br/>Tray app<br/>✔ 0.2.0 beta"]:::done
+    M3["<b>M3</b><br/>Settings UI<br/>▶ next"]:::current
     M4["<b>M4</b><br/>Providers &amp; secrets"]:::todo
     M5["<b>M5</b><br/>Update check &amp; release"]:::todo
     M6["<b>M6</b><br/>Extras"]:::todo

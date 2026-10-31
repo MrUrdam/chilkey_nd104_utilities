@@ -1,8 +1,10 @@
 # Builds and publishes an nd104-sync release when a tag nd104-sync-vX.Y.Z is pushed.
+# Assets: NSIS setup (.exe), MSI, portable zip and SHA256SUMS.txt.
 # Release notes = the matching "## [X.Y.Z]" section of apps/nd104-sync/CHANGELOG.md.
 # 0.x versions are published as beta (title), but not as GitHub pre-release,
 # so the app update check finds them. Versions with a suffix (X.Y.Z-rc.1) are
-# published as pre-release and ignored by the update check.
+# published as pre-release (without MSI, which needs a plain X.Y.Z version) and
+# are ignored by the update check.
 name: nd104-sync release
 
 on:
@@ -38,21 +40,35 @@ jobs:
           fi
           echo "VERSION=$CARGO_VERSION" >> "$GITHUB_ENV"
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
       - name: Test
         run: cargo test --workspace --locked
 
-      - name: Build
+      - name: Build console tools
         run: cargo build --workspace --release --locked
+
+      - name: Build app and installers
+        run: |
+          case "$VERSION" in
+            *-*) cargo tauri build --bundles nsis ;;
+            *)   cargo tauri build --bundles nsis,msi ;;
+          esac
 
       - name: Package
         run: |
           NAME="nd104-sync-${VERSION}-windows-x64"
           mkdir -p "dist/$NAME"
-          cp target/release/nd104-cli.exe target/release/nd104-probe.exe \
+          cp target/release/nd104-sync.exe target/release/nd104-cli.exe target/release/nd104-probe.exe \
              README.md CHANGELOG.md ../../LICENSE "dist/$NAME/"
+          (cd dist && 7z a -tzip "$NAME.zip" "$NAME" > /dev/null)
+          cp target/release/bundle/nsis/*-setup.exe dist/
+          cp target/release/bundle/msi/*.msi dist/ 2>/dev/null || true
           cd dist
-          7z a -tzip "$NAME.zip" "$NAME" > /dev/null
-          sha256sum "$NAME.zip" > "$NAME.zip.sha256"
+          shopt -s nullglob
+          sha256sum *.zip *.exe *.msi > SHA256SUMS.txt
+          cat SHA256SUMS.txt
           echo "PACKAGE=$NAME" >> "$GITHUB_ENV"
 
       - name: Release notes from CHANGELOG
@@ -70,9 +86,13 @@ jobs:
           cat >> dist/notes.md <<EOF
 
           ---
-          **Download:** \`${PACKAGE}.zip\` (Windows 10/11, x64). Extract it anywhere and
-          run \`nd104-cli.exe\` – see the README inside. Wired USB connection only.
-          Verify the download with \`${PACKAGE}.zip.sha256\`.
+          **Downloads** (Windows 10/11, x64, wired USB connection only):
+          - \`nd104-sync_${VERSION}_x64-setup.exe\` – **recommended installer**, per user, no admin rights
+          - \`nd104-sync_${VERSION}_x64_en-US.msi\` – MSI for managed/per-machine installs (admin rights)
+          - \`${PACKAGE}.zip\` – portable: tray app \`nd104-sync.exe\`, console runner \`nd104-cli.exe\`, diagnostic tool \`nd104-probe.exe\`
+
+          The installers are not code-signed yet; Windows SmartScreen may ask for confirmation
+          ("More info" → "Run anyway"). Verify downloads with \`SHA256SUMS.txt\`.
           EOF
 
       - name: Publish release
@@ -85,6 +105,7 @@ jobs:
             *-*) FLAGS="--prerelease"; TITLE="$TITLE (pre-release)" ;;
             0.*) TITLE="$TITLE (beta)" ;;
           esac
+          shopt -s nullglob
           gh release create "$GITHUB_REF_NAME" \
-            "dist/${PACKAGE}.zip" "dist/${PACKAGE}.zip.sha256" \
+            dist/*.zip dist/*.exe dist/*.msi dist/SHA256SUMS.txt \
             --title "$TITLE" --notes-file dist/notes.md $FLAGS
