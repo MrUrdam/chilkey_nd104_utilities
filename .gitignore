@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+
+# Lokale Konfiguration / Secrets (z. B. Standort, API-Keys)
+.env
+.env.*
+config.local.*
+
+# Firmware-Binaries (Original-Firmware nicht ins Repo)
+firmware/**/*.bin
+firmware/**/*.hex
+firmware/**/*.dfu
+
+# Editoren & IDEs
+.vscode/
+.idea/
+*.swp
+
+# Betriebssystem
+Thumbs.db
+desktop.ini
+.DS_Store
