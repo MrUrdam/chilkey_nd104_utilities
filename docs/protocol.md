@@ -141,7 +141,7 @@ observed. The firmware itself probably answers correctly.
 
 **Consequence for nd104-sync:** use only the ASCII answer of the `0x11` query
 (§ 3.1 / § 3.2) and ignore the numeric byte. If a version string is not
-received within a timeout, treat it as unknown, which means locked mode.
+received within a timeout, the protocol check fails and the tool locks (see PLAN.md § 5.3).
 
 ---
 

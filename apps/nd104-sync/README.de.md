@@ -37,7 +37,8 @@ einmal einrichtest: dein Wetterdienst, dein Standort, deine Zeitquelle.
 - Wetterdienst, **Standort**, **Zeitquelle**, **Zeitzone** und
   **Sommerzeit-Modus** im Einstellungsfenster wählbar
 - **Status-Dashboard** mit Live-Vorschau dessen, was das Display zeigt
-- **Schützt deine Tastatur:** spricht nur mit geprüften Firmware-Versionen
+- **Schützt deine Tastatur:** funktioniert auch mit älterer/neuerer Firmware,
+  stoppt aber sofort, sobald sich das Protokoll anders verhält
   (siehe [Firmware-Schutz](#firmware-schutz))
 - **Zeigt die installierte Firmware** von Tastatur und Display (Dashboard und
   Seite „Gerät & Firmware“)
@@ -52,8 +53,10 @@ einmal einrichtest: dein Wetterdienst, dein Standort, deine Zeitquelle.
 - ❌ **Kein Linux / macOS** bisher (zukünftig möglich, nicht umgesetzt).
 - ❌ **Kein Firmware-Flashen.** Es lädt, installiert oder verändert keine
   Firmware, sondern informiert nur über verfügbare Updates.
-- ❌ **Keine Kommunikation mit ungeprüfter Firmware.** Ist die Version unbekannt
-  oder passt nicht, wird nichts gesendet und du erfährst warum.
+- ❌ **Keine riskante Kommunikation.** An ungeprüfte Firmware werden nur Uhrzeit
+  und Wetter gesendet, und nur solange alle Protokoll-Prüfungen bestehen.
+  Sieht irgendetwas anders aus, hört das Tool sofort auf zu senden und sagt dir
+  warum. Einen Schalter „ignorieren und weitermachen“ gibt es nicht.
 - ❌ **Keine Tastatur-Konfiguration** – Tastenbelegung, RGB, Makros, Drehregler
   usw. bleiben beim offiziellen [Chilkey-Treiber](https://chilkey.com/pages/console).
 - ❌ **Kein Bild-/GIF-Upload** in der ersten Version (später geplant).
@@ -74,7 +77,7 @@ einmal einrichtest: dein Wetterdienst, dein Standort, deine Zeitquelle.
 |---|---|
 | Betriebssystem | Windows 10 (21H2+) oder Windows 11, 64 Bit |
 | Verbindung | Chilkey ND104 per **USB-Kabel** |
-| Firmware | Nur geprüfte Versionen, siehe Tabelle |
+| Firmware | Geprüfte Versionen, oder andere Versionen solange die Protokoll-Prüfungen bestehen (siehe unten) |
 | Laufzeit | Microsoft Edge WebView2 (bei Windows 11 und aktuellem Windows 10 vorinstalliert) |
 
 ### Unterstützte Firmware
@@ -94,15 +97,25 @@ Tastatur und Display – mit denselben Abfragen wie der offizielle Web-Treiber
 (siehe [docs/protocol.md § 3](../../docs/protocol.md#3-firmware-version-queries)) –
 und vergleicht sie mit einer Liste geprüfter Versionen.
 
+Ältere oder neuere Firmware ist willkommen, aber das Protokoll muss sich genau
+wie erwartet verhalten. nd104-sync prüft das beim Anstecken und bei jedem
+Senden:
+- beide USB-Geräte haben die erwarteten Schnittstellen und Reportgrößen,
+- die Versionsabfragen werden korrekt beantwortet,
+- Schreibzugriffe werden angenommen,
+- Antworten sehen so aus wie bei geprüfter Firmware.
+
 | Situation | Verhalten |
 |---|---|
-| Geprüfte Version | Normalbetrieb |
-| Andere oder unbekannte Version | **Gesperrt:** es wird nichts gesendet. Das Tray-Icon wird orange, du bekommst eine Benachrichtigung und die Statusseite erklärt, was zu tun ist. |
-| Version nicht lesbar | Gilt als unbekannt → gesperrt |
+| Geprüfte Version, alle Prüfungen bestanden | **Geprüft:** Normalbetrieb |
+| Ältere/neuere Version, alle Prüfungen bestanden | **Kompatibel (ungeprüft):** Uhrzeit und Wetter werden synchronisiert; einmalige Benachrichtigung, die Statusseite zeigt „ungeprüfte Firmware“ |
+| Eine Prüfung schlägt fehl (vorher oder im Betrieb) | **Gesperrt:** sofortiger Sendestopp. Das Tray-Icon wird orange, die Benachrichtigung nennt die fehlgeschlagene Prüfung, und die Statusseite erklärt, was zu tun ist |
+| Version nicht lesbar | Gesperrt |
 
-Eine Übersteuerung gibt es bewusst **nicht**. Neue Firmware-Versionen werden
-unterstützt, indem sie geprüft und mit einer neuen nd104-sync-Version
-freigegeben werden.
+Zusatzfunktionen wie Themes oder Bilder (geplant) werden nur mit geprüfter
+Firmware genutzt. Eine Sperre wird nur durch erneutes Anstecken oder „Erneut
+prüfen“ aufgehoben, und in beiden Fällen laufen alle Prüfungen von vorn.
+Einen Schalter „ignorieren und weitermachen“ gibt es bewusst **nicht**.
 
 ## Firmware-Update-Prüfung
 
@@ -203,7 +216,7 @@ schaltest sie ein.
 | Problem | Lösung |
 |---|---|
 | „Nicht verbunden“ | USB-**Kabel** verwenden (Funk wird nicht unterstützt); anderen Port probieren; keine passiven Hubs |
-| Oranges Icon / gesperrt | Firmware nicht geprüft – siehe Seite „Gerät & Firmware“; auf ein nd104-sync-Update warten oder geprüfte Firmware verwenden |
+| Oranges Icon / gesperrt | Eine Protokoll-Prüfung ist fehlgeschlagen (Grund auf der Seite „Gerät & Firmware“). Kabel neu anstecken oder „Erneut prüfen“; bleibt es gesperrt, verhält sich deine Firmware anders – bitte ein Issue mit dem Log anlegen |
 | Display zeigt andere Werte | Vermutlich läuft noch das offizielle Chilkey-Wetter-Plugin – schließen |
 | Falsche Uhrzeit nach Zeitumstellung | Zeitzone / Sommerzeit-Modus im Tab „Uhr“ prüfen |
 
@@ -268,7 +281,7 @@ apps/nd104-sync/
 - **Neue Plattform (Linux/macOS):** `Platform`-Trait implementieren
   (siehe [docs/PLAN.md § 5.10](../../docs/PLAN.md#510-platform-layer-r2)).
 - **Neue Firmware-Version:** Protokoll an echter Hardware prüfen, in
-  `docs/protocol.md` dokumentieren, zur Freigabeliste hinzufügen.
+  `docs/protocol.md` dokumentieren, zur Liste geprüfter Versionen hinzufügen.
 
 ## Danksagung
 

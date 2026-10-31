@@ -74,5 +74,5 @@ The 12 h/°F folder warns that you must use the matching MCU and UI files.
      `firmware/versions.json`.
   2. **nd104-sync only reads `firmware/versions.json`**, which is stable and
      reviewed, and never scrapes Google Drive itself.
-- The firmware allowlist has to cover the **screen variant** too (°C or °F), not
+- The firmware checks have to recognise the **screen variant** too (°C or °F), not
   just the version.

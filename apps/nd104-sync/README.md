@@ -37,7 +37,8 @@ your weather provider, your location, your clock source.
 - Lets you choose the **weather provider**, **location**, **clock source**,
   **time zone** and **DST mode** in a settings window
 - Shows a **status dashboard** with a live preview of what the display shows
-- **Protects your keyboard:** only talks to verified firmware versions
+- **Protects your keyboard:** works with older/newer firmware too, but stops
+  immediately as soon as the protocol behaves differently
   (see [Firmware safety](#firmware-safety))
 - **Shows the installed firmware** of keyboard and screen (dashboard and
   Device & Firmware page)
@@ -52,8 +53,10 @@ your weather provider, your location, your clock source.
 - ❌ **No Linux / macOS support** yet (possible in the future, not implemented).
 - ❌ **No firmware flashing.** It never downloads, installs or modifies firmware;
   it only tells you an update exists.
-- ❌ **No communication with unverified firmware.** If the firmware version is
-  unknown or doesn't match, the tool sends nothing and tells you why.
+- ❌ **No risky communication.** On firmware that isn't verified, only time and
+  weather are sent, and only while every protocol check passes. If anything
+  looks different, the tool stops sending immediately and tells you why. There
+  is no "ignore and continue" switch.
 - ❌ **No keyboard configuration** – keymap, RGB lighting, macros, knob etc.
   stay with the official [Chilkey driver](https://chilkey.com/pages/console).
 - ❌ **No image/GIF upload** in the first version (planned later).
@@ -74,7 +77,7 @@ your weather provider, your location, your clock source.
 |---|---|
 | OS | Windows 10 (21H2+) or Windows 11, 64-bit |
 | Connection | Chilkey ND104 via **USB cable** |
-| Firmware | Verified versions only, see table below |
+| Firmware | Verified versions, or other versions while the protocol checks pass (see below) |
 | Runtime | Microsoft Edge WebView2 (pre-installed on Windows 11 and current Windows 10) |
 
 ### Supported firmware
@@ -94,14 +97,25 @@ and of the display, using the same queries as the official web driver (see
 [docs/protocol.md § 3](../../docs/protocol.md#3-firmware-version-queries)). It
 then compares them with a list of versions it has been verified against.
 
+Older or newer firmware is welcome, but the protocol has to behave exactly as
+expected. nd104-sync checks this when the keyboard is connected and on every
+write:
+- both USB devices have the expected interfaces and report sizes,
+- the version queries are answered correctly,
+- writes are accepted,
+- answers look the way they did on verified firmware.
+
 | Situation | What happens |
 |---|---|
-| Verified version | Normal operation |
-| Different or unknown version | **Locked mode:** nothing is sent. Tray icon turns amber, you get a notification and the status page explains what to do. |
-| Version cannot be read | Treated as unknown → locked mode |
+| Verified version, all checks pass | **Verified:** normal operation |
+| Older/newer version, all checks pass | **Compatible (unverified):** time and weather are synced; you get a one-time notification and the status page shows "unverified firmware" |
+| Any check fails (before or during operation) | **Locked:** stops sending immediately. Tray icon turns amber, a notification names the failed check, and the status page explains what to do |
+| Version cannot be read | Locked |
 
-There is intentionally **no override**. New firmware versions get supported by
-verifying them and releasing an updated nd104-sync.
+Extra features such as themes or images (planned) are only ever used on
+verified firmware. A lock is only lifted by re-connecting the keyboard or by
+"Check again", and either way all checks run again. There is intentionally
+**no "ignore and continue" override**.
 
 ## Firmware update check
 
@@ -202,7 +216,7 @@ No telemetry, no analytics, no IP-based location unless you turn it on.
 | Problem | Fix |
 |---|---|
 | "Not connected" | Use a USB **cable** (wireless is not supported); try another port; avoid unpowered hubs |
-| Amber icon / locked | Firmware not verified – see the Device & Firmware page; wait for an nd104-sync update or use a verified firmware |
+| Amber icon / locked | A protocol check failed (the reason is on the Device & Firmware page). Re-connect the cable or press "Check again"; if it stays locked, your firmware behaves differently – please open an issue with the log |
 | Display shows other values | The official Chilkey weather plugin is probably still running – close it |
 | Wrong time after DST change | Check time zone / DST mode in the Clock tab |
 
@@ -268,7 +282,7 @@ apps/nd104-sync/
 - **New platform (Linux/macOS):** implement the `Platform` trait
   (see [docs/PLAN.md § 5.10](../../docs/PLAN.md#510-platform-layer-r2)).
 - **New firmware version:** verify the protocol on real hardware, document it in
-  `docs/protocol.md`, add it to the allowlist.
+  `docs/protocol.md`, add it to the verified list.
 
 ## Credits
 

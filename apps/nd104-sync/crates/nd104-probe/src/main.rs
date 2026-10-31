@@ -16,8 +16,8 @@ use nd104_protocol::{
 
 use crate::hid::{hex_dump, Probe};
 
-/// Firmware versions the probe lets you write to without `--force`.
-/// Candidates only – they become the nd104-sync allowlist once verified.
+/// Firmware versions treated as verified. Candidates from the support page
+/// until M0 has confirmed them; other versions run as "compatible (unverified)".
 const KNOWN_KEYBOARD_FIRMWARE: &[&str] = &["3.0.4"];
 const KNOWN_SCREEN_FIRMWARE: &[&str] = &["1.2.1"];
 
@@ -88,7 +88,7 @@ struct WriteOpts {
     /// Only print the packet, do not open any device
     #[arg(long)]
     dry_run: bool,
-    /// Write even if the firmware versions are unknown (verification only!)
+    /// Write even if the version query was not answered as expected (verification only!)
     #[arg(long)]
     force: bool,
     /// Override the HID output report length (without report ID)
@@ -208,7 +208,9 @@ fn send(opts: &WriteOpts, packets: &[Vec<u8>], delay: Duration) -> Result<()> {
     Ok(())
 }
 
-/// Protocol safety: only write when both firmware versions are known.
+/// Protocol safety: verified firmware → go; other firmware → go with a warning
+/// as long as both version queries were answered well-formed; otherwise the
+/// protocol looks different → stop.
 fn firmware_gate(probe: &Probe, force: bool) -> Result<()> {
     let versions = probe.read_versions(Duration::from_millis(1000), false);
     let keyboard = versions.keyboard.as_deref().and_then(normalize_version);
@@ -219,20 +221,27 @@ fn firmware_gate(probe: &Probe, force: bool) -> Result<()> {
         versions.screen.as_deref().unwrap_or("unknown")
     );
 
-    let known = |v: &Option<String>, list: &[&str]| v.as_deref().is_some_and(|v| list.contains(&v));
-    if known(&keyboard, KNOWN_KEYBOARD_FIRMWARE) && known(&screen, KNOWN_SCREEN_FIRMWARE) {
-        return Ok(());
+    let (Some(keyboard), Some(screen)) = (keyboard, screen) else {
+        if force {
+            println!("⚠ Version query not answered as expected – writing anyway because of --force.");
+            return Ok(());
+        }
+        bail!(
+            "version query not answered as expected – the protocol may differ, nothing was sent.\n\
+             Run `nd104-probe version` for the raw answers. Use --force only for verification."
+        );
+    };
+
+    let verified = KNOWN_KEYBOARD_FIRMWARE.contains(&keyboard.as_str())
+        && KNOWN_SCREEN_FIRMWARE.contains(&screen.as_str());
+    if verified {
+        println!("Firmware verified.");
+    } else {
+        println!(
+            "⚠ Firmware not verified (known: keyboard {KNOWN_KEYBOARD_FIRMWARE:?}, screen \
+             {KNOWN_SCREEN_FIRMWARE:?}) – protocol answers look normal, continuing as \
+             compatible (unverified)."
+        );
     }
-    if force {
-        println!("⚠ Firmware not in the known list – writing anyway because of --force.");
-        return Ok(());
-    }
-    bail!(
-        "firmware not in the known list (keyboard {:?}, screen {:?}); nothing was sent.\n\
-         Known: keyboard {:?}, screen {:?}. Use --force only to verify a new firmware.",
-        keyboard,
-        screen,
-        KNOWN_KEYBOARD_FIRMWARE,
-        KNOWN_SCREEN_FIRMWARE
-    )
+    Ok(())
 }

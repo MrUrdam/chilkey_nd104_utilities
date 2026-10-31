@@ -19,7 +19,7 @@ These rules are non-negotiable and shape every design decision below.
 |---|---|---|
 | R1 | **Wired USB only.** | No 2.4 GHz dongle, no Bluetooth. Wireless mode is out of scope and is not tested. |
 | R2 | **Windows only (for now).** | Windows 10/11 is the only supported platform. The architecture keeps all OS-specific code behind a platform layer so Linux and macOS *can* be added later without touching the core. |
-| R3 | **Protocol safety first.** | The tool only talks to firmware versions it has been verified against. On an unknown or mismatching firmware it sends **nothing** to the keyboard and informs the user. |
+| R3 | **Protocol safety first.** | The tool also works with older or newer firmware than the verified ones, but only as long as the protocol behaves exactly as expected. As soon as anything looks different (missing or malformed answers, changed device layout, rejected writes) it **stops sending immediately**, locks itself and tells the user. When in doubt: stop. |
 | R4 | **Read-only towards firmware.** | The tool never flashes, patches or modifies firmware. It only *checks* whether updates exist and tells the user. |
 | R5 | **Extensible by design.** | Weather providers, clock sources, languages and platforms are plug-in points (traits / files), not hard-coded switches. |
 | R6 | **Privacy.** | No telemetry. Network access only to services the user configured (weather, geocoding, NTP) plus the firmware manifest for the update check. |
@@ -36,7 +36,7 @@ These rules are non-negotiable and shape every design decision below.
 | Weather providers | Start with key-less providers (Open-Meteo, Bright Sky); key-based ones later; provider list documented and extensible |
 | UI languages | German + English; default = system language; switchable in tray menu and settings; more languages via additional locale files |
 | UI style | Modern, gamer-inspired but simple; dark/light following Windows, overridable (Auto / Dark / Light) |
-| Firmware | Allowlist of verified versions; mismatch → no writes + notification; update check after boot |
+| Firmware | Verified versions → normal; other versions → allowed while protocol checks pass ("compatible, unverified"); any protocol deviation → stop + lock + notification; update check after boot and on demand |
 | Plan location | This file (`docs/PLAN.md`) |
 
 ---
@@ -78,7 +78,7 @@ These rules are non-negotiable and shape every design decision below.
 │  │            ├─ Weather service ─ WeatherProvider trait + Location      │ │
 │  │            └─ Firmware update check ── manifest source                │ │
 │  │                         │                                             │ │
-│  │ Firmware guard (allowlist)  ← must pass before ANY write              │ │
+│  │ Firmware guard (protocol checks) ← must pass before ANY write         │ │
 │  │                         │                                             │ │
 │  │ Device manager (discover, reconnect, serialised writes)               │ │
 │  │                         │                                             │ │
@@ -143,19 +143,37 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
   (e.g. device busy / unexpected screen changes) and warns.
 
 ### 5.3 Firmware guard (R3)
-- Reads the screen (and if possible keyboard) firmware version **before** any write.
-- Compares against a built-in **allowlist** of verified versions
-  (initial target: screen V1.2.1, keyboard V3.0.4 – to be verified in M0).
+- Reads the keyboard and screen firmware versions **before** any write.
+- Compares them with the list of versions verified on real hardware (filled in M0).
+- Older or newer firmware is **allowed** as long as the protocol behaves exactly
+  as expected. The guard continuously checks for **protocol fingerprints**:
+
+| # | Check | When |
+|---|---|---|
+| P1 | Both devices present with the expected VID/PID, usage page `FF60`, usage `61` | connect |
+| P2 | Expected HID report lengths (keyboard 32, screen 64 bytes) | connect |
+| P3 | Version query answered within the timeout with a well-formed `0x11` report and printable ASCII version | connect, after every re-connect |
+| P4 | Writes accepted by the HID stack (no errors, no short writes) | every write |
+| P5 | Answers to time/weather packets match the pattern recorded in M0 (if the firmware answers at all), no unexpected/unknown reports | every write |
+| P6 | Screen variant (°C / °F) recognised | connect |
+
 - Outcomes:
 
 | Situation | Behaviour |
 |---|---|
-| Version verified | Normal operation |
-| Version newer / older / unknown | **Locked mode:** no packets are sent at all. Tray icon turns amber, toast notification, status page explains the situation and links to the repo. |
-| Version cannot be read | Treated as unknown → locked mode |
+| Verified version, all checks pass | **Verified** – normal operation |
+| Other version (older/newer), all checks pass | **Compatible (unverified)** – normal operation, one-time notification, status page shows "unverified firmware" |
+| Any check fails – before or during operation | **Locked** – stop sending immediately, tray icon amber, notification with the reason (which check failed), status page explains it |
+| Version cannot be read | Locked (P3 failed) |
 
-- No user override in the UI. Supporting a new firmware = verifying it and adding
-  it to the allowlist in a new release.
+- **Only the basic data packets** (time, weather) are ever sent to unverified
+  firmware. Anything else (themes, images, menu control, later features) is
+  only allowed on verified firmware.
+- Locked stays locked until the user runs a re-check ("Check again" button) or
+  the device is re-connected, and then all checks run again from the start.
+  There is no "ignore and continue" switch.
+- A new firmware becomes *verified* once it has been tested with `nd104-probe`
+  and added to the list in a new release.
 - **How the version is read** (found in the official web driver, see
   [protocol.md § 3](protocol.md#3-firmware-version-queries)):
   - keyboard: send `11 02 … CRC` (32 bytes) → answer `0x11`, ASCII in bytes 8–14
@@ -163,7 +181,7 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
   - Only the ASCII answers count. The numeric byte in the screen's `0x1C … FB`
     answer is ignored; it is most likely why the web driver shows a broken
     screen version.
-  - Timeout (e.g. 1 s, 3 retries) without an answer → unknown → locked mode.
+  - Timeout (e.g. 1 s, 3 retries) without an answer → P3 fails → locked.
 - Fallback if the queries turn out unreliable in M0: the USB descriptor
   release number (`bcdDevice`).
 
@@ -193,7 +211,8 @@ Separating `nd104-protocol` and `nd104-core` from the Tauri app means:
   The manifest is maintained in the repo and updated through the watcher
   action's issues/PRs. The tool itself never scrapes Chilkey or Google Drive.
 - If an update is available → notification after boot + hint on the status page,
-  including the warning *"not yet verified with nd104-sync"* when applicable,
+  including the hint *"not yet verified with nd104-sync – will run as
+  compatible/unverified as long as the protocol checks pass"* when applicable,
   and a link to the official Chilkey instructions.
 - The tool **never** downloads or installs firmware.
 - Offline / manifest unreachable → silently retry later, show "last checked" date.
@@ -331,7 +350,7 @@ trait Platform {
 Tabs (left sidebar):
 1. **Dashboard** – live preview of the keyboard display (320×172 mock-up showing
    what was sent), connection, **installed firmware versions (keyboard + screen,
-   incl. screen variant °C/°F) with a verified/locked badge**, last/next sync,
+   incl. screen variant °C/°F) with a verified / compatible (unverified) / locked badge**, last/next sync,
    recent errors, update hint.
 2. **Weather** – provider, API key + *Test*, location search with result list,
    interval, fallback provider, °C/°F (UI).
@@ -369,7 +388,7 @@ Apply/Cancel with validation; *Test* buttons never save.
 2. Load config (create defaults on first run), set up logging.
 3. Resolve language + theme, create tray icon.
 4. Start device manager → find wired screen device.
-5. Firmware guard → **verified**: continue · **otherwise**: locked mode + notification, stop here (keep polling).
+5. Firmware guard → **verified** or **compatible (unverified)**: continue · **any protocol check fails**: locked + notification, stop here (keep polling).
 6. Initial clock sync + weather fetch/push.
 7. Start scheduler.
 8. After ~30 s: firmware update check → notification if an update exists.
@@ -381,7 +400,7 @@ Apply/Cancel with validation; *Test* buttons never save.
 
 | # | Milestone | Deliverable |
 |---|---|---|
-| **M0** | **Protocol & firmware verification** | Small Rust CLI (`nd104-probe`): list devices, read keyboard + screen firmware versions, send time, send test weather (incl. negative temperatures), cycle icons, compare keyboard vs. screen as target. Work through the checklist in [protocol.md § 6](protocol.md#6-open-points-for-m0-hardware-verification), first allowlist entry. **Gate for everything else.** |
+| **M0** | **Protocol & firmware verification** | Small Rust CLI (`nd104-probe`): list devices, read keyboard + screen firmware versions, send time, send test weather (incl. negative temperatures), cycle icons, compare keyboard vs. screen as target. Work through the checklist in [protocol.md § 6](protocol.md#6-open-points-for-m0-hardware-verification), record the answer patterns for the protocol checks, first verified firmware entry. **Gate for everything else.** |
 | M1 | Core (headless) | `nd104-protocol` + `nd104-core`: device manager, firmware guard, clock (system/timezone/manual), Open-Meteo + manual provider, scheduler, config; unit tests |
 | M2 | Tray app | Tauri shell, tray with states, autostart, single instance, notifications, i18n (DE/EN) |
 | M3 | Settings UI | Dashboard, Weather, Clock, Device & Firmware, General; dark/light/auto; design system |
@@ -398,7 +417,7 @@ Apply/Cancel with validation; *Test* buttons never save.
 | Firmware version cannot be read | Version queries found in the web driver (protocol.md § 3); M0 verifies them; USB descriptor as fallback; otherwise the tool stays locked |
 | Web driver sends to keyboard, gist to screen | M0 tests both paths; device manager supports both |
 | Official Chilkey software writes to the display at the same time | Detect/warn; documentation says to close it |
-| Firmware updates change the protocol | Allowlist + locked mode (R3); protocol crate versioned per firmware |
+| Firmware updates change the protocol | Protocol checks P1–P6 + immediate lock (R3); protocol crate versioned per firmware |
 | Weather provider changes / rate limits | Provider trait, backoff, fallback provider |
 | Tray behaviour on Linux desktops (later) | Platform layer; settings window also openable via command-line flag |
 | Image/GIF upload protocol unverified | Not part of v1 |

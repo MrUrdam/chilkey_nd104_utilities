@@ -25,11 +25,18 @@ macros), upload images, or work over 2.4 GHz or Bluetooth.
 ## Firmware safety
 
 Before `time`, `weather` and `icons` write anything, the probe reads both
-firmware versions. It only sends if both versions are on its known list.
-Otherwise it stops, sends nothing, and prints what it found.
+firmware versions:
+- **Verified version:** it sends.
+- **Other (older/newer) version, both queries answered well-formed:** it sends
+  and prints a "compatible (unverified)" warning.
+- **Query not answered or malformed:** the protocol may be different, so it
+  stops and sends nothing.
 
-`--force` skips this check. Use it **only** to verify a new firmware during M0.
-Unlike the probe, the nd104-sync app has no such override.
+Any write error aborts immediately.
+
+`--force` skips the stop for a failed version query. Use it **only** to
+investigate a new firmware during M0. Unlike the probe, the nd104-sync app has
+no such override.
 
 `--dry-run` prints the packets without opening any device.
 
