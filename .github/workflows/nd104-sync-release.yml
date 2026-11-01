@@ -1,5 +1,5 @@
 # Builds and publishes an nd104-sync release when a tag nd104-sync-vX.Y.Z is pushed.
-# Assets: NSIS setup (.exe), MSI, portable zip and SHA256SUMS.txt.
+# Assets: own setup (.exe, crate installer/), MSI, portable zip and SHA256SUMS.txt.
 # Release notes = the matching "## [X.Y.Z]" section of apps/nd104-sync/CHANGELOG.md.
 # 0.x versions are published as beta (title), but not as GitHub pre-release,
 # so the app update check finds them. Versions with a suffix (X.Y.Z-rc.1) are
@@ -50,20 +50,26 @@ jobs:
         run: npm ci
 
       - name: Build frontend
-        run: npm run build
+        run: |
+          npm run build
+          npm run build:installer-ui
 
       - name: Test
         run: cargo test --workspace --locked
 
+      # the setup is built last: it embeds the finished app (installer/build.rs)
       - name: Build console tools
-        run: cargo build --workspace --release --locked
+        run: cargo build --workspace --release --locked --exclude nd104-sync-setup
 
-      - name: Build app and installers
+      - name: Build app and MSI
         run: |
           case "$VERSION" in
-            *-*) npx tauri build --bundles nsis ;;
-            *)   npx tauri build --bundles nsis,msi ;;
+            *-*) npx tauri build --no-bundle ;;
+            *)   npx tauri build --bundles msi ;;
           esac
+
+      - name: Build setup
+        run: cargo build --release --locked -p nd104-sync-setup
 
       - name: Package
         run: |
@@ -72,7 +78,7 @@ jobs:
           cp target/release/nd104-sync.exe target/release/nd104-cli.exe target/release/nd104-probe.exe \
              README.md CHANGELOG.md ../../LICENSE "dist/$NAME/"
           (cd dist && 7z a -tzip "$NAME.zip" "$NAME" > /dev/null)
-          cp target/release/bundle/nsis/*-setup.exe dist/
+          cp target/release/nd104-sync-setup.exe "dist/nd104-sync_${VERSION}_x64-setup.exe"
           cp target/release/bundle/msi/*.msi dist/ 2>/dev/null || true
           cd dist
           shopt -s nullglob
@@ -96,7 +102,7 @@ jobs:
 
           ---
           **Downloads** (Windows 10/11, x64, wired USB connection only):
-          - \`nd104-sync_${VERSION}_x64-setup.exe\` – **recommended installer**, per user, no admin rights
+          - \`nd104-sync_${VERSION}_x64-setup.exe\` – **recommended**: setup for install, update and uninstall, per user, no admin rights
           - \`nd104-sync_${VERSION}_x64_en-US.msi\` – MSI for managed/per-machine installs (admin rights)
           - \`${PACKAGE}.zip\` – portable: tray app \`nd104-sync.exe\`, console runner \`nd104-cli.exe\`, diagnostic tool \`nd104-probe.exe\`
 

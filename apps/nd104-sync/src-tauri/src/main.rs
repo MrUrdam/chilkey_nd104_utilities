@@ -9,6 +9,7 @@
 mod commands;
 mod i18n;
 mod logging;
+mod self_update;
 mod tray;
 
 use std::path::{Path, PathBuf};
@@ -82,11 +83,18 @@ fn main() {
         }
     }
     let show_settings = first_run || std::env::args().any(|a| a == "--settings");
+    // `--quit` (sent by the setup before an update) ends a running instance;
+    // without one there is nothing to do.
+    let quit_request = std::env::args().any(|a| a == "--quit");
 
     tauri::Builder::default()
         // must be registered first: a second start opens the window of the first
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            open_settings(app);
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if args.iter().any(|a| a == "--quit") {
+                quit(app);
+            } else {
+                open_settings(app);
+            }
         }))
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
@@ -110,8 +118,12 @@ fn main() {
             commands::timezones,
             commands::engine_command,
             commands::open_target,
+            commands::install_update,
         ])
         .setup(move |app| {
+            if quit_request {
+                std::process::exit(0);
+            }
             let handle = app.handle().clone();
             let device = DeviceHandle::spawn(
                 || Ok(Box::new(HidapiBackend::new()?) as Box<dyn HidBackend>),
@@ -179,6 +191,12 @@ fn window_theme(config: &Config) -> Option<Theme> {
         "light" => Some(Theme::Light),
         _ => None, // follow Windows
     }
+}
+
+/// Stops the engine and ends the app.
+pub(crate) fn quit(app: &AppHandle) {
+    send(app, EngineCommand::Shutdown);
+    app.exit(0);
 }
 
 /// Shows the settings window, creating it if needed.
@@ -274,8 +292,7 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
             }
         }
         "quit" => {
-            send(app, EngineCommand::Shutdown);
-            app.exit(0);
+            quit(app);
         }
         _ => {}
     }

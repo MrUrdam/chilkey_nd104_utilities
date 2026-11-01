@@ -1,0 +1,40 @@
+[package]
+name = "nd104-sync-setup"
+description = "Setup for nd104-sync: install, update and uninstall (per user, no admin rights)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[dependencies]
+nd104-core.workspace = true
+anyhow.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sys-locale = "0.3"
+# The setup always serves its own embedded UI (no dev server).
+tauri = { version = "2", features = ["custom-protocol"] }
+tauri-plugin-opener = "2"
+winreg = "0.55"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[dependencies.windows]
+version = "0.62"
+features = [
+    "Win32_Foundation",
+    "Win32_Storage_EnhancedStorage",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Threading",
+    "Win32_System_Variant",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem",
+    "Win32_UI_WindowsAndMessaging",
+]

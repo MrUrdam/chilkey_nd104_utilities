@@ -28,6 +28,6 @@ pub mod weather;
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// User agent for all HTTP requests.
-pub(crate) fn user_agent() -> String {
+pub fn user_agent() -> String {
     format!("nd104-sync/{APP_VERSION} (+https://github.com/MrUrdam/chilkey_nd104_utilities)")
 }

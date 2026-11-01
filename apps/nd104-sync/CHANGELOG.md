@@ -12,6 +12,43 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] – 2026-11-01
+
+New setup for install, update and uninstall, and one-click updates from the
+app. Keyboard communication, protocol and configuration are unchanged.
+**Run this setup once by hand** – an installation by the old installer
+(1.0.x) is taken over automatically. From 1.1.0 on, later updates can be
+installed from the settings window.
+
+### Added
+- **Own setup** (`nd104-sync_X.Y.Z_x64-setup.exe`) in the nd104-sync look,
+  replacing the generic NSIS installer. One file for **install, update and
+  uninstall**, per user without admin rights, English/German:
+  - Options *Start with Windows* (on) and *Desktop shortcut* (off).
+  - A simple progress bar instead of technical details.
+  - Recognises an installed version and offers **Update**; reinstalling the
+    same version repairs it; an older setup shows a hint but may install.
+  - Closes a running nd104-sync before replacing files. The new files are
+    swapped in only at the end, so a failed update keeps the old version.
+  - The last page tells you whether the keyboard is connected by cable.
+  - **Uninstall** via Windows *Apps*, with *Keep my settings* (on by
+    default); unticked, settings, stored API keys and logs are deleted too.
+  - Offers to install the WebView2 Runtime if it is missing.
+  - Hint if an all-users MSI installation exists as well.
+  - Unattended use: `--silent`, `--no-autostart`, `--desktop-shortcut`,
+    `--uninstall --silent [--remove-settings]`.
+- **Install update** in the settings window (General): downloads the new
+  setup, checks it against the release's `SHA256SUMS.txt` and updates with a
+  small progress window; nd104-sync restarts on its own. Offered for
+  installations made by the new setup.
+
+### Changed
+- Installation folder of the setup: `%LOCALAPPDATA%\Programs\nd104-sync`.
+  An installation by the old installer (1.0.x) is taken over automatically;
+  settings, API keys, logs and the autostart choice stay.
+- The MSI stays available for managed/per-machine installs.
+- `nd104-sync.exe --quit` ends a running instance (used by the setup).
+
 ## [1.0.1] – 2026-11-01
 
 Documentation and tooling release – **no changes to the app's behaviour**
@@ -320,7 +357,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.1...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.1.0...HEAD
+[1.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.1...nd104-sync-v1.1.0
 [1.0.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.0...nd104-sync-v1.0.1
 [1.0.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.5.0...nd104-sync-v1.0.0
 [0.5.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.4.0...nd104-sync-v0.5.0

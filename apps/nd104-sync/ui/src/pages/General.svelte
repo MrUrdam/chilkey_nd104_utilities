@@ -23,6 +23,20 @@
   }
 
   let update = $derived(status.app_update);
+  let installing = $state(false);
+  let installError = $state("");
+
+  async function installUpdate() {
+    installing = true;
+    installError = "";
+    try {
+      // the app quits once the setup has started
+      await api.installUpdate();
+    } catch (e) {
+      installError = String(e);
+      installing = false;
+    }
+  }
 </script>
 
 <div class="stack">
@@ -65,6 +79,11 @@
         {:else if update.Ok.kind === "available"}
           <span class="badge warn">{t("ui.general.update_available", { version: update.Ok.version })}</span>
           {@const url = update.Ok.url}
+          {#if info.self_update && update.Ok.setup_url}
+            <button class="key primary" onclick={installUpdate} disabled={installing}>
+              {installing ? t("ui.general.installing_update") : t("ui.general.install_update")}
+            </button>
+          {/if}
           <button type="button" class="link" onclick={() => api.open(url)}>{t("ui.general.open_release")}</button>
         {:else}
           <span class="badge ok">{t("ui.general.up_to_date")}</span>
@@ -72,6 +91,9 @@
         <span class="muted small">{t("ui.general.last_check", { time: dateTime(status.app_update_checked) })}</span>
       {/if}
     </div>
+    {#if installError}
+      <span class="error-text selectable">{installError}</span>
+    {/if}
     {#if status.firmware_update}
       <div class="row">
         <span class="label">{t("ui.general.firmware_status")}:</span>

@@ -15,6 +15,7 @@ target/
 
 # Tauri (generated on build)
 apps/*/src-tauri/gen/
+apps/*/installer/gen/
 
 # Node / Frontend
 node_modules/

@@ -10,5 +10,5 @@
     "verbatimModuleSyntax": true,
     "types": ["svelte"]
   },
-  "include": ["ui/src/**/*.ts", "ui/src/**/*.svelte"]
+  "include": ["ui/src/**/*.ts", "ui/src/**/*.svelte", "installer-ui/src/**/*.ts", "installer-ui/src/**/*.svelte"]
 }

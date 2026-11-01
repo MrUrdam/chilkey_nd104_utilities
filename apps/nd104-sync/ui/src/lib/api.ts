@@ -89,6 +89,8 @@ export interface Release {
   tag: string;
   url: string;
   published_at: string | null;
+  setup_url: string | null;
+  checksums_url: string | null;
 }
 
 export type UpdateStatus =
@@ -153,6 +155,7 @@ export interface AppInfo {
   providers: ProviderInfo[];
   models: { id: string; name: string; verified_firmware: { role: string; version: string }[] }[];
   min_weather_interval: number;
+  self_update: boolean;
 }
 
 export interface ProviderInfo {
@@ -182,6 +185,7 @@ export type OpenTarget = "config" | "logs" | string;
 
 export const api = {
   appInfo: () => invoke<AppInfo>("app_info"),
+  installUpdate: () => invoke<void>("install_update"),
   texts: () => invoke<Record<string, string>>("texts"),
   status: () => invoke<Status>("get_status"),
   config: () => invoke<Config>("get_config"),

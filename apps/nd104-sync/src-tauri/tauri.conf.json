@@ -17,7 +17,6 @@
   "bundle": {
     "active": true,
     "targets": [
-      "nsis",
       "msi"
     ],
     "publisher": "MrUrdam",
@@ -34,14 +33,6 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "nsis": {
-        "installMode": "currentUser",
-        "languages": [
-          "English",
-          "German"
-        ],
-        "displayLanguageSelector": false
-      },
       "wix": {
         "language": "en-US"
       }

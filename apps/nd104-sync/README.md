@@ -240,7 +240,7 @@ Each release has:
 
 | File | What | When to use |
 |---|---|---|
-| `nd104-sync_X.Y.Z_x64-setup.exe` | **Installer (recommended)** – per user, no admin rights, English/German | normal use |
+| `nd104-sync_X.Y.Z_x64-setup.exe` | **Setup (recommended)** – install, update and uninstall; per user, no admin rights, English/German | normal use |
 | `nd104-sync_X.Y.Z_x64_en-US.msi` | MSI installer – per machine, needs admin rights | managed PCs, software deployment |
 | `nd104-sync-X.Y.Z-windows-x64.zip` | Portable: `nd104-sync.exe` (tray app), `nd104-cli.exe`, `nd104-probe.exe` | no installation, testing |
 | `SHA256SUMS.txt` | Checksums of all files | verifying downloads |
@@ -250,14 +250,31 @@ Each release has:
 1. Download `nd104-sync_X.Y.Z_x64-setup.exe` from the newest release.
 2. Optional: compare its checksum with `SHA256SUMS.txt`:
    `certutil -hashfile nd104-sync_X.Y.Z_x64-setup.exe SHA256`
-3. Run it. The installer is not code-signed yet, so Windows SmartScreen may
-   warn: **More info → Run anyway**.
-4. nd104-sync starts and shows its icon in the tray (maybe behind the **^**
-   arrow; drag it onto the taskbar to keep it visible). It starts with Windows
-   from now on.
-5. The settings window opens on first start: **Weather → Location** → search
+3. Run it. The setup is not code-signed, so Windows SmartScreen may warn:
+   **More info → Run anyway**.
+4. Choose whether nd104-sync starts with Windows (on by default) and whether
+   you want a desktop shortcut (off by default), then **Install**. A progress
+   bar shows the installation; no admin rights are needed. nd104-sync is
+   installed to `%LOCALAPPDATA%\Programs\nd104-sync` and gets a Start menu
+   entry and an entry in Windows **Apps**.
+5. **Start nd104-sync**. Its icon appears in the tray (maybe behind the **^**
+   arrow; drag it onto the taskbar to keep it visible). The last page of the
+   setup also tells you whether your keyboard is connected by cable.
+6. The settings window opens on first start: **Weather → Location** → search
    your city, check it on the map (🗺) if needed, pick it, **Apply**. Without
    this, Berlin is used.
+
+If the Microsoft Edge WebView2 Runtime is missing (rare: it ships with
+Windows 11 and current Windows 10), the setup offers to download and install
+it from Microsoft first.
+
+Unattended installation: `nd104-sync_X.Y.Z_x64-setup.exe --silent`
+(add `--no-autostart` and/or `--desktop-shortcut`). The exit code is 0 on
+success.
+
+Installed nd104-sync 1.0.x with the old installer? The new setup takes over
+that installation: it moves nd104-sync to the new folder and keeps your
+settings, API keys, logs and the "Start with Windows" choice.
 
 ### Option B – portable zip
 
@@ -269,35 +286,48 @@ Each release has:
 ### Option C – your own build
 
 1. [Build from source](#building-from-source).
-2. Install `target/release/bundle/nsis/nd104-sync_X.Y.Z_x64-setup.exe`, or run
-   `target/release/nd104-sync.exe` directly.
+2. Run `target/release/nd104-sync-setup.exe` (the setup with your build
+   inside), or run `target/release/nd104-sync.exe` directly.
 
 In every case the configuration lives in `%APPDATA%\nd104-sync\config.toml`
 and the logs in `%LOCALAPPDATA%\nd104-sync\logs` – see [Files](#files).
 
 ### Uninstall
 
-Quit nd104-sync (tray → Quit), then Windows Settings → Apps → nd104-sync →
-Uninstall. The configuration and logs are kept. Delete `%APPDATA%\nd104-sync`
-and `%LOCALAPPDATA%\nd104-sync` to remove them too. For the portable zip,
-untick "Start with Windows" in the tray menu first, then delete the folder.
+Windows Settings → **Apps** → nd104-sync → **Uninstall**. The setup closes
+nd104-sync if it is running and removes the app, its shortcuts and the
+autostart entry. **Keep my settings** is ticked by default: your
+configuration, location and API keys stay for a later installation. Untick it
+to delete the settings, the stored API keys and the logs as well.
+
+Unattended: `"%LOCALAPPDATA%\Programs\nd104-sync\nd104-sync-setup.exe" --uninstall --silent`
+(add `--remove-settings` to delete the settings too).
+
+MSI installation: uninstall it in Windows **Apps** as usual; the configuration
+and logs are kept. For the portable zip, untick "Start with Windows" first,
+then delete the folder.
 
 ## Updating
 
 **Update check:** nd104-sync asks GitHub for the newest release 30 seconds
 after start and then once a day. If a newer version exists, you get a
-notification with a link to the release. Nothing is downloaded or installed
-automatically. Check by hand:
-- Tray menu → **Check for updates** (always shows a result)
+notification. Nothing is downloaded or installed automatically. Check by
+hand:
+- Settings window → General → **Check for updates** (always shows a result)
 - Console: `nd104-cli check-update`
 
 Only releases tagged `nd104-sync-vX.Y.Z` count; drafts and pre-releases are
 ignored.
 
 **How to update:**
-- **Installer:** download the new `…-setup.exe` and run it. It replaces the
-  installed version (quit nd104-sync first if the installer asks).
-  Configuration, location and API keys stay.
+- **Setup, one click:** settings window → General → **Install update**.
+  nd104-sync downloads the new setup, checks it against the release's
+  `SHA256SUMS.txt`, closes itself and shows a small progress window; it starts
+  again on its own when the update is done.
+- **Setup, by hand:** download the new `…-setup.exe` and run it. It recognises
+  the installed version and offers **Update** (it closes nd104-sync for you).
+  Configuration, location and API keys stay. Running an *older* setup works
+  too – it shows a hint and installs that version on request.
 - **MSI:** run the new `.msi`; it upgrades the installed version.
 - **Portable zip:** quit nd104-sync, replace the files in your folder.
 - **Own build:** `git pull`, build again, install or replace the exe.
@@ -408,6 +438,7 @@ nd104-sync.exe --settings     # open the settings window right away
 | Configuration | `%APPDATA%\nd104-sync\config.toml` |
 | Logs | `%LOCALAPPDATA%\nd104-sync\logs\` |
 | API keys | Windows Credential Manager (`nd104-sync/<provider>`) |
+| Program (setup) | `%LOCALAPPDATA%\Programs\nd104-sync\` (includes `nd104-sync-setup.exe` for uninstalling) |
 
 ## Privacy / network access
 
@@ -431,7 +462,8 @@ No telemetry, no analytics, no IP-based location unless you turn it on.
 | "Not connected" | Use a USB **cable** (wireless is not supported); try another port; avoid unpowered hubs |
 | Amber icon / locked | A protocol check failed (the reason is in the tray status line, the notification and the log). Re-connect the cable or use "Check keyboard again"; if it stays locked, your firmware behaves differently – please open an issue with the log |
 | No tray icon | It may be hidden behind the **^** arrow in the taskbar; drag it out. Is nd104-sync running (Task Manager)? |
-| SmartScreen blocks the installer | The installer is not code-signed yet: **More info → Run anyway** |
+| SmartScreen blocks the setup | The setup is not code-signed: **More info → Run anyway** |
+| "Install update" is missing | It is offered only for installations made by the setup (1.1.0+). With the MSI or the zip, download the new version from the release page |
 | Config or log folder "not available" / settings not found | nd104-sync was started from a packaged (MSIX) app, e.g. some terminals or IDE integrations; Windows then redirects its AppData into that app's package folder (`%LOCALAPPDATA%\Packages\<app>\LocalCache\…`). Start nd104-sync from the Start menu or via autostart instead |
 | Tray app and `nd104-cli run` at the same time | Only run one of them |
 | Display shows other values | The official Chilkey weather plugin is probably still running – close it |
@@ -468,14 +500,21 @@ git clone https://github.com/MrUrdam/chilkey_nd104_utilities.git
 cd chilkey_nd104_utilities/apps/nd104-sync
 npm ci                     # frontend + Tauri CLI
 npm run build              # settings window → ui/dist (embedded into the app)
+npm run build:installer-ui # setup window → installer-ui/dist (embedded into the setup)
 cargo test --workspace     # unit tests, no hardware needed
-cargo build --release      # → target/release/nd104-sync.exe, nd104-cli.exe, nd104-probe.exe
-npm run tauri build        # app + installers → target/release/bundle/nsis/*.exe, bundle/msi/*.msi
+cargo build --release --workspace --exclude nd104-sync-setup
+                           # → target/release/nd104-sync.exe, nd104-cli.exe, nd104-probe.exe
+npm run tauri build        # app + MSI → target/release/bundle/msi/*.msi
+cargo build --release -p nd104-sync-setup
+                           # setup with the app inside → target/release/nd104-sync-setup.exe
 ```
 
 - `npm run build` must run before any `cargo build` of the app, because the
   window's files are compiled into `nd104-sync.exe`.
-- `npm run tauri build` downloads NSIS and WiX on first use.
+- The setup (`installer/`) packs `target/release/nd104-sync.exe`, the console
+  tools and the docs into itself, so build it **last**. Built without the app
+  it shows its window but refuses to install.
+- `npm run tauri build` downloads WiX on first use.
 - Development with hot reload: `npm run tauri dev`.
 - Frontend type check: `npm run check`.
 
@@ -491,7 +530,7 @@ Stable releases follow SemVer (MAJOR.MINOR.PATCH); pre-releases use `X.Y.Z-rc.N`
    `git tag nd104-sync-vX.Y.Z` and `git push origin nd104-sync-vX.Y.Z`.
 4. The workflow [`nd104-sync-release.yml`](../../.github/workflows/nd104-sync-release.yml)
    checks that the tag matches `Cargo.toml`, runs the tests, builds the
-   console tools and the tray app, creates the **NSIS setup and the MSI**, packs
+   console tools, the tray app and the **MSI**, then the **setup**, packs
    the portable zip, writes `SHA256SUMS.txt` and publishes the GitHub release.
    Its notes are the CHANGELOG section for that version plus a download list.
    - `X.Y.Z-rc.N` → GitHub pre-release without MSI (WiX needs a plain version),
@@ -515,6 +554,8 @@ and tests.
 | `keyring` 3 | API keys in the Windows Credential Manager |
 | `tracing`, `tracing-appender` | Logging |
 | `sys-locale` | System language detection |
+| `zip`, `winreg`, `windows` | Setup: embedded app files, Windows "Apps" entry, shortcuts |
+| `sha2` | Checking the downloaded setup ("Install update") |
 | Svelte 5 + TypeScript + Vite | Settings window (`ui/`) |
 | `@tauri-apps/api`, `@tauri-apps/cli` | Window ↔ app calls, build tooling |
 | `@fontsource/rajdhani` | Display font, bundled locally (OFL) |
@@ -529,9 +570,11 @@ apps/nd104-sync/
 │   ├── nd104-core/       # model interface, device + firmware guard,
 │   │                     # clock, weather, scheduler, config, update check
 │   └── nd104-cli/        # console runner for the core
-├── src-tauri/            # Tauri tray app, icons, installer config
+├── src-tauri/            # Tauri tray app, icons, MSI config
 ├── ui/                   # Svelte settings window
-└── locales/              # en.json, de.json
+├── installer/            # setup: install, update, uninstall (Tauri, own window)
+├── installer-ui/         # Svelte setup window
+└── locales/              # en.json, de.json (the setup has its own in installer/locales)
 ```
 
 ## Contributing

@@ -148,6 +148,8 @@
   "ui.general.updates": "Updates",
   "ui.general.update_available": "Version {version} verfügbar",
   "ui.general.open_release": "Release-Seite öffnen",
+  "ui.general.install_update": "Update installieren",
+  "ui.general.installing_update": "Update wird geladen …",
   "ui.general.up_to_date": "Aktuell",
   "ui.general.last_check": "Zuletzt geprüft: {time}",
   "ui.general.auto_check": "Automatisch nach neuen Versionen suchen",

@@ -37,8 +37,10 @@ jobs:
       - name: Frontend type check
         run: npm run check
 
-      - name: Frontend build (embedded into the app)
-        run: npm run build
+      - name: Frontend build (embedded into the app and the setup)
+        run: |
+          npm run build
+          npm run build:installer-ui
 
       - name: Format
         run: cargo fmt --all --check

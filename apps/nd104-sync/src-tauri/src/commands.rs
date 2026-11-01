@@ -43,6 +43,8 @@ pub struct AppInfo {
     providers: Vec<weather::ProviderInfo>,
     models: Vec<ModelInfo>,
     min_weather_interval: u32,
+    /// "Install update" is possible (installed by nd104-sync-setup).
+    self_update: bool,
 }
 
 #[tauri::command]
@@ -69,7 +71,26 @@ pub fn app_info(state: State<'_, AppState>) -> AppInfo {
             })
             .collect(),
         min_weather_interval: WeatherSettings::MIN_INTERVAL_MIN,
+        self_update: crate::self_update::supported(),
     }
+}
+
+/// Downloads the newest release's setup, verifies it and starts it in update
+/// mode; then quits so the setup can replace the files.
+#[tauri::command]
+pub async fn install_update(app: AppHandle) -> CmdResult<()> {
+    if !crate::self_update::supported() {
+        return Err("this installation cannot update itself".into());
+    }
+    let release = match &app.state::<AppState>().status.borrow().app_update {
+        Some(Ok(app_update::UpdateStatus::Available(release))) => release.clone(),
+        _ => return Err("no update available".into()),
+    };
+    crate::self_update::download_and_start(&release)
+        .await
+        .map_err(|e| format!("{e:#}"))?;
+    crate::quit(&app);
+    Ok(())
 }
 
 /// Locale texts for the UI (same files as the tray).
