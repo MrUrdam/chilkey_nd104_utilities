@@ -107,22 +107,17 @@ pub fn install(options: InstallOptions, report: Report) -> Result<()> {
         return Err(e);
     }
 
-    // 3. swap in the new version
+    // 3. swap in the new version, file by file
     say(Step::Finishing, 0.84);
-    let backup = sibling(&dir, "old");
-    remove_dir(&backup)?;
-    if dir.exists() {
-        retry(|| std::fs::rename(&dir, &backup)).inspect_err(|_| {
+    // left over by setups up to 1.4.0, which swapped the whole folder
+    let _ = remove_dir(&sibling(&dir, "old"));
+    let swap = match swap_in(&staging, &dir) {
+        Ok(swap) => swap,
+        Err(e) => {
             let _ = remove_dir(&staging);
-        })?;
-    }
-    if let Err(e) = retry(|| std::fs::rename(&staging, &dir)) {
-        if backup.exists() {
-            let _ = std::fs::rename(&backup, &dir);
+            return Err(e);
         }
-        let _ = remove_dir(&staging);
-        return Err(e);
-    }
+    };
 
     // 4. Windows integration; on failure the old files come back
     let exe = dir.join(APP_EXE);
@@ -137,15 +132,105 @@ pub fn install(options: InstallOptions, report: Report) -> Result<()> {
         system::register(&dir, nd104_core::APP_VERSION)
     })();
     if let Err(e) = integrated {
-        if backup.exists() {
-            let _ = remove_dir(&dir);
-            let _ = std::fs::rename(&backup, &dir);
-        }
+        swap.roll_back();
+        let _ = remove_dir(&staging);
         return Err(e);
     }
-    let _ = remove_dir(&backup);
+    swap.finish();
+    let _ = remove_dir(&staging);
     say(Step::Done, 1.0);
     Ok(())
+}
+
+/// Files moved into the installation, for rollback and clean-up.
+struct Swap {
+    /// (installed file, its previous version renamed to `*.old`)
+    moved: Vec<(PathBuf, Option<PathBuf>)>,
+}
+
+impl Swap {
+    /// Puts the previous files back.
+    fn roll_back(self) {
+        for (target, old) in self.moved.into_iter().rev() {
+            let _ = std::fs::remove_file(&target);
+            if let Some(old) = old {
+                let _ = std::fs::rename(&old, &target);
+            }
+        }
+    }
+
+    /// Deletes the previous files. One still locked (e.g. by a virus
+    /// scanner) stays as `*.old` and is removed by the next update.
+    fn finish(self) {
+        for (_, old) in self.moved {
+            if let Some(old) = old {
+                let _ = std::fs::remove_file(old);
+            }
+        }
+    }
+}
+
+/// Moves every file from `staging` into `dir`. An existing file is renamed
+/// to `<name>.old` first: Windows allows renaming a file that another
+/// process still has open (a just-ended app being scanned, Explorer reading
+/// its icon), but not renaming the folder that contains it (os error 32).
+fn swap_in(staging: &Path, dir: &Path) -> Result<Swap> {
+    let mut swap = Swap { moved: Vec::new() };
+    let result = (|| -> Result<()> {
+        for source in files_in(staging)? {
+            let relative = source.strip_prefix(staging)?;
+            let target = dir.join(relative);
+            if let Some(parent) = target.parent() {
+                std::fs::create_dir_all(parent)
+                    .with_context(|| format!("cannot create {}", parent.display()))?;
+            }
+            let old = if target.exists() {
+                let old = with_suffix(&target, "old");
+                // a leftover from an earlier update
+                let _ = std::fs::remove_file(&old);
+                retry(|| std::fs::rename(&target, &old))
+                    .with_context(|| format!("{} is in use", target.display()))?;
+                Some(old)
+            } else {
+                None
+            };
+            if let Err(e) = retry(|| std::fs::rename(&source, &target)) {
+                if let Some(old) = &old {
+                    let _ = std::fs::rename(old, &target);
+                }
+                return Err(e).with_context(|| format!("cannot replace {}", target.display()));
+            }
+            swap.moved.push((target, old));
+        }
+        Ok(())
+    })();
+    match result {
+        Ok(()) => Ok(swap),
+        Err(e) => {
+            swap.roll_back();
+            Err(e)
+        }
+    }
+}
+
+fn files_in(dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut files = Vec::new();
+    for entry in std::fs::read_dir(dir).with_context(|| format!("cannot read {}", dir.display()))? {
+        let path = entry?.path();
+        if path.is_dir() {
+            files.extend(files_in(&path)?);
+        } else {
+            files.push(path);
+        }
+    }
+    files.sort();
+    Ok(files)
+}
+
+fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(format!(".{suffix}"));
+    path.with_file_name(name)
 }
 
 /// Removes the installation of the old NSIS setup (≤ 1.0.1). Logs stay.
@@ -226,18 +311,83 @@ fn remove_dir(dir: &Path) -> Result<()> {
         .with_context(|| format!("cannot remove {}", dir.display()))
 }
 
-/// Files of a just-ended process can stay locked for a moment
-/// (virus scanners, Explorer); try a few times.
+/// Files of a just-ended process can stay locked for a while (virus
+/// scanners, Explorer); keep trying for about 10 seconds.
 fn retry(mut op: impl FnMut() -> std::io::Result<()>) -> Result<()> {
     let mut last = None;
-    for _ in 0..10 {
+    for _ in 0..40 {
         match op() {
             Ok(()) => return Ok(()),
             Err(e) => last = Some(e),
         }
-        std::thread::sleep(Duration::from_millis(300));
+        std::thread::sleep(Duration::from_millis(250));
     }
     Err(last
         .map(anyhow::Error::from)
         .unwrap_or_else(|| anyhow::anyhow!("failed")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("nd104-setup-test-{}-{name}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn write(path: &Path, text: &str) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, text).unwrap();
+    }
+
+    fn read(path: &Path) -> String {
+        std::fs::read_to_string(path).unwrap()
+    }
+
+    #[test]
+    fn swaps_files_while_one_is_open_and_cleans_up() {
+        let root = temp("swap");
+        let (dir, staging) = (root.join("app"), root.join("app.new"));
+        write(&dir.join("nd104-sync.exe"), "old exe");
+        write(&dir.join("README.md"), "old readme");
+        write(&dir.join("only-old.txt"), "stays");
+        write(&staging.join("nd104-sync.exe"), "new exe");
+        write(&staging.join("README.md"), "new readme");
+        write(&staging.join("sub/extra.txt"), "new extra");
+        write(&dir.join("README.md.old"), "leftover of an earlier update");
+
+        // like a virus scanner: the file stays open during the swap
+        let held = std::fs::File::open(dir.join("nd104-sync.exe")).unwrap();
+        let swap = swap_in(&staging, &dir).unwrap();
+        drop(held);
+        swap.finish();
+
+        assert_eq!(read(&dir.join("nd104-sync.exe")), "new exe");
+        assert_eq!(read(&dir.join("README.md")), "new readme");
+        assert_eq!(read(&dir.join("sub/extra.txt")), "new extra");
+        assert_eq!(read(&dir.join("only-old.txt")), "stays");
+        assert!(!dir.join("nd104-sync.exe.old").exists());
+        assert!(!dir.join("README.md.old").exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn roll_back_restores_the_previous_files() {
+        let root = temp("rollback");
+        let (dir, staging) = (root.join("app"), root.join("app.new"));
+        write(&dir.join("nd104-sync.exe"), "old exe");
+        write(&staging.join("nd104-sync.exe"), "new exe");
+        write(&staging.join("new-file.txt"), "new");
+
+        swap_in(&staging, &dir).unwrap().roll_back();
+
+        assert_eq!(read(&dir.join("nd104-sync.exe")), "old exe");
+        assert!(!dir.join("new-file.txt").exists());
+        assert!(!dir.join("nd104-sync.exe.old").exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }

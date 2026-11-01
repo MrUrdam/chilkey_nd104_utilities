@@ -12,6 +12,25 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.4.1] – 2026-11-01
+
+Fix for updating from the app.
+
+### Fixed
+- **Updating failed** with "The process cannot access the file because it
+  is being used by another process (os error 32)". The setup renamed the
+  whole installation folder, which Windows refuses while any file in it is
+  still open for a moment after the app ends (virus scanner, Explorer
+  reading the icon). It now replaces the files one by one: each old file is
+  renamed to `*.old` (allowed even while it is open), the new one moved in,
+  and the old files are deleted at the end (or by the next update if one is
+  still locked). It waits up to about 10 seconds per file, a failure names
+  the file, and the previous version is restored on any error.
+
+The fix is in the setup itself, so it applies from this release on: an
+installed 1.1.0–1.4.0 downloads the 1.4.1 setup when you choose
+**Install update**.
+
 ## [1.4.0] – 2026-11-01
 
 A new look for the settings window and the setup, with a choice of two
@@ -428,7 +447,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.1...HEAD
+[1.4.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.0...nd104-sync-v1.4.1
 [1.4.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.3.0...nd104-sync-v1.4.0
 [1.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.2.0...nd104-sync-v1.3.0
 [1.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.1.0...nd104-sync-v1.2.0
