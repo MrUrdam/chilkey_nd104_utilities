@@ -14,22 +14,33 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [1.0.1] – 2026-11-01
 
-No changes to the app's behaviour. Documentation and tooling only.
+Documentation and tooling release – **no changes to the app's behaviour**
+(protocol, keyboard communication, configuration and settings are unchanged).
+Updating from 1.0.0 is optional.
 
 ### Changed
-- READMEs reworked: screenshots and badges at the top, a current feature
-  overview instead of the roadmap, and a full
+- **Main README** reworked: tools shown as cards with screenshot and short
+  description (ready for further tools), badges, and a full
   [disclaimer](../../README.md#disclaimer): use at your own risk, no
-  warranty, no guaranteed support, not affiliated with Chilkey, tested only
-  with the listed firmware versions.
-- The implemented project plan (`docs/PLAN.md`) was removed.
+  warranty or liability, no guaranteed support, not affiliated with Chilkey,
+  tested only with the listed firmware versions.
+- **nd104-sync README**: badges and screenshots at the top, a current
+  feature overview instead of roadmap, milestone and beta notes; the
+  screenshot gallery shows the General page instead of the tray menu.
+- The implemented project plan (`docs/PLAN.md`) was removed, together with
+  all references to it (docs and code comments).
 
 ### Added
+- **Screenshots** of all settings pages (Dashboard, Weather, Clock,
+  Device & Firmware, General) in
+  [`docs/images/nd104-sync/`](../../docs/images/nd104-sync/), with a list
+  describing each image.
 - **Demo mode** for the settings window (`npm run build:demo`): runs in a
-  normal browser with sample data, without app or keyboard. Never part of the
-  app itself.
-- Screenshot script (`npm run screenshots`) and the workflow
-  `nd104-sync-screenshots.yml`, which keep the README screenshots up to date.
+  normal browser with sample data, without app or keyboard. It is built into
+  a separate folder and is never part of the app.
+- **Screenshot automation**: `npm run screenshots` (Playwright) and the
+  workflow `nd104-sync-screenshots.yml`, which rebuilds the demo on Windows
+  and commits updated screenshots.
 
 ## [1.0.0] – 2026-10-31 · Stable
 
