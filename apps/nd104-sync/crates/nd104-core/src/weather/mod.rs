@@ -42,6 +42,20 @@ pub enum Condition {
     Thunderstorm,
 }
 
+/// From this cloud cover (%) on the sky counts as overcast (8/8 in eighths;
+/// 7/8 is still "cloudy").
+pub const OVERCAST_FROM_PERCENT: f32 = 88.0;
+
+/// For providers that only say "cloudy or overcast" (Open-Meteo code 3,
+/// Bright Sky "cloudy"): the cloud cover decides between the single cloud
+/// and the overcast icon. Without a value it stays overcast.
+pub(crate) fn cloudy_or_overcast(cloud_cover: Option<f32>) -> Condition {
+    match cloud_cover {
+        Some(c) if c < OVERCAST_FROM_PERCENT => Condition::Cloudy,
+        _ => Condition::Overcast,
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct WeatherReport {
     pub condition: Condition,

@@ -12,6 +12,21 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.4.2] – 2026-11-01
+
+All ten display weather icons now also appear with the default provider, plus
+screenshots of the new pages in the README. Update with
+**Settings → General → Install update**.
+
+### Changed
+- **Weather icon "cloudy" (single cloud)** now also appears with Open-Meteo
+  (default) and Bright Sky. Both only report "cloudy or overcast"; their
+  cloud cover now decides: below 88 % (7/8) the single cloud, from 88 % the
+  overcast icon (two clouds). Before, these providers always showed
+  overcast.
+- README: screenshots of the Lighting and Screen picture pages; texts on
+  lighting, own picture/GIF, styles and one-click updates.
+
 ## [1.4.1] – 2026-11-01
 
 Fix for updating from the app.
@@ -447,7 +462,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.1...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.2...HEAD
+[1.4.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.1...nd104-sync-v1.4.2
 [1.4.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.0...nd104-sync-v1.4.1
 [1.4.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.3.0...nd104-sync-v1.4.0
 [1.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.2.0...nd104-sync-v1.3.0

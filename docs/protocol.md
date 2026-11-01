@@ -293,6 +293,10 @@ Notes:
   notes map thunderstorms to rain, but nd104-sync will use 9.
 - Icons 1 and 3 are not used by the web driver. nd104-sync uses 1 for overcast
   and 3 for cloudy, and 8 only for fog/mist.
+- Providers that only report "cloudy or overcast" (Open-Meteo WMO code 3,
+  Bright Sky icon `cloudy`) are split by their cloud cover: below 88 % (7/8)
+  → 3 (cloudy), from 88 % → 1 (overcast). OpenWeatherMap (803/804) and
+  WeatherAPI (1006/1009) already tell the two apart.
 - Indices above 9 are rejected by `nd104-protocol` and have not been tried on
   purpose.
 

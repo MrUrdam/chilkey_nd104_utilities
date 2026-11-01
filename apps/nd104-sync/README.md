@@ -220,6 +220,14 @@ automatically*, or `[updates] firmware_check = false`).
 settings, or `nd104-cli geocode "<city>" --set 1`). Your location is stored only
 in your local config file, never in this repository.
 
+**Weather icons:** all ten icons of the display are used, including
+thunderstorm and the night variants of clear and partly cloudy. Each provider
+maps its own codes to one neutral condition, which the keyboard model turns
+into the icon (table in [docs/protocol.md § 4.2](../../docs/protocol.md#42-weather-command-0xfe-len-8)).
+Open-Meteo and Bright Sky only report "cloudy or overcast"; nd104-sync uses
+their cloud cover to choose: below 88 % (7/8) the single cloud, from 88 %
+the overcast icon.
+
 Providers are plug-ins implementing one interface (`WeatherProvider` in
 [`crates/nd104-core/src/weather/mod.rs`](crates/nd104-core/src/weather/mod.rs)),
 so more can be added.

@@ -71,6 +71,9 @@ struct Current {
 struct CurrentRecord {
     temperature: Option<f32>,
     icon: Option<String>,
+    /// %, used to tell "cloudy" from "overcast"
+    #[serde(default)]
+    cloud_cover: Option<f32>,
 }
 
 #[derive(Deserialize)]
@@ -94,7 +97,7 @@ fn parse(current: &str, day: &str) -> Result<WeatherReport> {
     let min = temps.fold(f32::MAX, f32::min);
     let icon = c.weather.icon.unwrap_or_default();
     Ok(WeatherReport {
-        condition: icon_condition(&icon),
+        condition: icon_condition(&icon, c.weather.cloud_cover),
         is_day: !icon.ends_with("-night"),
         current_c: now,
         max_c: max,
@@ -104,12 +107,13 @@ fn parse(current: &str, day: &str) -> Result<WeatherReport> {
     })
 }
 
-/// Bright Sky icon names (Dark Sky style).
-fn icon_condition(icon: &str) -> Condition {
+/// Bright Sky icon names (Dark Sky style). "cloudy" covers both "cloudy"
+/// and "overcast"; the cloud cover tells them apart.
+fn icon_condition(icon: &str, cloud_cover: Option<f32>) -> Condition {
     match icon {
         "clear-day" | "clear-night" => Condition::Clear,
         "partly-cloudy-day" | "partly-cloudy-night" => Condition::PartlyCloudy,
-        "cloudy" => Condition::Overcast,
+        "cloudy" => super::cloudy_or_overcast(cloud_cover),
         "fog" => Condition::Fog,
         "rain" | "hail" => Condition::Rain,
         "sleet" | "snow" => Condition::Snow,
@@ -144,9 +148,28 @@ mod tests {
 
     #[test]
     fn icons() {
-        assert_eq!(icon_condition("cloudy"), Condition::Overcast);
-        assert_eq!(icon_condition("sleet"), Condition::Snow);
-        assert_eq!(icon_condition("thunderstorm"), Condition::Thunderstorm);
-        assert_eq!(icon_condition("wind"), Condition::Cloudy);
+        assert_eq!(icon_condition("cloudy", None), Condition::Overcast);
+        assert_eq!(icon_condition("sleet", None), Condition::Snow);
+        assert_eq!(
+            icon_condition("thunderstorm", None),
+            Condition::Thunderstorm
+        );
+        assert_eq!(icon_condition("wind", None), Condition::Cloudy);
+    }
+
+    #[test]
+    fn cloud_cover_tells_cloudy_from_overcast() {
+        assert_eq!(icon_condition("cloudy", Some(80.0)), Condition::Cloudy);
+        assert_eq!(icon_condition("cloudy", Some(96.0)), Condition::Overcast);
+        // only "cloudy" is refined; other icons keep their meaning
+        assert_eq!(
+            icon_condition("partly-cloudy-day", Some(80.0)),
+            Condition::PartlyCloudy
+        );
+        let current = CURRENT.replace(
+            r#""icon":"partly-cloudy-night""#,
+            r#""icon":"cloudy","cloud_cover":75"#,
+        );
+        assert_eq!(parse(&current, DAY).unwrap().condition, Condition::Cloudy);
     }
 }

@@ -47,7 +47,10 @@ impl WeatherProvider for OpenMeteo {
                 .query(&[
                     ("latitude", location.lat.to_string()),
                     ("longitude", location.lon.to_string()),
-                    ("current", "temperature_2m,weather_code,is_day".into()),
+                    (
+                        "current",
+                        "temperature_2m,weather_code,is_day,cloud_cover".into(),
+                    ),
                     ("daily", "temperature_2m_max,temperature_2m_min".into()),
                     ("timezone", "auto".into()),
                     ("forecast_days", "1".into()),
@@ -78,6 +81,9 @@ struct Current {
     temperature_2m: f32,
     weather_code: u8,
     is_day: u8,
+    /// %, used to tell "cloudy" from "overcast"
+    #[serde(default)]
+    cloud_cover: Option<f32>,
 }
 
 #[derive(Deserialize)]
@@ -92,7 +98,7 @@ fn parse(body: &str) -> Result<WeatherReport> {
     let min = r.daily.temperature_2m_min.first().copied().flatten();
     let current = r.current.temperature_2m;
     Ok(WeatherReport {
-        condition: wmo_condition(r.current.weather_code),
+        condition: wmo_condition(r.current.weather_code, r.current.cloud_cover),
         is_day: r.current.is_day != 0,
         current_c: current,
         max_c: max.unwrap_or(current).max(current),
@@ -102,12 +108,13 @@ fn parse(body: &str) -> Result<WeatherReport> {
     })
 }
 
-/// WMO weather interpretation codes as used by Open-Meteo.
-fn wmo_condition(code: u8) -> Condition {
+/// WMO weather interpretation codes as used by Open-Meteo. Code 3 covers
+/// both "cloudy" and "overcast"; the cloud cover tells them apart.
+fn wmo_condition(code: u8, cloud_cover: Option<f32>) -> Condition {
     match code {
         0 | 1 => Condition::Clear,
         2 => Condition::PartlyCloudy,
-        3 => Condition::Overcast,
+        3 => super::cloudy_or_overcast(cloud_cover),
         45 | 48 => Condition::Fog,
         51..=57 => Condition::Drizzle,
         61..=67 | 80..=82 => Condition::Rain,
@@ -157,13 +164,26 @@ mod tests {
 
     #[test]
     fn wmo_mapping() {
-        assert_eq!(wmo_condition(0), Condition::Clear);
-        assert_eq!(wmo_condition(2), Condition::PartlyCloudy);
-        assert_eq!(wmo_condition(3), Condition::Overcast);
-        assert_eq!(wmo_condition(48), Condition::Fog);
-        assert_eq!(wmo_condition(55), Condition::Drizzle);
-        assert_eq!(wmo_condition(81), Condition::Rain);
-        assert_eq!(wmo_condition(86), Condition::Snow);
-        assert_eq!(wmo_condition(95), Condition::Thunderstorm);
+        assert_eq!(wmo_condition(0, None), Condition::Clear);
+        assert_eq!(wmo_condition(2, Some(60.0)), Condition::PartlyCloudy);
+        assert_eq!(wmo_condition(3, None), Condition::Overcast);
+        assert_eq!(wmo_condition(48, None), Condition::Fog);
+        assert_eq!(wmo_condition(55, None), Condition::Drizzle);
+        assert_eq!(wmo_condition(81, None), Condition::Rain);
+        assert_eq!(wmo_condition(86, None), Condition::Snow);
+        assert_eq!(wmo_condition(95, None), Condition::Thunderstorm);
+    }
+
+    #[test]
+    fn cloud_cover_tells_cloudy_from_overcast() {
+        assert_eq!(wmo_condition(3, Some(75.0)), Condition::Cloudy);
+        assert_eq!(wmo_condition(3, Some(87.9)), Condition::Cloudy);
+        assert_eq!(wmo_condition(3, Some(88.0)), Condition::Overcast);
+        assert_eq!(wmo_condition(3, Some(100.0)), Condition::Overcast);
+        let body = SAMPLE.replace(
+            r#""weather_code": 73, "is_day": 1"#,
+            r#""weather_code": 3, "is_day": 1, "cloud_cover": 70"#,
+        );
+        assert_eq!(parse(&body).unwrap().condition, Condition::Cloudy);
     }
 }
