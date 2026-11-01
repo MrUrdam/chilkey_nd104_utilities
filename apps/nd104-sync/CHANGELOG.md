@@ -12,6 +12,13 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] – 2026-11-01
+
+The display preview now looks like the keyboard's real weather page.
+Keyboard communication, protocol and configuration are unchanged.
+If you run 1.1.0 (installed with the new setup), update with
+**Settings → General → Install update**.
+
 ### Changed
 - **Display preview** (dashboard and setup window) now looks like the real
   weather page of the keyboard: light screen, time top left, battery top
@@ -365,7 +372,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.1.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.2.0...HEAD
+[1.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.1.0...nd104-sync-v1.2.0
 [1.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.1...nd104-sync-v1.1.0
 [1.0.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.0...nd104-sync-v1.0.1
 [1.0.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.5.0...nd104-sync-v1.0.0
