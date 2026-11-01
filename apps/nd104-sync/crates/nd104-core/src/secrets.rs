@@ -1,4 +1,4 @@
-//! API keys in the operating system's credential store (PLAN.md § 5.8).
+//! API keys in the operating system's credential store.
 //!
 //! Windows: Credential Manager, entry `<provider>.nd104-sync`. Keys are never
 //! written to the config file or the log.

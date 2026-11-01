@@ -75,8 +75,7 @@ All notable changes to nd104-sync are listed here. The format follows
 - **`nd104-probe`** – diagnostic tool for protocol tests on real hardware.
 - Documentation: [protocol](../../docs/protocol.md),
   [firmware sources](../../docs/firmware.md),
-  [keyboard API capabilities](../../docs/keyboard-api.md),
-  [project plan](../../docs/PLAN.md).
+  [keyboard API capabilities](../../docs/keyboard-api.md).
 
 ### Findings (M6)
 - **Battery level is not available over the USB interfaces**; only Bluetooth

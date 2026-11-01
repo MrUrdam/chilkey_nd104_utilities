@@ -1,4 +1,4 @@
-//! Tray icon, menu and status presentation (PLAN.md § 6.1).
+//! Tray icon, menu and status presentation.
 
 use nd104_core::device::{DeviceState, Trust};
 use nd104_core::engine::Status;

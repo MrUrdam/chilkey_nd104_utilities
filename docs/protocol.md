@@ -170,7 +170,7 @@ observed. The firmware itself probably answers correctly.
 
 **Consequence for nd104-sync:** use only the ASCII answer of the `0x11` query
 (§ 3.1 / § 3.2) and ignore the numeric byte. If a version string is not
-received within a timeout, the protocol check fails and the tool locks (see PLAN.md § 5.3).
+received within a timeout, the protocol check fails and the tool locks (firmware guard, see the [nd104-sync README](../apps/nd104-sync/README.md#firmware-safety)).
 
 ---
 
@@ -243,7 +243,7 @@ The first one arrived That is command `0x35`,
 status OK, which nd104-sync never sends. It is not caused by page changes or by
 the time packet itself, and the web driver has no handling for it either. Its
 origin is still open, see § 6. **nd104-sync logs and ignores it** (decision
-2026-10-31, PLAN.md § 5.3).
+2026-10-31).
 
 ### 4.2 Weather (command `0xFE`, len 8)
 

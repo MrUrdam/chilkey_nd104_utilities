@@ -85,7 +85,8 @@ Still open:
 - The firmware update check cannot rely on the version text on the support page.
   It compares the **build date** reported by the device with the date in the
   newest Drive file name, for the matching screen variant.
-- Implemented (M5, see [PLAN.md § 5.4](PLAN.md#54-firmware-update-check-r4)):
+- Implemented in nd104-sync (see its
+  [firmware update check](../apps/nd104-sync/README.md#firmware-update-check)):
   1. The **firmware watch** action ([`firmware-watch.yml`](../.github/workflows/firmware-watch.yml),
      [`firmware/watch.py`](../firmware/watch.py)) checks the Drive folders and
      support pages every day and **opens an issue** when files, subfolders or

@@ -1,4 +1,4 @@
-//! Clock sources, time zones and DST handling (PLAN.md § 5.5).
+//! Clock sources, time zones and DST handling.
 
 use std::net::UdpSocket;
 use std::time::{Duration, Instant};

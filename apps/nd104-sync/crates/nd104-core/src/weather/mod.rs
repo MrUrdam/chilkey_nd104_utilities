@@ -1,4 +1,4 @@
-//! Neutral weather data and providers (PLAN.md § 5.6).
+//! Neutral weather data and providers.
 //!
 //! Providers return a neutral [`WeatherReport`]; each keyboard model maps the
 //! [`Condition`] to its own icon set. Adding a provider = one module that

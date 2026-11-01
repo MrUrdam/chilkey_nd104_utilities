@@ -1,4 +1,4 @@
-//! TOML configuration in `%APPDATA%\nd104-sync\config.toml` (PLAN.md § 5.8).
+//! TOML configuration in `%APPDATA%\nd104-sync\config.toml`.
 
 use std::fs;
 use std::path::{Path, PathBuf};

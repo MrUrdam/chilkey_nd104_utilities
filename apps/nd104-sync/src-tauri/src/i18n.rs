@@ -1,4 +1,4 @@
-//! UI texts in German and English (PLAN.md § 5.9).
+//! UI texts in German and English.
 //!
 //! Locale files live in `apps/nd104-sync/locales/` and are compiled in.
 //! A new language = new JSON file + entry in [`LANGUAGES`] and [`source`].

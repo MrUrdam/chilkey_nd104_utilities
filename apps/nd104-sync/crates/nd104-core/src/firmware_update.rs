@@ -1,4 +1,4 @@
-//! Firmware update check (PLAN.md § 5.4).
+//! Firmware update check.
 //!
 //! 1. **Official source first:** the vendor's public Google Drive folder per
 //!    part ([`OfficialSource`]); the newest file is the one with the latest

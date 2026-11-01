@@ -1,4 +1,4 @@
-//! Device manager with the firmware/protocol guard (PLAN.md § 5.2, § 5.3).
+//! Device manager with the firmware/protocol guard.
 //!
 //! Checks:
 //! - P1 all interfaces of the model present (wired USB)

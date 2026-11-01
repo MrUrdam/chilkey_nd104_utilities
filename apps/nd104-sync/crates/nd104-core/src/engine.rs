@@ -1,5 +1,5 @@
 //! Scheduler: polls the device, syncs time and weather, checks for app
-//! updates (PLAN.md § 5.7, § 7). UI and CLI talk to it through
+//! updates. UI and CLI talk to it through
 //! [`EngineHandle`]: commands in, [`Status`] snapshots out.
 
 use std::collections::VecDeque;

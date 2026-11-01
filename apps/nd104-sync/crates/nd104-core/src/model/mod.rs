@@ -1,4 +1,4 @@
-//! Keyboard model interface (PLAN.md § 4.3).
+//! Keyboard model interface.
 //!
 //! The core never talks about a specific keyboard directly. Everything
 //! model-specific – USB interfaces, packets, answers, firmware – lives behind
@@ -83,7 +83,7 @@ pub struct VerifiedFirmware {
 }
 
 /// An official firmware source of the vendor: a public Google Drive folder
-/// and how to recognise the right file in it (PLAN.md § 5.4).
+/// and how to recognise the right file in it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OfficialSource {
     /// Part key, same as in `firmware/versions.json`.

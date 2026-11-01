@@ -1,24 +1,44 @@
 # nd104-sync
 
-Background tool that keeps the display of the **Chilkey ND104** keyboard up to
-date with the **current time and weather** – with a tray icon and a modern
-settings/status window.
+[![Latest release](https://img.shields.io/github/v/release/MrUrdam/chilkey_nd104_utilities?filter=nd104-sync-v*&label=release&color=0969da)](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
+[![CI](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-sync-ci.yml/badge.svg)](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-sync-ci.yml)
+[![License: MIT](https://img.shields.io/github/license/MrUrdam/chilkey_nd104_utilities)](../../LICENSE)
+![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
+![USB cable only](https://img.shields.io/badge/connection-USB%20cable%20only-orange)
+<br>
+![Rust](https://img.shields.io/badge/Rust-1.80%2B-000000?logo=rust&logoColor=white)
+![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)
+![Svelte 5](https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
 
-> ✅ **Version 1.0.0 – stable.** Tray app with settings window, five weather
-> providers and firmware update check; installer on the
-> [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
-> See the [changelog](CHANGELOG.md) and the [roadmap](#roadmap).
+Keeps the display of the **Chilkey ND104** keyboard up to date with the
+**current time and weather**. A small tray app with a settings and status
+window: set it up once, then forget it.
 
-> ⚠️ **Use at your own risk.** No warranty, no guaranteed support.
-> See the [disclaimer](../../README.md#chilkey-nd104-utilities) in the main README.
+<p align="center">
+  <img src="../../docs/images/nd104-sync/dashboard.png" width="760" alt="nd104-sync settings window, dashboard page with live preview of the keyboard display">
+</p>
 
-> 🔌 **Wired USB only.** nd104-sync only supports the keyboard connected with a
-> **USB cable**. 2.4 GHz dongle and Bluetooth modes are **not supported** and
-> not tested.
+<table>
+  <tr>
+    <td align="center"><img src="../../docs/images/nd104-sync/weather.png" width="370" alt="Weather page"><br><sub>Weather: provider, location search, test</sub></td>
+    <td align="center"><img src="../../docs/images/nd104-sync/clock.png" width="370" alt="Clock page"><br><sub>Clock: source, time zone, summer/winter time</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="../../docs/images/nd104-sync/device.png" width="370" alt="Device and Firmware page"><br><sub>Device & Firmware: safety state, update check</sub></td>
+    <td align="center"><img src="../../docs/images/nd104-sync/tray.png" width="370" alt="Tray icon and menu"><br><sub>Tray icon and menu</sub></td>
+  </tr>
+</table>
 
-> 🪟 **Windows only (for now).** Windows 10/11 is the only supported platform.
-> The architecture is prepared for Linux and macOS, but support is not
-> implemented.
+**⬇️ [Download the installer](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)** ·
+[Installation](#installation) · [Usage](#usage) · [Changelog](CHANGELOG.md)
+
+> ⚠️ **Use at your own risk.** Unofficial hobby project, not affiliated with
+> Chilkey. No warranty and no guaranteed support. Only tested with the
+> firmware versions listed under [Supported firmware](#supported-firmware),
+> on Windows 10/11, with the keyboard connected by **USB cable** (no 2.4 GHz
+> dongle, no Bluetooth). Full text: [disclaimer](../../README.md#disclaimer).
 
 ---
 
@@ -30,53 +50,58 @@ browser-based driver plus a weather plugin with a fixed weather backend.
 nd104-sync replaces this with a small background app that you configure once:
 your weather provider, your location, your clock source.
 
-## What it does
+## Features
 
-- Starts with Windows and lives in the **system tray**
+**Time and weather**
 - **Syncs the clock** to the keyboard regularly, on connect, after sleep and
   exactly at summer/winter time changes
+- Clock sources: **system time, time zone, NTP or manual offset**, with
+  automatic or forced summer/winter time
 - **Fetches the weather** for your location and sends current, max and min
   temperature plus a condition icon to the display
-- Lets you choose the **weather provider**, **location**, **clock source**,
-  **time zone** and **DST mode** in a settings window
-- Shows a **status dashboard** with a live preview of what the display shows
-- **Protects your keyboard:** works with older/newer firmware too, but stops
+- **Five weather providers** (two without API key) with a fallback provider
+  and a city search for your location
+
+**Safety and updates**
+- **Firmware safety lock:** works with older/newer firmware too, but stops
   immediately as soon as the protocol behaves differently
   (see [Firmware safety](#firmware-safety))
-- **Shows the installed firmware** of keyboard and screen (dashboard and
-  Device & Firmware page)
-- **Checks for firmware updates** after boot and notifies you; manual
-  **"Check for updates"** button in the UI and in the tray menu
-- **Checks for new nd104-sync releases** on GitHub after boot and on demand
-  (see [Updating](#updating))
-- **Shows its version** in the settings window (General → About), in the
-  dashboard footer and in the tray tooltip
-- UI in **German and English** (follows the system language, switchable)
+- **Shows the installed firmware** of keyboard and screen
+- **Checks for firmware updates** against Chilkey's official folders and
+  notifies you. It never downloads or flashes anything.
+- **Checks for new nd104-sync releases** on GitHub (see [Updating](#updating))
+
+**App**
+- Starts with Windows and lives in the **system tray**
+- **Status dashboard** with a live preview of what the display shows
+- API keys stored in the **Windows Credential Manager**
+- UI in **English and German** (follows the system language, switchable)
 - **Dark / light mode** following Windows, overridable in settings
+- **Console runner** `nd104-cli` for scripting and testing
+- **No telemetry** (see [Privacy](#privacy--network-access))
 
 ## What it does NOT do
 
-- ❌ **No wireless support** – no 2.4 GHz dongle, no Bluetooth. USB cable only.
-- ❌ **No Linux / macOS support** yet (possible in the future, not implemented).
-- ❌ **No firmware flashing.** It never downloads, installs or modifies firmware;
-  it only tells you an update exists.
+- ❌ **No wireless support.** No 2.4 GHz dongle, no Bluetooth. USB cable only.
+- ❌ **No Linux / macOS support.** Windows 10/11 only.
+- ❌ **No firmware flashing.** It never downloads, installs or modifies firmware.
+  It only tells you an update exists.
 - ❌ **No risky communication.** On firmware that isn't verified, only time and
   weather are sent, and only while every protocol check passes. If anything
   looks different, the tool stops sending immediately and tells you why. There
   is no "ignore and continue" switch.
-- ❌ **No keyboard configuration** – keymap, RGB lighting, macros, knob etc.
+- ❌ **No keyboard configuration.** Keymap, RGB lighting, macros, knob etc.
   stay with the official [Chilkey driver](https://chilkey.com/pages/console).
-- ❌ **No image/GIF upload** in the first version (planned later).
+- ❌ **No image/GIF upload** and no display themes.
 - ❌ **No °C/°F or 12/24 h switching on the display.** Chilkey ships two screen
   firmware variants (24 h + °C, 12 h + °F) and the tool doesn't change which
   one you have (see [docs/firmware.md](../../docs/firmware.md)). The UI unit is
   independent of it.
-- ❌ **No telemetry.** It only contacts the services you configured
-  (see [Privacy](#privacy--network-access)).
-- ❌ **No other keyboard models (yet).** Only the Chilkey ND104 is supported.
-  The architecture has a model interface, so other keyboards with displays can
-  be added later (see [docs/PLAN.md § 4.3](../../docs/PLAN.md#43-keyboard-models-r7)).
-- ❌ **Not meant to run alongside** the official Chilkey weather plugin – both
+- ❌ **No other keyboard models.** Only the Chilkey ND104 is supported. The
+  code has a model interface (`KeyboardModel` in
+  [`crates/nd104-core/src/model/mod.rs`](crates/nd104-core/src/model/mod.rs)),
+  so other keyboards with displays could be added.
+- ❌ **Not meant to run alongside** the official Chilkey weather plugin. Both
   would write to the display.
 
 ---
@@ -125,8 +150,7 @@ write:
 | Any check fails (before or during operation) | **Locked:** stops sending immediately. Tray icon turns amber, a notification names the failed check, and the status page explains what to do |
 | Version cannot be read | Locked |
 
-Extra features such as themes or images (planned) are only ever used on
-verified firmware. A lock is only lifted by re-connecting the keyboard or by
+A lock is only lifted by re-connecting the keyboard or by
 "Check again", and either way all checks run again. There is intentionally
 **no "ignore and continue" override**.
 
@@ -178,8 +202,10 @@ automatically*, or `[updates] firmware_check = false`).
 settings, or `nd104-cli geocode "<city>" --set 1`). Your location is stored only
 in your local config file, never in this repository.
 
-Providers are plug-ins implementing one interface, so more can be added
-(see [docs/PLAN.md § 5.6](../../docs/PLAN.md#56-weather-service)).
+Providers are plug-ins implementing one interface (`WeatherProvider` in
+[`crates/nd104-core/src/weather/mod.rs`](crates/nd104-core/src/weather/mod.rs)),
+so more can be added.
+
 **API keys** (OpenWeatherMap, WeatherAPI.com):
 - Enter them in the settings window → **Weather** → *API key – …* → **Save key**,
   or on the console: `nd104-cli api-key set openweathermap` (the key is read
@@ -209,7 +235,7 @@ Summer/winter time: **Auto** (from time-zone rules) · force summer · force win
 All options need Windows 10/11 (64-bit) and the keyboard connected **by USB
 cable**. Releases are published on the
 [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
-(tag `nd104-sync-vX.Y.Z`; 1.0.0 is the first stable release, 0.x were betas).
+(tag `nd104-sync-vX.Y.Z`).
 Each release has:
 
 | File | What | When to use |
@@ -283,9 +309,7 @@ instead of misreading it.
 ## Versioning
 
 - nd104-sync uses [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
-  - Since `1.0.0` (stable): MAJOR = incompatible changes, MINOR = new
-    features, PATCH = fixes.
-  - `0.x.y` were the betas of the milestones M1–M5.
+  MAJOR = incompatible changes, MINOR = new features, PATCH = fixes.
 - **One source of truth:** `version` in [`Cargo.toml`](Cargo.toml)
   (`[workspace.package]`). Every crate, the CLI (`nd104-cli --version`) and the
   app UI read it from there.
@@ -470,7 +494,6 @@ Stable releases follow SemVer (MAJOR.MINOR.PATCH); pre-releases use `X.Y.Z-rc.N`
    console tools and the tray app, creates the **NSIS setup and the MSI**, packs
    the portable zip, writes `SHA256SUMS.txt` and publishes the GitHub release.
    Its notes are the CHANGELOG section for that version plus a download list.
-   - `0.x` → title "(beta)", normal release, so the app update check finds it.
    - `X.Y.Z-rc.N` → GitHub pre-release without MSI (WiX needs a plain version),
      ignored by the app update check.
 
@@ -501,48 +524,28 @@ and tests.
 ```
 apps/nd104-sync/
 ├── crates/
-│   ├── nd104-protocol/   # packet building, CRC – pure, unit tested  ✅ exists
-│   ├── nd104-probe/      # diagnostic CLI (M0)                       ✅ exists
+│   ├── nd104-protocol/   # packet building, CRC (pure, unit tested)
+│   ├── nd104-probe/      # diagnostic CLI for hardware tests
 │   ├── nd104-core/       # model interface, device + firmware guard,
-│   │                     # clock, weather, scheduler, config, update check  ✅ exists
-│   └── nd104-cli/        # console runner for the core               ✅ exists
-├── src-tauri/            # Tauri tray app, icons, installer config     ✅ exists
-├── ui/                   # Svelte settings window                     ✅ exists
-├── locales/              # en.json, de.json                          ✅ exists
-└── packaging/            # installer configuration
+│   │                     # clock, weather, scheduler, config, update check
+│   └── nd104-cli/        # console runner for the core
+├── src-tauri/            # Tauri tray app, icons, installer config
+├── ui/                   # Svelte settings window
+└── locales/              # en.json, de.json
 ```
-
-## Roadmap
-
-```mermaid
-flowchart LR
-    M0["<b>M0</b><br/>Protocol &amp; firmware check<br/>✔ done"]:::done
-    M1["<b>M1</b><br/>Core, headless<br/>✔ 0.1.0 beta"]:::done
-    M2["<b>M2</b><br/>Tray app<br/>✔ 0.2.0 beta"]:::done
-    M3["<b>M3</b><br/>Settings UI<br/>✔ 0.3.0 beta"]:::done
-    M4["<b>M4</b><br/>Providers &amp; secrets<br/>✔ 0.4.0 beta"]:::done
-    M5["<b>M5</b><br/>Firmware check &amp; release<br/>✔ 0.5.0 beta"]:::done
-    M6["<b>M6</b><br/>Keyboard API survey<br/>✔ done"]:::done
-    V1["<b>1.0.0</b><br/>Stable release<br/>✔ released"]:::current
-    M0 --> M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> V1
-
-    classDef done fill:#1a7f37,stroke:#2ea043,color:#ffffff
-    classDef current fill:#0969da,stroke:#54aeff,color:#ffffff,stroke-width:3px
-    classDef todo fill:#6e7781,stroke:#8c959f,color:#ffffff
-```
-
-🟦 current · 🟩 done. What each milestone contains:
-[docs/PLAN.md § 8](../../docs/PLAN.md#8-milestones). M0 results: [docs/protocol.md § 6](../../docs/protocol.md#6-open-points-for-m0-hardware-verification).
 
 ## Contributing
 
 - **New weather provider:** implement the `WeatherProvider` trait, register it,
   add locale strings and a row in the provider table above.
 - **New language:** add `locales/<code>.json` with all keys of `en.json`.
-- **New platform (Linux/macOS):** implement the `Platform` trait
-  (see [docs/PLAN.md § 5.10](../../docs/PLAN.md#510-platform-layer-r2)).
+- **New platform (Linux/macOS):** not implemented. Please open an issue
+  first to discuss it.
 - **New firmware version:** verify the protocol on real hardware, document it in
   `docs/protocol.md`, add it to the verified list.
+
+Contributions are welcome, but reviews and answers happen in my free time.
+There is no guaranteed support (see the [disclaimer](../../README.md#disclaimer)).
 
 ## Credits
 
@@ -553,4 +556,5 @@ by borrougagnou and on an analysis of the official
 [docs/protocol.md](../../docs/protocol.md). Inspired by
 [zoom-sync](https://github.com/ozboar/zoom-sync).
 
-Unofficial project, not affiliated with Chilkey. MIT licensed – see [LICENSE](../../LICENSE).
+Unofficial project, not affiliated with Chilkey. Use at your own risk, see the
+[disclaimer](../../README.md#disclaimer). MIT licensed, see [LICENSE](../../LICENSE).
