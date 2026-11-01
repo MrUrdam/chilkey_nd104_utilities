@@ -61,6 +61,7 @@
   "ui.preview.no_weather": "Noch kein Wetter",
   "ui.preview.offline": "Tastatur nicht verbunden",
   "ui.preview.caption": "Live-Vorschau des Tastatur-Displays (zuletzt gesendete Werte)",
+  "ui.preview.battery_hint": "Das Batteriesymbol ist nur ein Platzhalter – nd104-sync kann Ladestand und Ladezustand nicht auslesen.",
   "ui.dash.keyboard": "Tastatur",
   "ui.dash.connect_hint": "ND104 per USB-Kabel anschließen. Funkmodi werden nicht unterstützt.",
   "ui.dash.sync": "Synchronisierung",

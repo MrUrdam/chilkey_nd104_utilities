@@ -61,6 +61,7 @@
   "ui.preview.no_weather": "No weather yet",
   "ui.preview.offline": "Keyboard not connected",
   "ui.preview.caption": "Live preview of the keyboard display (last values sent)",
+  "ui.preview.battery_hint": "The battery symbol is only a placeholder – nd104-sync cannot read the battery level or charging state.",
   "ui.dash.keyboard": "Keyboard",
   "ui.dash.connect_hint": "Connect the ND104 with a USB cable. Wireless modes are not supported.",
   "ui.dash.sync": "Sync",

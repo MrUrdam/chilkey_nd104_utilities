@@ -12,6 +12,14 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **Display preview** (dashboard and setup window) now looks like the real
+  weather page of the keyboard: light screen, time top left, battery top
+  right, weather icon left, temperature right with low ~ high below. The
+  battery is a placeholder (nd104-sync cannot read battery level or charging
+  state), noted below the preview. The icons stay nd104-sync's own drawings.
+- README screenshots use a sunny summer day.
+
 ## [1.1.0] – 2026-11-01
 
 New setup for install, update and uninstall, and one-click updates from the

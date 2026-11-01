@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import WeatherIcon from "../../ui/src/components/WeatherIcon.svelte";
+  import DisplayScreen from "../../ui/src/components/DisplayScreen.svelte";
   import * as api from "./api";
   import type { SetupInfo, Step, Texts } from "./api";
 
@@ -30,9 +30,8 @@
 
   let uninstalling = $derived(info?.mode === "uninstall");
   let busy = $derived(phase === "working" || phase === "loading");
-  let clock = $derived(
-    now.toLocaleTimeString(t.lang ?? "en", { hour: "2-digit", minute: "2-digit", hour12: false }),
-  );
+  // sample values for the display replica: a sunny summer day
+  const summer = { condition: "clear", is_day: true, current_c: 26.4, min_c: 17.2, max_c: 28.9 } as const;
   let disclaimer = $derived(tr("disclaimer").split("{license}"));
 
   let primaryLabel = $derived.by(() => {
@@ -134,11 +133,8 @@
         <span class="version" data-tauri-drag-region>v{info.version}</span>
       {/if}
     </div>
-    <div class="display" class:on={phase === "done" && !uninstalling} aria-hidden="true" data-tauri-drag-region>
-      <div class="screen" data-tauri-drag-region>
-        <span class="time">{clock}</span>
-        <WeatherIcon condition="partly_cloudy" size={44} />
-      </div>
+    <div class="display" class:off={uninstalling && phase === "done"} aria-hidden="true">
+      <DisplayScreen time={now} weather={summer} />
     </div>
   </section>
 
@@ -355,39 +351,13 @@
 
   /* small replica of the keyboard's display */
   .display {
-    padding: 7px;
-    border-radius: 14px;
-    background: linear-gradient(160deg, #2b313b, #12151a);
-    box-shadow:
-      0 10px 24px rgba(0, 0, 0, 0.35),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    width: 200px;
     flex: none;
+    transition: opacity 0.6s;
   }
 
-  .screen {
-    width: 172px;
-    height: 92px;
-    border-radius: 8px;
-    background: var(--screen-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    opacity: 0.55;
-    transition:
-      opacity 0.6s,
-      box-shadow 0.6s;
-  }
-
-  .display.on .screen {
-    opacity: 1;
-    box-shadow: 0 0 22px rgba(34, 211, 238, 0.3);
-  }
-
-  .time {
-    font: 700 36px var(--font-display);
-    color: #e6f9fd;
-    letter-spacing: 0.04em;
+  .display.off {
+    opacity: 0.4;
   }
 
   main {

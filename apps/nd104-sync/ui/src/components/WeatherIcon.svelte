@@ -2,8 +2,11 @@
   // Same ten icon types as the keyboard display (docs/protocol.md § 4.2).
   import type { Condition } from "../lib/api";
 
-  let { condition, isDay = true, size = 64 }: { condition: Condition; isDay?: boolean; size?: number } =
-    $props();
+  let {
+    condition,
+    isDay = true,
+    size = 64,
+  }: { condition: Condition; isDay?: boolean; size?: number | string } = $props();
 
   const cloud = "M17 47h30a10 10 0 0 0 1-20 15 15 0 0 0-28-4 11 11 0 0 0-3 24z";
   const backCloud = "M30 36h20a8 8 0 0 0 1-16 12 12 0 0 0-22-3 9 9 0 0 0 1 19z";

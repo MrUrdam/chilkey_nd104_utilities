@@ -59,11 +59,11 @@ const config: Config = {
 };
 
 const weather: WeatherReport = {
-  condition: "partly_cloudy",
+  condition: "clear",
   is_day: true,
-  current_c: 12.4,
-  max_c: 14.1,
-  min_c: 6.3,
+  current_c: 26.4,
+  max_c: 28.9,
+  min_c: 17.2,
   observed_at: iso(-4),
   provider: "Open-Meteo",
 };

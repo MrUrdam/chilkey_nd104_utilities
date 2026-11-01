@@ -35,8 +35,9 @@
 
   <div class="top">
     <div class="preview">
-      <DisplayPreview {status} />
+      <div class="screen-wrap"><DisplayPreview {status} /></div>
       <div class="caption muted">{t("ui.preview.caption")}</div>
+      <div class="caption hint muted">{t("ui.preview.battery_hint")}</div>
     </div>
 
     <div class="card device">
@@ -145,8 +146,20 @@
     gap: 8px;
   }
 
+  .screen-wrap {
+    width: 100%;
+    max-width: 500px;
+  }
+
   .caption {
     font-size: 12px;
+    text-align: center;
+  }
+
+  .caption.hint {
+    font-size: 11px;
+    margin-top: -4px;
+    max-width: 420px;
   }
 
   .device {
