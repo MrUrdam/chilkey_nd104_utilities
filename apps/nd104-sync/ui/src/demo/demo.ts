@@ -5,7 +5,8 @@
 // URL parameters: ?lang=en|de  ?theme=dark|light|auto
 
 import { mockIPC } from "@tauri-apps/api/mocks";
-import type { AppInfo, Config, FirmwareReport, Status, WeatherReport } from "../lib/api";
+import type { AppInfo, Config, FirmwareReport, Keymap, KeymapProfile, Status, WeatherReport } from "../lib/api";
+import { layout } from "../lib/keyboard";
 import en from "../../../locales/en.json";
 import de from "../../../locales/de.json";
 
@@ -272,6 +273,38 @@ function demoPicture() {
   };
 }
 
+/** A plausible keymap: layer 0 as printed, layer 1 with media and display keys. */
+function demoKeymap(): Keymap {
+  const layers = Array.from({ length: 6 }, (_, n) => Array<number>(128).fill(n === 0 ? 0 : 1));
+  for (const key of layout("iso")) for (const [r, c] of key.pos) layers[0][r * 16 + c] = key.hid;
+  layers[0][6 * 16 + 9] = 0xa8; // knob press: mute
+  layers[0][7 * 16 + 9] = 0x7e35;
+  layers[0][4 * 16 + 1] = 0x1c; // German QWERTZ habits: Y and Z swapped
+  layers[0][2 * 16 + 6] = 0x1d;
+  const fn = layers[1];
+  [0xae, 0xac, 0xab, 0xad].forEach((code, i) => (fn[0 * 16 + 5 + i] = code));
+  [0xa8, 0xaa, 0xa9].forEach((code, i) => (fn[0 * 16 + 9 + i] = code));
+  fn[5 * 16 + 1] = 0x700b;
+  fn[1 * 16 + 1] = 0x7820;
+  fn[1 * 16 + 2] = 0x7821;
+  fn[4 * 16 + 12] = 0x7827;
+  fn[5 * 16 + 12] = 0x7828;
+  const knob = [
+    [0xaa, 0xa9],
+    [0x7e10, 0x7e0f],
+    [0x7828, 0x7827],
+    [0x7828, 0x7827],
+  ];
+  return { layers, knob };
+}
+
+let demoKeys = demoKeymap();
+const demoProfiles: KeymapProfile[] = [
+  { id: "p1", name: "Gaming", app: "Steam", created: "2026-10-28T19:40:00Z" },
+  { id: "p2", name: "Photo editing", app: "Lightroom", created: "2026-10-21T08:05:00Z" },
+];
+let demoPage: unknown = null;
+
 export function installDemo(version: string) {
   const texts: Record<string, string> = { ...en, ...(language === "de" ? de : {}) };
 
@@ -312,6 +345,54 @@ export function installDemo(version: string) {
       case "picture_refit":
         return demoPicture();
       case "picture_upload":
+        return null;
+      case "keymap_backup":
+        return { path: "C:\\Users\\demo\\Documents\\nd104-keymap-2026-11-01.json", layers: 6, assigned_keys: 214 };
+      case "keymap_restore_check":
+        return {
+          name: "nd104-keymap-2026-10-30.json",
+          created: "2026-10-30T18:12:00Z",
+          backup_firmware: "V3.0.14 20260710_123331",
+          keyboard_firmware: "V3.0.14 20260710_123331",
+          keys: 12,
+          knob: 2,
+        };
+      case "keymap_restore_apply":
+        return 14;
+      case "keymap_read":
+        return structuredClone(demoKeys);
+      case "keymap_write": {
+        const target = a.target as Keymap;
+        let n = 0;
+        target.layers.forEach((l, i) => l.forEach((c, j) => (n += c !== demoKeys.layers[i][j] ? 1 : 0)));
+        target.knob.forEach((l, i) => l.forEach((c, j) => (n += c !== demoKeys.knob[i][j] ? 1 : 0)));
+        demoKeys = structuredClone(target);
+        return new Promise((resolve) => setTimeout(() => resolve(n), 700));
+      }
+      case "keymap_page_get":
+        return demoPage;
+      case "keymap_page_set":
+        demoPage = a.settings;
+        return null;
+      case "keymap_profiles":
+        return demoProfiles;
+      case "keymap_profile_get": {
+        const k = demoKeymap();
+        k.layers[0][3 * 16 + 0] = 0xe0; // profile: Caps Lock → Ctrl, Win key off
+        k.layers[0][5 * 16 + 1] = 0;
+        return k;
+      }
+      case "keymap_profile_save": {
+        const p = { id: `p${Date.now()}`, name: String(a.name), app: String(a.application), created: new Date().toISOString() };
+        demoProfiles.push(p);
+        return p;
+      }
+      case "keymap_profile_delete":
+        demoProfiles.splice(demoProfiles.findIndex((p) => p.id === a.id), 1);
+        return null;
+      case "keymap_profile_export":
+        return "C:\\Users\\demo\\Documents\\nd104-profile-Gaming.json";
+      case "keymap_profile_import":
         return null;
       case "plugin:event|listen":
         return 1;

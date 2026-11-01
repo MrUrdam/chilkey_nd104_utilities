@@ -70,6 +70,12 @@ your weather provider, your location, your clock source.
 **Lighting and screen**
 - **Lighting:** background and bottom lighting on/off, effect, brightness,
   speed and colour
+- **Keymap:** change what keys, the knob and the round button do on all 6
+  layers – renamable layers, ISO/ANSI drawing, ISO UK / ISO DE / ANSI US
+  labels (plus your own copies), profiles per application with export and
+  import; writes only the differences and backs up the old keymap first
+- **Keymap backup:** save all 6 layers and the knob to a file and restore
+  them later (shows the differences first, writes only those, then checks)
 - **Own picture or GIF** on the screen: any PNG/JPEG/GIF/BMP is checked
   (type, size, frames) and scaled to 320 × 172 before it is sent
 
@@ -102,8 +108,10 @@ your weather provider, your location, your clock source.
   are only sent while every protocol check passes. If anything
   looks different, the tool stops sending immediately and tells you why. There
   is no "ignore and continue" switch.
-- ❌ **No keyboard configuration.** Keymap, macros, knob, debounce, sleep
-  times etc. stay with the official [Chilkey driver](https://chilkey.com/pages/console).
+- ❌ **No further keyboard configuration.** Macros, debounce, sleep times
+  etc. stay with the official
+  [Chilkey driver](https://chilkey.com/pages/console); nd104-sync covers the
+  keymap (keys, knob, round button), its backup and lighting.
   Lighting covers on/off, effect, brightness, speed and colour.
 - ❌ **No display themes.**
 - ❌ **No °C/°F or 12/24 h switching on the display.** Chilkey ships two screen
@@ -415,9 +423,10 @@ running in the tray.
 | Page | Contents |
 |---|---|
 | **Dashboard** | Large live preview of the keyboard display with keyboard state and last/next syncs (incl. next DST change) next to it; weather, firmware, recent events; Sync now, Pause/Resume |
+| **Keymap** | Layers (renamable), ISO/ANSI drawing with detection, label sets, function picker for keys, knob and round button, list of changes, write with automatic backup; profiles; keymap backup and restore |
+| **Lighting** | Background lighting (keys + light bar below Del/End/PgDn) and bottom lighting: on/off, effect, brightness, speed, colour (sent and stored right away) |
 | **Weather** | Location via city search (with OpenStreetMap link to check a result) or coordinates; provider, fallback, interval, °C/°F in the window; Test button (fetches without sending) |
 | **Clock** | Source (System / Time zone / NTP / Manual), time zone, NTP test, summer/winter time mode, sync interval; live preview of the time sent |
-| **Lighting** | Background lighting (keys + light bar below Ins/Home/PgUp) and bottom lighting: on/off, effect, brightness, speed, colour (sent and stored right away) |
 | **Screen picture** | Choose a picture or GIF, see the checks and a preview (fill the screen or show the whole picture), send it to the screen with a progress bar |
 | **Device & Firmware** | Verified / unverified / locked state, installed vs. verified firmware, display variant, Check keyboard again, polling interval |
 | **General** | Start with Windows, language, appearance (like Windows / dark / light), style (Calm / Gamer), update check, About with version, config file and log folder |

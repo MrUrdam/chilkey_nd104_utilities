@@ -9,6 +9,8 @@
 mod commands;
 mod hardware;
 mod i18n;
+mod keymap_backup;
+mod keymap_page;
 mod logging;
 mod self_update;
 mod tray;
@@ -59,6 +61,8 @@ pub(crate) struct AppState {
     own_write: Mutex<Option<SystemTime>>,
     /// Picture picked on the Screen picture page.
     pub(crate) picture: Mutex<Option<hardware::PendingPicture>>,
+    /// Keymap backup chosen for restoring (checked, not written yet).
+    pub(crate) keymap_restore: Mutex<Option<keymap_backup::PendingRestore>>,
 }
 
 fn main() {
@@ -128,6 +132,20 @@ fn main() {
             hardware::picture_pick,
             hardware::picture_refit,
             hardware::picture_upload,
+            keymap_backup::keymap_backup,
+            keymap_backup::keymap_restore_check,
+            keymap_backup::keymap_restore_apply,
+            keymap_backup::keymap_restore_cancel,
+            keymap_page::keymap_read,
+            keymap_page::keymap_write,
+            keymap_page::keymap_page_get,
+            keymap_page::keymap_page_set,
+            keymap_page::keymap_profiles,
+            keymap_page::keymap_profile_save,
+            keymap_page::keymap_profile_get,
+            keymap_page::keymap_profile_delete,
+            keymap_page::keymap_profile_export,
+            keymap_page::keymap_profile_import,
         ])
         .setup(move |app| {
             if quit_request {
@@ -163,6 +181,7 @@ fn main() {
             app.manage(AppState {
                 own_write: Mutex::new(modified(&config_path)),
                 picture: Mutex::new(None),
+                keymap_restore: Mutex::new(None),
                 config_path,
                 config: Mutex::new(config.clone()),
                 i18n: Mutex::new(i18n),

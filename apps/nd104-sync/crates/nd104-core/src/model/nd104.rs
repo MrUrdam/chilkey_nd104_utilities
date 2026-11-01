@@ -11,10 +11,12 @@ use nd104_protocol::{
     PICTURE_WIDTH, SCREEN, VENDOR_USAGE, VENDOR_USAGE_PAGE,
 };
 
+use super::KeymapReply;
 use super::{
     Capabilities, EncodedFrame, FirmwareInfo, InterfaceSpec, KeyboardModel, OfficialSource, Packet,
     PictureSpec, PictureTransfer, ReportClass, Role, ScreenVariant, TransferAck, VerifiedFirmware,
 };
+use crate::keymap::KeymapSpec;
 use crate::lighting::{LightChange, LightField, LightZone};
 use crate::weather::{Condition, WeatherReport};
 
@@ -319,6 +321,43 @@ impl KeyboardModel for Nd104 {
         match (role, report[0]) {
             (_, 0x11) => Self::firmware(role, report),
             (Role::Keyboard, 0x1C) => Self::classify_keyboard_frame(report),
+            (
+                Role::Keyboard,
+                nd104_protocol::KEYMAP_GET_BUFFER
+                | nd104_protocol::KEYMAP_SET_KEY
+                | nd104_protocol::KNOB_GET
+                | nd104_protocol::KNOB_SET,
+            ) => match nd104_protocol::parse_keymap_answer(report) {
+                Some(nd104_protocol::KeymapAnswer::Buffer { offset, data }) => {
+                    ReportClass::Keymap(KeymapReply::Buffer { offset, data })
+                }
+                Some(nd104_protocol::KeymapAnswer::KeySet {
+                    layer,
+                    row,
+                    col,
+                    code,
+                }) => ReportClass::Keymap(KeymapReply::KeySet {
+                    layer,
+                    row,
+                    col,
+                    code,
+                }),
+                Some(nd104_protocol::KeymapAnswer::Knob {
+                    set,
+                    layer,
+                    direction,
+                    code,
+                }) => ReportClass::Keymap(KeymapReply::Knob {
+                    set,
+                    layer,
+                    direction,
+                    code,
+                }),
+                None => ReportClass::Ignored(format!(
+                    "keymap answer out of range 0x{:02X} {:02X} {:02X} {:02X}",
+                    report[0], report[1], report[2], report[3]
+                )),
+            },
             (Role::Keyboard, LIGHT_SET | LIGHT_GET | LIGHT_SAVE | LIGHT_UNHANDLED) => {
                 Self::classify_light_answer(report)
             }
@@ -330,6 +369,15 @@ impl KeyboardModel for Nd104 {
             (Role::Screen, 0xA5) => Self::classify_screen_answer(report),
             (Role::Screen, 0x1C) if report[9] == 0xFB => {
                 ReportClass::Ignored("screen info report (1C … FB)".into())
+            }
+            // VIA commands of other programs (Chilkey's web driver, VIA):
+            // Windows hands their answers to every open handle. Well-formed
+            // protocol, just not ours – log and ignore.
+            (Role::Keyboard, first @ 0x01..=0x16) => ReportClass::Ignored(format!(
+                "answer to VIA command 0x{first:02X} of another program (e.g. Chilkey's web driver)"
+            )),
+            (Role::Screen, 0x58) => {
+                ReportClass::Ignored("screen debug answer (58 …) of another program".into())
             }
             (_, first) => {
                 ReportClass::Malformed(format!("unknown {role} report starting with 0x{first:02X}"))
@@ -384,6 +432,57 @@ impl KeyboardModel for Nd104 {
             role: Role::Keyboard,
             command: LIGHT_SAVE,
             bytes: light_save(proto_zone(zone)),
+        })
+    }
+
+    fn keymap_spec(&self) -> Option<KeymapSpec> {
+        Some(KeymapSpec {
+            layers: nd104_protocol::KEYMAP_LAYERS,
+            rows: nd104_protocol::KEYMAP_ROWS,
+            cols: nd104_protocol::KEYMAP_COLS,
+            knob_layers: nd104_protocol::KNOB_LAYERS,
+            knob_directions: nd104_protocol::KNOB_DIRECTIONS,
+        })
+    }
+
+    fn keymap_reads(&self) -> Vec<(Packet, u16, usize)> {
+        nd104_protocol::keymap_read_plan()
+            .into_iter()
+            .map(|(offset, size)| {
+                (
+                    Packet {
+                        role: Role::Keyboard,
+                        command: nd104_protocol::KEYMAP_GET_BUFFER,
+                        bytes: nd104_protocol::keymap_read(offset, size),
+                    },
+                    offset,
+                    size as usize,
+                )
+            })
+            .collect()
+    }
+
+    fn knob_read(&self, layer: u8, direction: u8) -> Option<Packet> {
+        Some(Packet {
+            role: Role::Keyboard,
+            command: nd104_protocol::KNOB_GET,
+            bytes: nd104_protocol::knob_get(layer, direction),
+        })
+    }
+
+    fn key_write(&self, layer: u8, row: u8, col: u8, code: u16) -> Option<Packet> {
+        Some(Packet {
+            role: Role::Keyboard,
+            command: nd104_protocol::KEYMAP_SET_KEY,
+            bytes: nd104_protocol::keymap_set_key(layer, row, col, code),
+        })
+    }
+
+    fn knob_write(&self, layer: u8, direction: u8, code: u16) -> Option<Packet> {
+        Some(Packet {
+            role: Role::Keyboard,
+            command: nd104_protocol::KNOB_SET,
+            bytes: nd104_protocol::knob_set(layer, direction, code),
         })
     }
 
@@ -457,6 +556,46 @@ fn build_date(build: &str) -> Option<jiff::civil::Date> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn answers_for_other_programs_do_not_lock() {
+        // the report that locked 1.4.1 while the web driver was open
+        let report: [u8; 32] = [
+            0x12, 0x01, 0xc4, 0x1c, 0x00, 0x00, 0x00, 0x00, 0x7e, 0x0f, 0x00, 0x01, 0x7e, 0x10,
+            0x00, 0x01, 0x00, 0x01, 0x7e, 0x0e, 0x78, 0x21, 0x78, 0x20, 0x78, 0x2a, 0x00, 0x01,
+            0x00, 0x01, 0x00, 0x01,
+        ];
+        assert!(matches!(
+            Nd104.classify_report(Role::Keyboard, &report),
+            ReportClass::Keymap(KeymapReply::Buffer { offset: 0x01C4, .. })
+        ));
+        for first in [
+            0x01u8, 0x02, 0x03, 0x04, 0x06, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x13, 0x16,
+        ] {
+            let mut r = [0u8; 32];
+            r[0] = first;
+            assert!(
+                matches!(
+                    Nd104.classify_report(Role::Keyboard, &r),
+                    ReportClass::Ignored(_)
+                ),
+                "0x{first:02X}"
+            );
+        }
+        let mut r = [0u8; 64];
+        r[..3].copy_from_slice(&[0x58, 0x01, 0x00]);
+        assert!(matches!(
+            Nd104.classify_report(Role::Screen, &r),
+            ReportClass::Ignored(_)
+        ));
+        // still locks: unknown data and damaged frames
+        let mut r = [0u8; 32];
+        r[0] = 0x42;
+        assert!(matches!(
+            Nd104.classify_report(Role::Keyboard, &r),
+            ReportClass::Malformed(_)
+        ));
+    }
+
     use super::*;
 
     fn hex(s: &str, len: usize) -> Vec<u8> {

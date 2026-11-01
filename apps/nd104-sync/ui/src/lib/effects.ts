@@ -24,7 +24,7 @@ function catalogue(count: number, color: number[], still: number[]): Effect[] {
 }
 
 export const EFFECTS: Record<LightZone, Effect[]> = {
-  // QMK rgb_matrix (per key + bar below Ins/Home/PgUp)
+  // QMK rgb_matrix (per key + bar below Del/End/PgDn)
   per_key: catalogue(
     45,
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 23, 25, 26, 27, ...range(33, 40), 43, 44],

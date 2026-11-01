@@ -266,7 +266,49 @@ export const api = {
   picturePick: (fit: Fit) => invoke<PictureCheck | null>("picture_pick", { fit }),
   pictureRefit: (fit: Fit) => invoke<PictureCheck>("picture_refit", { fit }),
   pictureUpload: () => invoke<void>("picture_upload"),
+  keymapBackup: () =>
+    invoke<{ path: string; layers: number; assigned_keys: number } | null>("keymap_backup"),
+  keymapRestoreCheck: () => invoke<KeymapRestoreCheck | null>("keymap_restore_check"),
+  keymapRestoreApply: () => invoke<number>("keymap_restore_apply"),
+  keymapRestoreCancel: () => invoke<void>("keymap_restore_cancel"),
+  keymapRead: () => invoke<Keymap>("keymap_read"),
+  keymapWrite: (target: Keymap) => invoke<number>("keymap_write", { target }),
+  keymapPageGet: () => invoke<unknown>("keymap_page_get"),
+  keymapPageSet: (settings: unknown) => invoke<void>("keymap_page_set", { settings }),
+  keymapProfiles: () => invoke<KeymapProfile[]>("keymap_profiles"),
+  keymapProfileSave: (name: string, application: string, keymap: Keymap) =>
+    invoke<KeymapProfile>("keymap_profile_save", { name, application, keymap }),
+  keymapProfileGet: (id: string) => invoke<Keymap>("keymap_profile_get", { id }),
+  keymapProfileDelete: (id: string) => invoke<void>("keymap_profile_delete", { id }),
+  keymapProfileExport: (id: string) => invoke<string | null>("keymap_profile_export", { id }),
+  keymapProfileImport: () => invoke<KeymapProfile | null>("keymap_profile_import"),
 };
+
+/** All layers (6 × 128 slots, row × 16 + column) and the knob (4 layers × left/right). */
+export interface Keymap {
+  layers: number[][];
+  knob: number[][];
+}
+
+export interface KeymapProfile {
+  id: string;
+  name: string;
+  app: string;
+  created: string;
+}
+
+export interface KeymapRestoreCheck {
+  name: string;
+  created: string;
+  backup_firmware: string;
+  keyboard_firmware: string;
+  keys: number;
+  knob: number;
+}
+
+export function onKeymapProgress(handler: (progress: number) => void): Promise<UnlistenFn> {
+  return listen<number>("keymap-progress", (event) => handler(event.payload));
+}
 
 export function onPictureProgress(handler: (progress: number) => void): Promise<UnlistenFn> {
   return listen<number>("picture-progress", (event) => handler(event.payload));

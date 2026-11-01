@@ -448,6 +448,49 @@ select:focus {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/* Lighting colours of the keymap drawing: registered so they can animate */
+@property --lit-h {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --lit-a {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --glow-h {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --glow-a {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/* Own chevron instead of the native arrow (which ignores the theme) */
+select {
+  appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888d96' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+select option,
+select optgroup {
+  background: var(--panel);
+  color: var(--text);
+}
+
 input[aria-invalid="true"] {
   border-color: var(--err);
 }

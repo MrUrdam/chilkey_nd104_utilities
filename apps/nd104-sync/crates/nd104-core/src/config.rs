@@ -101,10 +101,15 @@ pub fn config_dir() -> Result<PathBuf> {
     Ok(base.config_dir().join("nd104-sync"))
 }
 
+/// `%LOCALAPPDATA%\nd104-sync` (Windows) or the platform equivalent.
+pub fn local_data_dir() -> Result<PathBuf> {
+    let base = directories::BaseDirs::new().ok_or_else(|| anyhow!("no home directory"))?;
+    Ok(base.data_local_dir().join("nd104-sync"))
+}
+
 /// `%LOCALAPPDATA%\nd104-sync\logs` (Windows) or the platform equivalent.
 pub fn log_dir() -> Result<PathBuf> {
-    let base = directories::BaseDirs::new().ok_or_else(|| anyhow!("no home directory"))?;
-    Ok(base.data_local_dir().join("nd104-sync").join("logs"))
+    Ok(local_data_dir()?.join("logs"))
 }
 
 pub fn default_path() -> Result<PathBuf> {

@@ -23,7 +23,9 @@ use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::hid::{HidBackend, HidChannel, HidInterfaceInfo};
+use crate::keymap::{Keymap, KeymapOp, KeymapResult};
 use crate::lighting::{LightChange, LightField, LightOp, LightZone, ZoneState};
+use crate::model::KeymapReply;
 use crate::model::{
     FirmwareInfo, KeyboardModel, Packet, PictureTransfer, ReportClass, Role, ScreenVariant,
     TransferAck,
@@ -518,6 +520,145 @@ impl DeviceManager {
         Ok(())
     }
 
+    /// Reads all layers and the knob. `progress` gets 0.0 … 1.0.
+    pub fn keymap_read(&mut self, progress: &mut dyn FnMut(f32)) -> Result<Keymap> {
+        let model = self.model()?;
+        let spec = model
+            .keymap_spec()
+            .ok_or_else(|| anyhow!("this keyboard does not support keymap backups"))?;
+        let reads = model.keymap_reads();
+        let knob_reads: Vec<(u8, u8, Packet)> = (0..spec.knob_layers as u8)
+            .flat_map(|l| (0..spec.knob_directions as u8).map(move |d| (l, d)))
+            .filter_map(|(l, d)| model.knob_read(l, d).map(|p| (l, d, p)))
+            .collect();
+        let total = (reads.len() + knob_reads.len()) as f32;
+
+        let mut buffer = vec![0u8; spec.layers * spec.rows * spec.cols * 2];
+        for (i, (packet, offset, size)) in reads.iter().enumerate() {
+            let data = self
+                .exchange(packet, ANSWER_TIMEOUT, |c| match c {
+                    ReportClass::Keymap(KeymapReply::Buffer { offset: o, data })
+                        if o == offset && data.len() == *size =>
+                    {
+                        Some(data.clone())
+                    }
+                    _ => None,
+                })?
+                .ok_or_else(|| anyhow!("the keyboard does not support reading the keymap"))?;
+            let at = *offset as usize;
+            buffer[at..at + size].copy_from_slice(&data);
+            progress((i + 1) as f32 / total);
+        }
+        let per_layer = spec.rows * spec.cols;
+        let layers = buffer
+            .chunks(per_layer * 2)
+            .map(|layer| {
+                layer
+                    .chunks(2)
+                    .map(|b| u16::from_be_bytes([b[0], b[1]]))
+                    .collect()
+            })
+            .collect();
+
+        let mut knob = vec![vec![0u16; spec.knob_directions]; spec.knob_layers];
+        for (i, (layer, direction, packet)) in knob_reads.iter().enumerate() {
+            let code = self
+                .exchange(packet, ANSWER_TIMEOUT, |c| match c {
+                    ReportClass::Keymap(KeymapReply::Knob {
+                        set: false,
+                        layer: l,
+                        direction: d,
+                        code,
+                    }) if l == layer && d == direction => Some(*code),
+                    _ => None,
+                })?
+                .ok_or_else(|| anyhow!("the keyboard does not support reading the knob"))?;
+            knob[*layer as usize][*direction as usize] = code;
+            progress((reads.len() + i + 1) as f32 / total);
+        }
+        let keymap = Keymap { layers, knob };
+        tracing::info!(
+            "keymap read: {} layers, {} assigned keys",
+            keymap.layers.len(),
+            keymap.assigned_keys()
+        );
+        Ok(keymap)
+    }
+
+    /// Writes the keys and knob actions of `target` that differ from the
+    /// keyboard, then reads everything back and compares. Returns the number
+    /// of changes.
+    pub fn keymap_restore(
+        &mut self,
+        target: &Keymap,
+        progress: &mut dyn FnMut(f32),
+    ) -> Result<usize> {
+        let spec = self
+            .model()?
+            .keymap_spec()
+            .ok_or_else(|| anyhow!("this keyboard does not support keymap backups"))?;
+        target.validate(&spec)?;
+        // reading takes the first and the last quarter of the progress
+        let current = self.keymap_read(&mut |p| progress(p * 0.25))?;
+        let changes = target.changes_from(&current, &spec);
+        if changes.is_empty() {
+            progress(1.0);
+            return Ok(0);
+        }
+        self.event(
+            EventLevel::Info,
+            format!("Restoring keymap: {} changes", changes.len()),
+        );
+        let total = changes.len() as f32;
+        for (i, &(layer, row, col, code)) in changes.keys.iter().enumerate() {
+            let packet = self
+                .model()?
+                .key_write(layer, row, col, code)
+                .ok_or_else(|| anyhow!("this keyboard cannot change keys"))?;
+            self.exchange(&packet, ANSWER_TIMEOUT, |c| match c {
+                ReportClass::Keymap(KeymapReply::KeySet {
+                    layer: l,
+                    row: r,
+                    col: k,
+                    code: v,
+                }) if (*l, *r, *k, *v) == (layer, row, col, code) => Some(()),
+                _ => None,
+            })?
+            .ok_or_else(|| anyhow!("the keyboard does not support changing keys"))?;
+            progress(0.25 + 0.5 * (i + 1) as f32 / total);
+        }
+        for (i, &(layer, direction, code)) in changes.knob.iter().enumerate() {
+            let packet = self
+                .model()?
+                .knob_write(layer, direction, code)
+                .ok_or_else(|| anyhow!("this keyboard cannot change the knob"))?;
+            self.exchange(&packet, ANSWER_TIMEOUT, |c| match c {
+                ReportClass::Keymap(KeymapReply::Knob {
+                    set: true,
+                    layer: l,
+                    direction: d,
+                    code: v,
+                }) if (*l, *d, *v) == (layer, direction, code) => Some(()),
+                _ => None,
+            })?
+            .ok_or_else(|| anyhow!("the keyboard does not support changing the knob"))?;
+            progress(0.25 + 0.5 * (changes.keys.len() + i + 1) as f32 / total);
+        }
+        let check = self.keymap_read(&mut |p| progress(0.75 + p * 0.25))?;
+        let left = target.changes_from(&check, &spec);
+        if !left.is_empty() {
+            return Err(anyhow!(
+                "verification failed: {} keys/knob actions differ after writing",
+                left.len()
+            ));
+        }
+        self.event(
+            EventLevel::Info,
+            format!("Keymap restored and verified ({} changes)", changes.len()),
+        );
+        Ok(changes.len())
+    }
+
     /// Sends an own picture/GIF to the screen, page by page as the screen
     /// asks for them. `progress` gets 0.0 … 1.0.
     pub fn upload_picture(
@@ -629,6 +770,7 @@ impl DeviceManager {
                 tracing::debug!("ignored unsupported-command answer")
             }
             ReportClass::Transfer(ack) => tracing::debug!("ignored transfer answer {ack:?}"),
+            ReportClass::Keymap(reply) => tracing::debug!("ignored keymap answer {reply:?}"),
             ReportClass::Receipt | ReportClass::Firmware(_) => {}
             ReportClass::Malformed(_) => unreachable!("handled by caller"),
         }
@@ -710,6 +852,11 @@ enum Command {
         oneshot::Sender<(Result<(), String>, DeviceState, Vec<DeviceEvent>)>,
     ),
     Light(LightOp, oneshot::Sender<Reply<Option<ZoneState>>>),
+    Keymap(
+        KeymapOp,
+        mpsc::UnboundedSender<f32>,
+        oneshot::Sender<Reply<KeymapResult>>,
+    ),
     Picture(
         PictureTransfer,
         mpsc::UnboundedSender<f32>,
@@ -759,6 +906,25 @@ impl DeviceHandle {
                         }
                         Command::Send(packet, reply) => {
                             let result = manager.send(&packet).map_err(|e| format!("{e:#}"));
+                            let _ = reply.send((
+                                result,
+                                manager.state().clone(),
+                                manager.take_events(),
+                            ));
+                        }
+                        Command::Keymap(op, progress, reply) => {
+                            let mut report = |p: f32| {
+                                let _ = progress.send(p);
+                            };
+                            let result = match op {
+                                KeymapOp::Read => {
+                                    manager.keymap_read(&mut report).map(KeymapResult::Read)
+                                }
+                                KeymapOp::Restore(target) => manager
+                                    .keymap_restore(&target, &mut report)
+                                    .map(KeymapResult::Restored),
+                            }
+                            .map_err(|e| format!("{e:#}"));
                             let _ = reply.send((
                                 result,
                                 manager.state().clone(),
@@ -832,6 +998,19 @@ impl DeviceHandle {
 }
 
 impl DeviceHandle {
+    pub async fn keymap(
+        &self,
+        op: KeymapOp,
+        progress: mpsc::UnboundedSender<f32>,
+    ) -> Result<Reply<KeymapResult>> {
+        let (reply, rx) = oneshot::channel();
+        self.tx
+            .send(Command::Keymap(op, progress, reply))
+            .await
+            .map_err(|_| gone())?;
+        rx.await.map_err(|_| gone())
+    }
+
     pub async fn light(&self, op: LightOp) -> Result<Reply<Option<ZoneState>>> {
         let (reply, rx) = oneshot::channel();
         self.tx
@@ -882,6 +1061,8 @@ mod tests {
         NoLighting,
         /// The screen asks for the first data page twice.
         ResendOnce,
+        /// The keyboard keeps one key unchanged (write echoed, not stored).
+        StuckKey,
     }
 
     struct Shared {
@@ -896,6 +1077,10 @@ mod tests {
         page_left: usize,
         picture_left: usize,
         resent: bool,
+        /// 6 layers × 128 keys × 2 bytes
+        keymap: Vec<u8>,
+        knob: [[u16; 2]; 4],
+        key_writes: usize,
     }
 
     fn picture_ack(code: u8) -> Vec<u8> {
@@ -1023,6 +1208,45 @@ mod tests {
                     answers.push(a);
                 }
                 (Role::Keyboard, 0x09) => answers.push(report.to_vec()),
+                (Role::Keyboard, 0x12 | 0x05 | 0x14 | 0x15)
+                    if s.behaviour == Behaviour::NoLighting =>
+                {
+                    let mut a = report.to_vec();
+                    a[0] = 0xFF;
+                    answers.push(a);
+                }
+                (Role::Keyboard, 0x12) => {
+                    let (offset, size) = (
+                        usize::from(report[1]) << 8 | usize::from(report[2]),
+                        report[3] as usize,
+                    );
+                    let mut a = report.to_vec();
+                    a[4..4 + size].copy_from_slice(&s.keymap[offset..offset + size]);
+                    answers.push(a);
+                }
+                (Role::Keyboard, 0x05) => {
+                    s.key_writes += 1;
+                    let at =
+                        (report[1] as usize * 128 + report[2] as usize * 16 + report[3] as usize)
+                            * 2;
+                    let stuck = s.behaviour == Behaviour::StuckKey && at == 0;
+                    if !stuck {
+                        s.keymap[at] = report[4];
+                        s.keymap[at + 1] = report[5];
+                    }
+                    answers.push(report.to_vec());
+                }
+                (Role::Keyboard, 0x14) => {
+                    let mut a = report.to_vec();
+                    let code = s.knob[report[1] as usize][report[3] as usize];
+                    a[4..6].copy_from_slice(&code.to_be_bytes());
+                    answers.push(a);
+                }
+                (Role::Keyboard, 0x15) => {
+                    s.knob[report[1] as usize][report[3] as usize] =
+                        u16::from_be_bytes([report[4], report[5]]);
+                    answers.push(report.to_vec());
+                }
                 (Role::Screen, 0xBA) if report[1] == 6 && report[2] == 0xAA => {
                     s.picture_left =
                         u32::from_be_bytes([report[4], report[5], report[6], report[7]]) as usize;
@@ -1075,6 +1299,9 @@ mod tests {
             page_left: 0,
             picture_left: 0,
             resent: false,
+            keymap: (0..1536).map(|i| (i % 7) as u8).collect(),
+            knob: [[0xE9, 0xEA]; 4],
+            key_writes: 0,
         }));
         let m = DeviceManager::new(Box::new(MockBackend(shared.clone())), vec![Box::new(Nd104)]);
         (m, shared)
@@ -1180,6 +1407,61 @@ mod tests {
             data,
             1 + transfer.pages.iter().map(Vec::len).sum::<usize>() + transfer.pages[0].len()
         );
+    }
+
+    #[test]
+    fn keymap_is_read_completely() {
+        let (mut m, shared) = manager(Behaviour::Normal, "3.0.14");
+        m.poll();
+        let mut last = 0.0;
+        let keymap = m.keymap_read(&mut |p| last = p).unwrap();
+        assert_eq!(last, 1.0);
+        assert_eq!(keymap.layers.len(), 6);
+        assert!(keymap.layers.iter().all(|l| l.len() == 128));
+        let raw = shared.lock().unwrap().keymap.clone();
+        assert_eq!(
+            keymap.layers[2][5],
+            u16::from_be_bytes([raw[(256 + 5) * 2], raw[(256 + 5) * 2 + 1]])
+        );
+        assert_eq!(keymap.knob, vec![vec![0xE9, 0xEA]; 4]);
+    }
+
+    #[test]
+    fn keymap_restore_writes_only_differences_and_verifies() {
+        let (mut m, shared) = manager(Behaviour::Normal, "3.0.14");
+        m.poll();
+        let mut target = m.keymap_read(&mut |_| {}).unwrap();
+        target.layers[0][17] = 0x0029; // row 1, col 1
+        target.layers[5][127] = 0x7E40;
+        target.knob[3][1] = 0x0080;
+        assert_eq!(m.keymap_restore(&target, &mut |_| {}).unwrap(), 3);
+        let s = shared.lock().unwrap();
+        assert_eq!(s.key_writes, 2);
+        assert_eq!(&s.keymap[34..36], &[0x00, 0x29]);
+        assert_eq!(s.knob[3][1], 0x0080);
+        drop(s);
+        // nothing differs any more
+        assert_eq!(m.keymap_restore(&target, &mut |_| {}).unwrap(), 0);
+        assert!(matches!(m.state(), DeviceState::Ready(_)));
+    }
+
+    #[test]
+    fn keymap_restore_reports_a_key_that_did_not_change() {
+        let (mut m, _) = manager(Behaviour::StuckKey, "3.0.14");
+        m.poll();
+        let mut target = m.keymap_read(&mut |_| {}).unwrap();
+        target.layers[0][0] = 0x1234;
+        let err = m.keymap_restore(&target, &mut |_| {}).unwrap_err();
+        assert!(err.to_string().contains("verification failed"), "{err}");
+        assert!(matches!(m.state(), DeviceState::Ready(_)));
+    }
+
+    #[test]
+    fn unsupported_keymap_does_not_lock() {
+        let (mut m, _) = manager(Behaviour::NoLighting, "3.0.14");
+        m.poll();
+        assert!(m.keymap_read(&mut |_| {}).is_err());
+        assert!(matches!(m.state(), DeviceState::Ready(_)));
     }
 
     #[test]

@@ -417,13 +417,40 @@ come from the browser's storage (defaults 0 and 1), not from the keyboard. No
 text in the keyboard firmware names these two settings, so their effect is not
 documented yet.
 
-### 5.3 Other keyboard commands (not used)
+### 5.3 Keymap – used by nd104-sync for backup and restore
+
+VIA "dynamic keymap" commands, answered with an echo of the request (reads
+carry the data in the echo):
+
+| Bytes | Meaning |
+|---|---|
+| `12 off_hi off_lo size` | read `size` (≤ 28) bytes of the keymap buffer; data from byte 4 |
+| `05 layer row col kc_hi kc_lo` | set one key (stored immediately) |
+| `14 layer 00 dir` | read the knob action (`dir` 0 = left, 1 = right); code at bytes 4–5 |
+| `15 layer 00 dir kc_hi kc_lo` | set the knob action |
+
+- The buffer holds **6 layers × 8 rows × 16 columns**, 2 bytes per key
+  (big-endian), so key `row × 16 + col` of `layer` is at offset
+  `(layer × 128 + row × 16 + col) × 2` – 1536 bytes in total. The web driver
+  reads it in 28-byte steps that never cross a layer.
+- The knob is read and set for **layers 0–3**, left and right.
+- Macros: `0D` buffer size, `10` clear all, `0F off_hi off_lo len data…`
+  write (the driver ends with one byte at offset `0x0A3F`, probably the
+  playback mode). The driver never reads macros back, so nd104-sync does not
+  back them up.
+
+**Other programs:** Windows hands every input report to all programs that
+have the interface open. While Chilkey's web driver or VIA is connected,
+nd104-sync receives their answers too (e.g. the keymap read `12 …` the web
+driver sends on connect). The guard treats answers in the VIA range
+`0x01`–`0x16` (and the screen's `58 …`) as well-formed foreign traffic:
+logged, ignored, no lock.
+
+### 5.4 Other keyboard commands (not used)
 
 | Byte 0 | Meaning |
 |---|---|
 | `0x01` | protocol/layout version |
-| `0x12` | read keymap |
-| `0x14` | read knob mapping |
 
 ---
 

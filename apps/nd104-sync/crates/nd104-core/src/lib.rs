@@ -2,6 +2,7 @@
 //!
 //! - [`model`]: keyboard model interface and the Chilkey ND104 implementation
 //! - [`hid`]: HID access (real backend via hidapi, mockable for tests)
+//! - [`keymap`]: keymap backup and restore
 //! - [`lighting`]: keyboard lighting zones and changes
 //! - [`picture`]: own picture/GIF for the screen (checks and conversion)
 //! - [`device`]: device manager with the firmware/protocol guard (P1–P6)
@@ -22,6 +23,7 @@ pub mod device;
 pub mod engine;
 pub mod firmware_update;
 pub mod hid;
+pub mod keymap;
 pub mod lighting;
 pub mod model;
 pub mod picture;

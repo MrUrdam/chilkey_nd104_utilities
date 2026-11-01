@@ -12,6 +12,64 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.5.0] – 2026-11-01
+
+A keymap page: change keys, the knob and the round button on all layers,
+with label sets, profiles and backups – plus a collapsible sidebar and a fix
+for locks while Chilkey's web driver is open. Update with
+**Settings → General → Install update**.
+
+### Added
+- **Keymap page:** change what every key, the knob (turn left/right, press)
+  and the round button left of the screen do, on all 6 layers. Layers can be
+  renamed; the drawing follows ISO or ANSI (switch, or detect it with one key
+  press) and scales with the window without growing beyond a comfortable
+  size. Functions are chosen by category or search (keys, modifiers, media
+  and apps, mouse, lighting, layers, display). Changes are collected and
+  written together – only the differences, read back to check – and the
+  current keymap is saved as an automatic backup first (the last 20 are
+  kept). Fn on layer 0 stays protected. Knob turning exists on layers 0–3
+  only (keyboard limit).
+- **Key labels** on the keymap page: ISO UK, ISO DE and ANSI US built in;
+  own label sets are always a copy of an existing one. Labels only change
+  the display.
+- **Keymap profiles:** save the current keymap with a name and an
+  application, load it later (its differences appear as changes to review),
+  export it to a file and import it again.
+- **Keymap backup** (now on the keymap page): saves every key on all 6 layers
+  and the knob actions (layers 0–3) to a JSON file, and restores such a file.
+  Restoring first shows how many keys would change and warns if the backup
+  comes from other keyboard firmware; it then writes only the differences
+  and reads everything back to check. Macros are not included (the official
+  tool never reads them back). The firmware guard knows the keymap answers;
+  an unsupported command is reported without locking time and weather.
+- **The keymap drawing shows the keyboard's lighting:** a single-colour
+  background lighting tints the keys and the light bar below Del / End /
+  PgDn, the bottom lighting glows softly around the keyboard. Animated
+  effects are not drawn; a switch turns the lighting look off. The screen
+  in the drawing shows the same live preview as the Dashboard.
+- **Default layer names:** layer 0 is the "Basic layer", layer 1 the "Fn
+  layer" (both can be renamed).
+- **Collapsible sidebar:** shrinks to icons; the page name slides out next
+  to the icon on hover.
+
+### Changed
+- **Sidebar order:** Dashboard, Keymap, Lighting, Weather, Clock, Screen
+  picture, Device & Firmware, General.
+- Drop-down lists use their own arrow that follows the theme.
+- The keymap backup moved from the Device & Firmware page to the keymap page.
+- Lighting page and README: the light bar sits below Del / End / PgDn (not
+  Ins / Home / PgUp).
+
+### Fixed
+- **Lock while Chilkey's web driver (or VIA) is open:** Windows passes the
+  keyboard's answers to every program that has it open, so nd104-sync also
+  sees the answers meant for the web driver (e.g. its keymap read
+  `12 01 C4 1C …` when it reconnects) and locked with "unknown keyboard
+  report". Answers to the known VIA commands (`0x01`–`0x16`) and the screen's
+  debug answer (`0x58`) are now logged as "answer to another program" and
+  ignored. Damaged frames and unknown data still lock.
+
 ## [1.4.2] – 2026-11-01
 
 All ten display weather icons now also appear with the default provider, plus
@@ -462,7 +520,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.2...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.5.0...HEAD
+[1.5.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.2...nd104-sync-v1.5.0
 [1.4.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.1...nd104-sync-v1.4.2
 [1.4.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.0...nd104-sync-v1.4.1
 [1.4.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.3.0...nd104-sync-v1.4.0

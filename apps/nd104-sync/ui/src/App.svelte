@@ -11,20 +11,43 @@
   import General from "./pages/General.svelte";
   import Lighting from "./pages/Lighting.svelte";
   import Picture from "./pages/Picture.svelte";
+  import Keymap from "./pages/Keymap.svelte";
   import Icon, { type IconName } from "./components/Icon.svelte";
 
-  type Page = "dashboard" | "weather" | "clock" | "lighting" | "picture" | "device" | "general";
+  type Page = "dashboard" | "weather" | "clock" | "lighting" | "picture" | "keymap" | "device" | "general";
   const pages: { id: Page; icon: IconName }[] = [
     { id: "dashboard", icon: "dashboard" },
+    { id: "keymap", icon: "layers" },
+    { id: "lighting", icon: "lighting" },
     { id: "weather", icon: "weather" },
     { id: "clock", icon: "clock" },
-    { id: "lighting", icon: "lighting" },
     { id: "picture", icon: "picture" },
     { id: "device", icon: "device" },
     { id: "general", icon: "general" },
   ];
 
   let page = $state<Page>("dashboard");
+
+  // Sidebar collapsed to icons (per-viewer convenience, kept in the browser storage)
+  const COLLAPSED_KEY = "nd104.nav.collapsed";
+  let collapsed = $state(readCollapsed());
+
+  function readCollapsed(): boolean {
+    try {
+      return localStorage.getItem(COLLAPSED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function toggleCollapsed() {
+    collapsed = !collapsed;
+    try {
+      localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
+    } catch {
+      /* storage unavailable: only for this session */
+    }
+  }
   let info = $state<AppInfo | null>(null);
   let status = $state<Status | null>(null);
   let saved = $state<Config | null>(null);
@@ -117,22 +140,37 @@
 </script>
 
 {#if info && draft && saved && status}
-  <div class="shell">
+  <div class="shell" class:collapsed>
     <nav>
       <div class="brand">
         <img src="/icon.png" alt="" width="34" height="34" />
-        <div>
+        <div class="brand-text">
           <div class="name">nd104-sync</div>
           <div class="model"><span class="led {deviceLed}"></span>{t("ui.brand.model")}</div>
         </div>
       </div>
       {#each pages as p (p.id)}
-        <button class="nav-item" aria-current={page === p.id ? "page" : undefined} onclick={() => (page = p.id)}>
-          <Icon name={p.icon} size={18} />{t(`ui.nav.${p.id}`)}
+        <button
+          class="nav-item"
+          aria-current={page === p.id ? "page" : undefined}
+          aria-label={collapsed ? t(`ui.nav.${p.id}`) : undefined}
+          onclick={() => (page = p.id)}
+        >
+          <Icon name={p.icon} size={18} /><span class="label">{t(`ui.nav.${p.id}`)}</span>
         </button>
       {/each}
       <div class="spacer"></div>
-      <div class="wired"><Icon name="plug" />{t("ui.wired_only")}</div>
+      <div class="wired" title={collapsed ? t("ui.wired_only") : undefined}>
+        <Icon name="plug" /><span class="wired-text">{t("ui.wired_only")}</span>
+      </div>
+      <button
+        class="nav-item collapse"
+        aria-expanded={!collapsed}
+        aria-label={t(collapsed ? "ui.nav.expand" : "ui.nav.collapse")}
+        onclick={toggleCollapsed}
+      >
+        <Icon name="sidebar" size={18} /><span class="label">{t(collapsed ? "ui.nav.expand" : "ui.nav.collapse")}</span>
+      </button>
     </nav>
 
     <main>
@@ -147,6 +185,8 @@
           <Lighting {status} />
         {:else if page === "picture"}
           <Picture {status} />
+        {:else if page === "keymap"}
+          <Keymap {status} {info} />
         {:else if page === "device"}
           <Device {status} {info} bind:draft {errors} />
         {:else}
@@ -183,6 +223,11 @@
     display: grid;
     grid-template-columns: 220px 1fr;
     height: 100%;
+    transition: grid-template-columns 0.22s var(--ease);
+  }
+
+  .shell.collapsed {
+    grid-template-columns: 64px 1fr;
   }
 
   nav {
@@ -192,6 +237,111 @@
     padding: 20px 12px 16px;
     background: var(--sidebar);
     border-right: 1px solid var(--border);
+    /* above the page, so the labels can fly out over it */
+    position: relative;
+    z-index: 20;
+    min-width: 0;
+  }
+
+  .brand img {
+    flex: none;
+  }
+
+  .brand-text,
+  .wired-text {
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity 0.15s var(--ease);
+  }
+
+  .label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .collapse {
+    margin-top: 6px;
+  }
+
+  /* --- collapsed: icons only; the label flies out on hover/focus --------- */
+  .collapsed nav {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .collapsed .brand {
+    padding: 0 0 20px;
+    justify-content: center;
+  }
+
+  .collapsed .brand-text,
+  .collapsed .wired-text {
+    opacity: 0;
+    width: 0;
+  }
+
+  .collapsed .wired {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .collapsed .nav-item {
+    justify-content: center;
+    padding: 0;
+    position: relative;
+  }
+
+  .collapsed .nav-item .label {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 0.22);
+    overflow: visible;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-8px, -50%) scale(0.96);
+    transform-origin: left center;
+    transition:
+      opacity 0.14s var(--ease),
+      transform 0.18s var(--ease);
+  }
+
+  /* small arrow pointing at the icon */
+  .collapsed .nav-item .label::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    background: var(--panel);
+    border-left: 1px solid var(--border-strong);
+    border-bottom: 1px solid var(--border-strong);
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  .collapsed .nav-item:hover .label,
+  .collapsed .nav-item:focus-visible .label {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+  }
+
+  .collapsed .nav-item[aria-current="page"] .label {
+    color: var(--accent-text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shell,
+    .collapsed .nav-item .label {
+      transition: none;
+    }
   }
 
   .brand {

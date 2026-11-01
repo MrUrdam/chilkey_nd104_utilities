@@ -13,6 +13,7 @@ use std::fmt;
 use jiff::civil::DateTime;
 use serde::Serialize;
 
+use crate::keymap::KeymapSpec;
 use crate::lighting::{LightChange, LightField, LightZone};
 use crate::weather::WeatherReport;
 
@@ -126,6 +127,8 @@ pub enum ReportClass {
     Unsupported,
     /// Flow control of a picture transfer.
     Transfer(TransferAck),
+    /// Answer to a keymap command.
+    Keymap(KeymapReply),
     /// Well-formed but unknown message: logged and ignored.
     Ignored(String),
     /// Damaged or structurally unknown: protocol violation.
@@ -139,6 +142,27 @@ pub enum TransferAck {
     Next,
     /// Send the last page again.
     Resend,
+}
+
+/// Answer to a keymap command.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KeymapReply {
+    /// Part of the keymap buffer (`offset` in bytes).
+    Buffer { offset: u16, data: Vec<u8> },
+    /// Echo of a key write.
+    KeySet {
+        layer: u8,
+        row: u8,
+        col: u8,
+        code: u16,
+    },
+    /// Knob action (read answer or write echo).
+    Knob {
+        set: bool,
+        layer: u8,
+        direction: u8,
+        code: u16,
+    },
 }
 
 /// Size limits of the own picture/GIF.
@@ -214,6 +238,26 @@ pub trait KeyboardModel: Send + Sync {
     }
     /// Stores a zone's lighting in the keyboard.
     fn light_save(&self, _zone: LightZone) -> Option<Packet> {
+        None
+    }
+    /// Keymap size, or `None` if the keymap cannot be backed up.
+    fn keymap_spec(&self) -> Option<KeymapSpec> {
+        None
+    }
+    /// Reads of the whole keymap buffer: (packet, offset, size in bytes).
+    fn keymap_reads(&self) -> Vec<(Packet, u16, usize)> {
+        Vec::new()
+    }
+    /// Reads one knob action.
+    fn knob_read(&self, _layer: u8, _direction: u8) -> Option<Packet> {
+        None
+    }
+    /// Sets one key.
+    fn key_write(&self, _layer: u8, _row: u8, _col: u8, _code: u16) -> Option<Packet> {
+        None
+    }
+    /// Sets one knob action.
+    fn knob_write(&self, _layer: u8, _direction: u8, _code: u16) -> Option<Packet> {
         None
     }
     /// Own picture/GIF on the screen: limits, or `None` if not supported.

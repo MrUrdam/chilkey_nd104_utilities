@@ -10,6 +10,7 @@ mod checksum;
 mod device;
 mod error;
 mod frame;
+mod keymap;
 mod lighting;
 mod picture;
 mod theme;
@@ -21,6 +22,11 @@ pub use checksum::{checksum8, crc16};
 pub use device::{Target, UsbId, KEYBOARD, SCREEN, SCREEN_DFU, VENDOR_USAGE, VENDOR_USAGE_PAGE};
 pub use error::ProtocolError;
 pub use frame::{frame, FrameKind, FRAME_LEN};
+pub use keymap::{
+    keymap_read, keymap_read_plan, keymap_set_key, knob_get, knob_set, parse_keymap_answer,
+    KeymapAnswer, KEYMAP_COLS, KEYMAP_GET_BUFFER, KEYMAP_LAYERS, KEYMAP_ROWS, KEYMAP_SET_KEY,
+    KEYS_PER_LAYER, KNOB_DIRECTIONS, KNOB_GET, KNOB_LAYERS, KNOB_SET,
+};
 pub use lighting::{
     hue_sat_to_rgb, light_get, light_save, light_set, parse_light_answer, rgb_to_hue_sat,
     LightAnswer, LightValue, LightZone, EFFECT_OFF, EFFECT_SOLID, LIGHT_GET, LIGHT_SAVE, LIGHT_SET,

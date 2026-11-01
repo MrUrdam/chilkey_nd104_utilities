@@ -262,6 +262,13 @@ pub async fn open_target(app: AppHandle, target: String) -> CmdResult<()> {
             let _ = std::fs::create_dir_all(&dir);
             crate::open_in_shell(&app, &dir);
         }
+        "keymap_backups" => {
+            let dir = config::local_data_dir()
+                .map_err(err)?
+                .join("keymap-backups");
+            let _ = std::fs::create_dir_all(&dir);
+            crate::open_in_shell(&app, &dir);
+        }
         url if url.starts_with("https://github.com/MrUrdam/chilkey_nd104_utilities")
             || url.starts_with("https://www.openstreetmap.org/?mlat=")
             || weather::PROVIDERS.iter().any(|p| p.signup_url == Some(url))

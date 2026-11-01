@@ -18,6 +18,7 @@ use crate::clock::{ntp_offset, ClockSource};
 use crate::config::Config;
 use crate::device::{DeviceEvent, DeviceHandle, DeviceState, EventLevel, Reply};
 use crate::firmware_update::{self, FirmwareReport};
+use crate::keymap::{KeymapOp, KeymapResult};
 use crate::lighting::{LightOp, ZoneState};
 use crate::model::{self, EncodedFrame, KeyboardModel};
 use crate::weather::{self, WeatherReport};
@@ -97,6 +98,12 @@ pub enum EngineCommand {
     CheckFirmwareUpdate,
     /// Read or change the keyboard lighting.
     Light(LightOp, oneshot::Sender<Result<Option<ZoneState>, String>>),
+    /// Back up or restore the keymap; progress 0.0 … 1.0.
+    Keymap {
+        op: KeymapOp,
+        progress: mpsc::UnboundedSender<f32>,
+        reply: oneshot::Sender<Result<KeymapResult, String>>,
+    },
     /// Send an own picture/GIF to the screen; progress 0.0 … 1.0.
     UploadPicture {
         frames: Vec<EncodedFrame>,
@@ -239,6 +246,10 @@ impl Engine {
                     }
                     Some(EngineCommand::CheckAppUpdate) => self.check_app_update().await,
                     Some(EngineCommand::CheckFirmwareUpdate) => self.check_firmware_update(true).await,
+                    Some(EngineCommand::Keymap { op, progress, reply }) => {
+                        let result = self.device.keymap(op, progress).await;
+                        let _ = reply.send(self.device_reply(result));
+                    }
                     Some(EngineCommand::Light(op, reply)) => {
                         let result = self.device.light(op).await;
                         let _ = reply.send(self.device_reply(result));

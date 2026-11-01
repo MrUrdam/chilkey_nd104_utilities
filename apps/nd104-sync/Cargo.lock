@@ -2386,7 +2386,7 @@ dependencies = [
 
 [[package]]
 name = "nd104-cli"
-version = "1.4.2"
+version = "1.5.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2399,7 +2399,7 @@ dependencies = [
 
 [[package]]
 name = "nd104-core"
-version = "1.4.2"
+version = "1.5.0"
 dependencies = [
  "anyhow",
  "directories",
@@ -2418,7 +2418,7 @@ dependencies = [
 
 [[package]]
 name = "nd104-probe"
-version = "1.4.2"
+version = "1.5.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2429,11 +2429,11 @@ dependencies = [
 
 [[package]]
 name = "nd104-protocol"
-version = "1.4.2"
+version = "1.5.0"
 
 [[package]]
 name = "nd104-sync"
-version = "1.4.2"
+version = "1.5.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -2459,7 +2459,7 @@ dependencies = [
 
 [[package]]
 name = "nd104-sync-setup"
-version = "1.4.2"
+version = "1.5.0"
 dependencies = [
  "anyhow",
  "nd104-core",
