@@ -12,7 +12,7 @@ hand under *Actions*.
 | File | Page |
 |---|---|
 | `dashboard.png` | Dashboard with the live display preview (hero image) |
-| `weather.png` | Weather, with a test result |
+| `weather.png` | Weather (location and provider) |
 | `clock.png` | Clock |
 | `device.png` | Device & Firmware, verified state |
 | `general.png` | General |
