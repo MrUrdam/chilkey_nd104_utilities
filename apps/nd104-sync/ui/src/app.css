@@ -285,6 +285,11 @@ button.link:hover {
   margin-bottom: 12px;
 }
 
+/* in stacked cards the stack gap already spaces the heading */
+.card.stack > h2 {
+  margin-bottom: 0;
+}
+
 /* Keycap buttons – the signature: a solid keycap with a bottom edge that
    goes down when pressed */
 .key {

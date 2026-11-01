@@ -199,6 +199,79 @@ const TIMEZONES = [
   "UTC",
 ];
 
+/** A short animated sunset loop drawn on a canvas, as if picked from disk. */
+function demoPicture() {
+  const W = 320;
+  const H = 172;
+  const FRAMES = 12;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const g = canvas.getContext("2d")!;
+  const frames: string[] = [];
+  for (let f = 0; f < FRAMES; f++) {
+    const sky = g.createLinearGradient(0, 0, 0, H * 0.62);
+    sky.addColorStop(0, "#1b1435");
+    sky.addColorStop(0.6, "#7a2e6b");
+    sky.addColorStop(1, "#f08a4b");
+    g.fillStyle = sky;
+    g.fillRect(0, 0, W, H);
+    // sun with bands that slide down
+    const cx = W / 2;
+    const cy = H * 0.62;
+    const sun = g.createLinearGradient(0, cy - 52, 0, cy);
+    sun.addColorStop(0, "#ffd36b");
+    sun.addColorStop(1, "#ff6f61");
+    g.save();
+    g.beginPath();
+    g.arc(cx, cy, 52, Math.PI, 0);
+    g.clip();
+    g.fillStyle = sun;
+    g.fillRect(cx - 52, cy - 52, 104, 52);
+    g.fillStyle = "#7a2e6b";
+    for (let i = 0; i < 6; i++) {
+      const y = cy - 30 + ((i * 9 + f * 0.75) % 30);
+      g.fillRect(cx - 52, y, 104, 1 + i * 0.5);
+    }
+    g.restore();
+    // ground with a moving grid
+    g.fillStyle = "#120d24";
+    g.fillRect(0, cy, W, H - cy);
+    g.strokeStyle = "rgba(255, 140, 120, 0.55)";
+    g.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      const t = (i + f / FRAMES) / 8;
+      const y = cy + (H - cy) * t * t;
+      g.beginPath();
+      g.moveTo(0, y);
+      g.lineTo(W, y);
+      g.stroke();
+    }
+    for (let x = -10; x <= 10; x++) {
+      g.beginPath();
+      g.moveTo(cx + x * 6, cy);
+      g.lineTo(cx + x * 40, H);
+      g.stroke();
+    }
+    frames.push(canvas.toDataURL("image/jpeg", 0.85));
+  }
+  const jpegBytes = frames.reduce((sum, url) => sum + Math.round(((url.length - 23) * 3) / 4), 0);
+  return {
+    name: "sunset-loop.gif",
+    file_bytes: 486_312,
+    spec: { width: 320, height: 172, max_frames: 59, max_bytes: 2_097_152, max_file_bytes: 2_097_152 },
+    problem: null,
+    format: "GIF",
+    width: 480,
+    height: 258,
+    frames: FRAMES,
+    payload_bytes: 8 + FRAMES * 5 + jpegBytes,
+    notes: [{ code: "scaled", width: 480, height: 258 }],
+    preview_frames: frames,
+    delays_ms: Array(FRAMES).fill(90),
+  };
+}
+
 export function installDemo(version: string) {
   const texts: Record<string, string> = { ...en, ...(language === "de" ? de : {}) };
 
@@ -231,7 +304,15 @@ export function installDemo(version: string) {
       case "timezones":
         return TIMEZONES;
       case "light_read":
-        return { effect: 1, brightness: 255, speed: 128, hue: 128, sat: 220 };
+        // key lighting: solid amber; bottom lighting: a rainbow effect
+        return a.zone === "bottom"
+          ? { effect: 9, brightness: 170, speed: 190, hue: 170, sat: 255 }
+          : { effect: 1, brightness: 210, speed: 128, hue: 24, sat: 210 };
+      case "picture_pick":
+      case "picture_refit":
+        return demoPicture();
+      case "picture_upload":
+        return null;
       case "plugin:event|listen":
         return 1;
       default:

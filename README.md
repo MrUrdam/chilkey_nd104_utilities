@@ -34,13 +34,18 @@ location, keep the clock in sync and know when new firmware is out.
       <h3><a href="apps/nd104-sync/README.md">nd104-sync</a></h3>
       <p>
         Small tray app that keeps the keyboard display up to date with the
-        <b>current time and weather</b>. Set it up once, then forget it.
+        <b>current time and weather</b>, controls the <b>lighting</b> and
+        shows <b>your own picture or GIF</b> on the screen. Set it up once,
+        then forget it.
       </p>
       <ul>
         <li>Time sync with time zones, NTP and summer/winter time</li>
         <li>Weather from 5 providers, 2 of them without API key</li>
+        <li>Lighting: on/off, effects, brightness, speed, colour</li>
+        <li>Own picture or animated GIF on the screen, checked and scaled first</li>
         <li>Firmware safety lock and firmware update notification</li>
-        <li>Settings window with live display preview, English/German, dark/light</li>
+        <li>Own setup with one-click updates from the app</li>
+        <li>Settings window with live display preview, English/German, two styles in dark/light</li>
       </ul>
       <p>
         <img src="https://img.shields.io/github/v/release/MrUrdam/chilkey_nd104_utilities?filter=nd104-sync-v*&label=version&color=0969da" alt="version">

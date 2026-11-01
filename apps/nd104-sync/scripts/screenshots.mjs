@@ -70,6 +70,23 @@ const SHOTS = [
     },
   },
   { file: "clock.png", page: "clock" },
+  {
+    file: "lighting.png",
+    page: "lighting",
+    // wait until both zones show the values read from the "keyboard"
+    prepare: async (page) => {
+      await page.locator("select:not([disabled])").nth(1).waitFor();
+    },
+  },
+  {
+    file: "picture.png",
+    page: "picture",
+    // a picked GIF with its checks and the playing preview
+    prepare: async (page) => {
+      await page.getByRole("button", { name: texts["ui.pic.choose"], exact: true }).click();
+      await page.locator(".checks").waitFor();
+    },
+  },
   { file: "device.png", page: "device" },
   { file: "general.png", page: "general" },
 ];

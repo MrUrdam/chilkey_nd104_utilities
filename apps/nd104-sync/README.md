@@ -13,8 +13,9 @@
 ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
 
 Keeps the display of the **Chilkey ND104** keyboard up to date with the
-**current time and weather**. A small tray app with a settings and status
-window: set it up once, then forget it.
+**current time and weather**, and lets you set the **keyboard lighting** and
+show **your own picture or GIF** on the screen. A small tray app with a
+settings and status window: set it up once, then forget it.
 
 <p align="center">
   <img src="../../docs/images/nd104-sync/dashboard.png" width="760" alt="nd104-sync settings window, dashboard page with live preview of the keyboard display">
@@ -26,8 +27,12 @@ window: set it up once, then forget it.
     <td align="center"><img src="../../docs/images/nd104-sync/clock.png" width="370" alt="Clock page"><br><sub>Clock: source, time zone, summer/winter time</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="../../docs/images/nd104-sync/lighting.png" width="370" alt="Lighting page"><br><sub>Lighting: on/off, effect, brightness, speed, colour</sub></td>
+    <td align="center"><img src="../../docs/images/nd104-sync/picture.png" width="370" alt="Screen picture page"><br><sub>Screen picture: checks, animated preview, send</sub></td>
+  </tr>
+  <tr>
     <td align="center"><img src="../../docs/images/nd104-sync/device.png" width="370" alt="Device and Firmware page"><br><sub>Device & Firmware: safety state, update check</sub></td>
-    <td align="center"><img src="../../docs/images/nd104-sync/general.png" width="370" alt="General page"><br><sub>General: autostart, language, theme, updates</sub></td>
+    <td align="center"><img src="../../docs/images/nd104-sync/general.png" width="370" alt="General page"><br><sub>General: autostart, language, theme, style, updates</sub></td>
   </tr>
 </table>
 

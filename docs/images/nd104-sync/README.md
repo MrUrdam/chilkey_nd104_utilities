@@ -6,7 +6,7 @@ Used by the [main README](../../../README.md) and the
 **Generated, do not edit by hand.** The workflow
 [`nd104-sync-screenshots.yml`](../../../.github/workflows/nd104-sync-screenshots.yml)
 renders them from the demo build of the settings window (sample data, no
-keyboard) and commits them whenever the UI changes. It can also be started by
+keyboard; the sample GIF is drawn by the demo itself) and commits them whenever the UI changes. It can also be started by
 hand under *Actions*.
 
 | File | Page |
@@ -14,6 +14,8 @@ hand under *Actions*.
 | `dashboard.png` | Dashboard with the live display preview (hero image) |
 | `weather.png` | Weather (location and provider) |
 | `clock.png` | Clock |
+| `lighting.png` | Lighting: background lighting in solid colour, bottom lighting with a rainbow effect |
+| `picture.png` | Screen picture: a sample animated GIF with its checks and preview |
 | `device.png` | Device & Firmware, verified state |
 | `general.png` | General |
 
