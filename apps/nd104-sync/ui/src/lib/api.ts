@@ -32,7 +32,7 @@ export type DstMode = "auto" | "force_summer" | "force_winter";
 
 export interface Config {
   schema: number;
-  general: { language: string; theme: string; autostart: boolean };
+  general: { language: string; theme: string; style: "calm" | "gamer"; autostart: boolean };
   device: { model: string; poll_interval_s: number };
   clock: {
     source: ClockSource;

@@ -12,6 +12,7 @@
 
   let checking = $state(false);
   const themes = ["auto", "dark", "light"] as const;
+  const styles = ["calm", "gamer"] as const;
 
   async function checkUpdates() {
     checking = true;
@@ -60,6 +61,16 @@
           {#each themes as th (th)}
             <button aria-pressed={draft.general.theme === th} onclick={() => (draft.general.theme = th)}
               >{t(`ui.general.theme_${th}`)}</button
+            >
+          {/each}
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">{t("ui.general.style")}</span>
+        <div class="segmented">
+          {#each styles as st (st)}
+            <button aria-pressed={draft.general.style === st} onclick={() => (draft.general.style = st)}
+              >{t(`ui.general.style_${st}`)}</button
             >
           {/each}
         </div>
@@ -169,13 +180,12 @@
 
   .title {
     font-family: var(--font-display);
-    font-size: 24px;
-    font-weight: 700;
+    font-size: 22px;
+    font-weight: 600;
   }
 
   .version {
-    color: var(--accent);
-    text-shadow: var(--glow);
+    color: var(--accent-text);
   }
 
   .links {

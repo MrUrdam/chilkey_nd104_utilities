@@ -11,16 +11,17 @@
   import General from "./pages/General.svelte";
   import Lighting from "./pages/Lighting.svelte";
   import Picture from "./pages/Picture.svelte";
+  import Icon, { type IconName } from "./components/Icon.svelte";
 
   type Page = "dashboard" | "weather" | "clock" | "lighting" | "picture" | "device" | "general";
-  const pages: { id: Page; icon: string }[] = [
-    { id: "dashboard", icon: "◉" },
-    { id: "weather", icon: "☁" },
-    { id: "clock", icon: "◷" },
-    { id: "lighting", icon: "✦" },
-    { id: "picture", icon: "▣" },
-    { id: "device", icon: "⌨" },
-    { id: "general", icon: "⚙" },
+  const pages: { id: Page; icon: IconName }[] = [
+    { id: "dashboard", icon: "dashboard" },
+    { id: "weather", icon: "weather" },
+    { id: "clock", icon: "clock" },
+    { id: "lighting", icon: "lighting" },
+    { id: "picture", icon: "picture" },
+    { id: "device", icon: "device" },
+    { id: "general", icon: "general" },
   ];
 
   let page = $state<Page>("dashboard");
@@ -41,6 +42,7 @@
     const theme = draft?.general.theme ?? "auto";
     if (theme === "dark" || theme === "light") document.documentElement.dataset.theme = theme;
     else delete document.documentElement.dataset.theme;
+    document.documentElement.dataset.style = draft?.general.style === "gamer" ? "gamer" : "calm";
   });
 
   async function loadTexts() {
@@ -105,7 +107,7 @@
   let deviceLed = $derived.by(() => {
     switch (status?.device.kind) {
       case "ready":
-        return status.weather_stale ? "err" : "accent";
+        return status.weather_stale ? "err" : "ok";
       case "locked":
         return "warn";
       default:
@@ -126,11 +128,11 @@
       </div>
       {#each pages as p (p.id)}
         <button class="nav-item" aria-current={page === p.id ? "page" : undefined} onclick={() => (page = p.id)}>
-          <span class="glyph">{p.icon}</span>{t(`ui.nav.${p.id}`)}
+          <Icon name={p.icon} size={18} />{t(`ui.nav.${p.id}`)}
         </button>
       {/each}
       <div class="spacer"></div>
-      <div class="wired">🔌 {t("ui.wired_only")}</div>
+      <div class="wired"><Icon name="plug" />{t("ui.wired_only")}</div>
     </nav>
 
     <main>
@@ -156,9 +158,6 @@
         <span class="muted">nd104-sync {info.version}</span>
         {#if status.device.kind === "ready"}
           <span class="muted">· {status.device.model_name}</span>
-          <span class="badge {status.device.trust === 'verified' ? 'ok' : 'warn'}">
-            {t(status.device.trust === "verified" ? "status.verified" : "status.compatible")}
-          </span>
         {:else if status.device.kind === "locked"}
           <span class="badge warn">{t("ui.device.locked")}</span>
         {:else}
@@ -166,7 +165,7 @@
         {/if}
         <div class="spacer"></div>
         {#if saveError}<span class="error-text">{saveError}</span>{/if}
-        {#if savedFlash}<span class="saved">✔ {t("ui.saved")}</span>{/if}
+        {#if savedFlash}<span class="saved"><Icon name="check" />{t("ui.saved")}</span>{/if}
         {#if dirty}
           {#if !valid}<span class="error-text">{t("ui.fix_errors")}</span>{/if}
           <button class="key" onclick={cancel} disabled={saving}>{t("ui.cancel")}</button>
@@ -189,9 +188,9 @@
   nav {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 18px 12px;
-    background: var(--panel);
+    gap: 2px;
+    padding: 20px 12px 16px;
+    background: var(--sidebar);
     border-right: 1px solid var(--border);
   }
 
@@ -199,13 +198,17 @@
     display: flex;
     gap: 10px;
     align-items: center;
-    padding: 0 8px 18px;
+    padding: 0 8px 20px;
   }
 
   .name {
     font-family: var(--font-display);
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  :global(:root[data-style="gamer"]) .name {
+    font-size: 21px;
     letter-spacing: 0.03em;
   }
 
@@ -221,14 +224,22 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    font: 600 14px var(--font-ui);
+    height: 36px;
+    font: 500 14px var(--font-ui);
     color: var(--muted);
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
-    padding: 9px 12px;
+    padding: 0 10px;
     text-align: left;
     cursor: pointer;
+    transition:
+      color 0.12s var(--ease),
+      background-color 0.12s var(--ease);
+  }
+
+  .nav-item :global(svg) {
+    color: var(--faint);
   }
 
   .nav-item:hover {
@@ -238,15 +249,17 @@
 
   .nav-item[aria-current="page"] {
     color: var(--text);
-    background: var(--panel-3);
-    border-color: var(--border-strong);
-    box-shadow: inset 3px 0 0 var(--accent);
+    background: var(--panel-2);
+    border-color: var(--border);
   }
 
-  .glyph {
-    width: 18px;
-    text-align: center;
-    color: var(--accent);
+  .nav-item[aria-current="page"] :global(svg) {
+    color: var(--accent-text);
+  }
+
+  :global(:root[data-style="gamer"]) .nav-item[aria-current="page"] {
+    box-shadow: inset 2px 0 0 var(--accent);
+    border-radius: 2px var(--radius-sm) var(--radius-sm) 2px;
   }
 
   .spacer {
@@ -254,9 +267,12 @@
   }
 
   .wired {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12px;
-    color: var(--muted);
-    padding: 0 8px;
+    color: var(--faint);
+    padding: 0 10px;
   }
 
   main {
@@ -269,7 +285,7 @@
   .content {
     flex: 1;
     overflow: auto;
-    padding: 22px 26px;
+    padding: 24px 32px 32px;
   }
 
   footer {
@@ -284,8 +300,11 @@
   }
 
   .saved {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: var(--ok);
-    font-weight: 600;
+    font-weight: 500;
   }
 
   .loading {

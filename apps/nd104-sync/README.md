@@ -82,7 +82,8 @@ your weather provider, your location, your clock source.
 - **Status dashboard** with a live preview of what the display shows
 - API keys stored in the **Windows Credential Manager**
 - UI in **English and German** (follows the system language, switchable)
-- **Dark / light mode** following Windows, overridable in settings
+- **Two styles**, "Calm" (default) and "Gamer", each in **dark and light**
+  following Windows; both can be changed in settings and in the setup
 - **Console runner** `nd104-cli` for scripting and testing
 - **No telemetry** (see [Privacy](#privacy--network-access))
 
@@ -400,13 +401,13 @@ running in the tray.
 
 | Page | Contents |
 |---|---|
-| **Dashboard** | Live preview of the keyboard display, keyboard and firmware state, last/next syncs (incl. next DST change), weather, recent events; Sync now, Pause/Resume |
+| **Dashboard** | Large live preview of the keyboard display with keyboard state and last/next syncs (incl. next DST change) next to it; weather, firmware, recent events; Sync now, Pause/Resume |
 | **Weather** | Location via city search (with OpenStreetMap link to check a result) or coordinates; provider, fallback, interval, °C/°F in the window; Test button (fetches without sending) |
 | **Clock** | Source (System / Time zone / NTP / Manual), time zone, NTP test, summer/winter time mode, sync interval; live preview of the time sent |
 | **Lighting** | Background lighting (keys + light bar below Ins/Home/PgUp) and bottom lighting: on/off, effect, brightness, speed, colour (sent and stored right away) |
 | **Screen picture** | Choose a picture or GIF, see the checks and a preview (fill the screen or show the whole picture), send it to the screen with a progress bar |
 | **Device & Firmware** | Verified / unverified / locked state, installed vs. verified firmware, display variant, Check keyboard again, polling interval |
-| **General** | Start with Windows, language, appearance (like Windows / dark / light), update check, About with version, config file and log folder |
+| **General** | Start with Windows, language, appearance (like Windows / dark / light), style (Calm / Gamer), update check, About with version, config file and log folder |
 
 Changes take effect with **Apply** (shown only when something changed);
 invalid fields are marked. The configuration file can still be edited by hand –

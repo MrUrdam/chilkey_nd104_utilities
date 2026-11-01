@@ -164,6 +164,7 @@ fn run_silent(args: &Args) -> anyhow::Result<()> {
             let options = InstallOptions {
                 autostart: !args.no_autostart && (!existing || system::autostart_enabled()),
                 desktop_shortcut: args.desktop_shortcut || system::has_desktop_shortcut(),
+                style: None,
             };
             let result = tasks::install(options, &quiet);
             if result.is_ok() && args.mode == Mode::Update {

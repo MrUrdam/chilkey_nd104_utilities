@@ -151,11 +151,11 @@
 
   .big {
     font-family: var(--font-display);
-    font-size: 48px;
-    font-weight: 700;
+    font-size: 44px;
+    font-weight: 500;
     line-height: 1.1;
-    color: var(--accent);
-    text-shadow: var(--glow);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
   }
 
   .sources {
@@ -176,7 +176,7 @@
     border-radius: var(--radius-sm);
     padding: 10px 12px;
     cursor: pointer;
-    box-shadow: var(--key-shadow);
+    box-shadow: 0 2px 0 var(--key-edge);
   }
 
   .source strong {
@@ -186,7 +186,6 @@
   .source[aria-pressed="true"] {
     border-color: var(--accent);
     background: var(--accent-soft);
-    box-shadow: var(--glow);
   }
 
   .end {

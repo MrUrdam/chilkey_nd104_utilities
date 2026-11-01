@@ -12,6 +12,28 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.4.0] – 2026-11-01
+
+A new look for the settings window and the setup, with a choice of two
+styles. Keyboard communication, protocol and configuration are unchanged
+(the new style setting is added with its default). Update with
+**Settings → General → Install update**.
+
+### Changed
+- **New look** for the settings window and the setup: calmer surfaces, no
+  glow effects, line icons instead of symbols, status shown as quiet text
+  with an LED dot, sentence-case headings. Keycap buttons and LED dots stay.
+- **Two styles:** "Calm" (default, graphite/paper with an amber accent) and
+  "Gamer" (dark blue-black with an acid-lime accent, Rajdhani headings).
+  Both follow the Windows light/dark setting. Choose the style under
+  General → Style or on the first page of the setup.
+- **Dashboard:** the display replica is now the large centrepiece, with the
+  keyboard state and the last/next syncs right next to it.
+
+### Added
+- Browser demo of the setup window (`npm run build:installer-demo`) for
+  reviewing it without installing.
+
 ## [1.3.0] – 2026-11-01
 
 Lighting control and your own picture or GIF on the screen. Time and weather
@@ -406,7 +428,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.3.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.0...HEAD
+[1.4.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.3.0...nd104-sync-v1.4.0
 [1.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.2.0...nd104-sync-v1.3.0
 [1.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.1.0...nd104-sync-v1.2.0
 [1.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.1...nd104-sync-v1.1.0

@@ -7,4 +7,10 @@ import "../../ui/src/app.css";
 import { mount } from "svelte";
 import Setup from "./Setup.svelte";
 
+// Browser-only demo with fake answers (`--mode demo`), never in the setup.
+if (import.meta.env.MODE === "demo") {
+  const { installDemo } = await import("./demo");
+  installDemo(__APP_VERSION__);
+}
+
 mount(Setup, { target: document.getElementById("app")! });

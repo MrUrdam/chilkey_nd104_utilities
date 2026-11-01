@@ -4,6 +4,7 @@
   import { condition, temperature } from "../lib/format";
   import WeatherIcon from "../components/WeatherIcon.svelte";
   import ApiKeyField from "../components/ApiKeyField.svelte";
+  import Icon from "../components/Icon.svelte";
   import { onMount } from "svelte";
 
   let { draft = $bindable(), info, errors }: { draft: Config; info: AppInfo; errors: Record<string, string> } =
@@ -90,7 +91,7 @@
         {@const lon = w.location.lon}
         <span class="mono muted">{lat.toFixed(4)}, {lon.toFixed(4)}</span>
         <button type="button" class="link" title={t("ui.weather.show_map_long")} onclick={() => api.open(osmUrl(lat, lon))}
-          >🗺 {t("ui.weather.show_map")}</button
+          ><Icon name="map" size={14} /> {t("ui.weather.show_map")}</button
         >
       {/if}
     </div>
@@ -136,7 +137,7 @@
                 <button
                   class="map"
                   title={t("ui.weather.show_map_long")}
-                  onclick={() => api.open(osmUrl(p.latitude, p.longitude))}>🗺 {t("ui.weather.show_map")}</button
+                  onclick={() => api.open(osmUrl(p.latitude, p.longitude))}><Icon name="map" size={14} /> {t("ui.weather.show_map")}</button
                 >
               </li>
             {/each}
@@ -166,7 +167,7 @@
         </label>
       </div>
     {/if}
-    <p class="muted small">🔒 {t("ui.weather.privacy")}</p>
+    <p class="muted small with-icon"><Icon name="lock" size={14} />{t("ui.weather.privacy")}</p>
   </div>
 
   <div class="card stack">

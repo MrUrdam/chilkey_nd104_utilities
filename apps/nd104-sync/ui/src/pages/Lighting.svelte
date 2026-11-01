@@ -6,6 +6,7 @@
   import { api, type LightChange, type LightZone, type Status } from "../lib/api";
   import { EFFECTS, EFFECT_OFF, EFFECT_SOLID, effect as effectInfo } from "../lib/effects";
   import { t } from "../lib/i18n.svelte";
+  import Icon from "../components/Icon.svelte";
 
   let { status }: { status: Status } = $props();
 
@@ -197,7 +198,7 @@
   <p class="muted intro">{t("ui.light.intro")}</p>
 
   {#if !ready}
-    <div class="notice warn">🔌 {t("ui.light.not_connected")}</div>
+    <div class="notice warn"><Icon name="plug" />{t("ui.light.not_connected")}</div>
   {/if}
 
   {#each zones as zone (zone)}
@@ -398,7 +399,7 @@
     border-radius: 50%;
     background: #ffffff;
     border: 2px solid var(--accent);
-    box-shadow: var(--glow);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 
   .colors {

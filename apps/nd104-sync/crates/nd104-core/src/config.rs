@@ -42,6 +42,8 @@ pub struct GeneralSettings {
     pub language: String,
     /// `auto`, `dark` or `light`.
     pub theme: String,
+    /// Look of the windows: `calm` (default) or `gamer`.
+    pub style: String,
     pub autostart: bool,
 }
 
@@ -50,6 +52,7 @@ impl Default for GeneralSettings {
         Self {
             language: "auto".into(),
             theme: "auto".into(),
+            style: "calm".into(),
             autostart: true,
         }
     }

@@ -21,6 +21,7 @@ apps/*/installer/gen/
 node_modules/
 apps/*/ui/dist/
 apps/*/ui/dist-demo/
+apps/*/installer-ui/dist-demo/
 apps/*/ui/.svelte-kit/
 npm-debug.log*
 

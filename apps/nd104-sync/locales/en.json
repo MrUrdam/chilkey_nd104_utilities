@@ -353,5 +353,10 @@
   "fx.bottom.40": "Twinkle 4",
   "fx.bottom.41": "Twinkle 5",
   "fx.bottom.42": "Twinkle 6",
-  "ui.pic.animation": "Animation with {frames} frames – shown as on the screen"
+  "ui.pic.animation": "Animation with {frames} frames – shown as on the screen",
+  "ui.dash.next_at": "next {time}",
+  "ui.dash.firmware": "Firmware",
+  "ui.general.style": "Style",
+  "ui.general.style_calm": "Calm",
+  "ui.general.style_gamer": "Gamer"
 }

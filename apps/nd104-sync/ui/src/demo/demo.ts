@@ -12,6 +12,7 @@ import de from "../../../locales/de.json";
 const params = new URLSearchParams(location.search);
 const language = params.get("lang") === "de" ? "de" : "en";
 const theme = params.get("theme") ?? "auto";
+const style = params.get("style") === "gamer" ? "gamer" : "calm";
 
 const now = Date.now();
 const iso = (offsetMin: number) => new Date(now + offsetMin * 60_000).toISOString();
@@ -37,7 +38,7 @@ function nextDstChange(): string {
 
 const config: Config = {
   schema: 1,
-  general: { language, theme, autostart: true },
+  general: { language, theme, style, autostart: true },
   device: { model: "chilkey-nd104", poll_interval_s: 3 },
   clock: {
     source: "timezone",

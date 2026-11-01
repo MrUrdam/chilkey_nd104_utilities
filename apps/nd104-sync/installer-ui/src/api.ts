@@ -14,6 +14,8 @@ export interface SetupInfo {
   payload: boolean;
   autostart: boolean;
   desktop_shortcut: boolean;
+  /** Style stored in the app's settings (calm / gamer). */
+  style: string;
 }
 
 export interface Progress {
@@ -25,8 +27,8 @@ export type Texts = Record<string, string>;
 
 export const setupInfo = () => invoke<SetupInfo>("setup_info");
 export const texts = () => invoke<Texts>("texts");
-export const runInstall = (autostart: boolean, desktopShortcut: boolean) =>
-  invoke<void>("run_install", { options: { autostart, desktop_shortcut: desktopShortcut } });
+export const runInstall = (autostart: boolean, desktopShortcut: boolean, style: string) =>
+  invoke<void>("run_install", { options: { autostart, desktop_shortcut: desktopShortcut, style } });
 export const runUninstall = (keepSettings: boolean) => invoke<void>("run_uninstall", { keepSettings });
 export const launchApp = () => invoke<void>("launch_app");
 export const keyboardConnected = () => invoke<boolean>("keyboard_connected");

@@ -13,6 +13,7 @@
   let autostart = $state(true);
   let desktop = $state(false);
   let keepSettings = $state(true);
+  let style = $state<"calm" | "gamer">("calm");
   let step = $state<Step>("preparing");
   let progress = $state(0);
   let error = $state("");
@@ -47,6 +48,11 @@
     }
   });
 
+  // the chosen style previews right away in this window
+  $effect(() => {
+    document.documentElement.dataset.style = style;
+  });
+
   onMount(() => {
     const timer = setInterval(() => (now = new Date()), 1000);
     const unlisten = api.onProgress((p) => {
@@ -60,6 +66,7 @@
       info = await api.setupInfo();
       autostart = info.autostart;
       desktop = info.desktop_shortcut;
+      style = info.style === "gamer" ? "gamer" : "calm";
       if (info.mode === "update") install();
       else phase = info.mode === "uninstall" ? "confirm" : "welcome";
     })();
@@ -74,7 +81,7 @@
     progress = 0;
     step = "preparing";
     try {
-      await api.runInstall(autostart, desktop);
+      await api.runInstall(autostart, desktop, style);
       progress = 1;
       phase = "done";
       if (info?.mode !== "update") keyboard = await api.keyboardConnected();
@@ -127,10 +134,10 @@
 
   <section class="hero" data-tauri-drag-region>
     <div class="brand" data-tauri-drag-region>
-      <h1 data-tauri-drag-region>nd104<span>-sync</span></h1>
+      <h1 data-tauri-drag-region>nd104-sync</h1>
       <p class="muted" data-tauri-drag-region>{tr("tagline")}</p>
       {#if info}
-        <span class="version" data-tauri-drag-region>v{info.version}</span>
+        <span class="version mono" data-tauri-drag-region>{info.version}</span>
       {/if}
     </div>
     <div class="display" class:off={uninstalling && phase === "done"} aria-hidden="true">
@@ -160,6 +167,13 @@
         <div class="options">
           <label class="switch"><input type="checkbox" bind:checked={autostart} />{tr("option.autostart")}</label>
           <label class="switch"><input type="checkbox" bind:checked={desktop} />{tr("option.desktop")}</label>
+          <div class="style-pick">
+            <span class="muted">{tr("option.style")}</span>
+            <div class="segmented">
+              <button aria-pressed={style === "calm"} onclick={() => (style = "calm")}>{tr("option.style_calm")}</button>
+              <button aria-pressed={style === "gamer"} onclick={() => (style = "gamer")}>{tr("option.style_gamer")}</button>
+            </div>
+          </div>
         </div>
       </div>
     {:else if phase === "confirm" && info}
@@ -269,9 +283,7 @@
     flex-direction: column;
     border: 1px solid var(--border-strong);
     box-sizing: border-box;
-    background:
-      radial-gradient(120% 70% at 100% 0%, var(--accent-soft), transparent 60%),
-      var(--bg);
+    background: var(--bg);
   }
 
   .titlebar {
@@ -326,27 +338,23 @@
   }
 
   .brand h1 {
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+
+  :global(:root[data-style="gamer"]) .brand h1 {
     font-size: 40px;
-    font-weight: 700;
-    line-height: 1;
     letter-spacing: 0.03em;
   }
 
-  .brand h1 span {
-    color: var(--accent);
-    text-shadow: var(--glow);
-  }
-
   .brand p {
-    margin: 6px 0 10px;
+    margin: 4px 0 8px;
   }
 
   .version {
-    font: 600 12px var(--font-mono);
-    color: var(--accent);
-    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-    border-radius: 999px;
-    padding: 2px 10px;
+    font-size: 12px;
+    color: var(--faint);
   }
 
   /* small replica of the keyboard's display */
@@ -377,9 +385,14 @@
   }
 
   .options {
-    display: flex;
-    gap: 28px;
+    display: grid;
+    grid-template-columns: max-content max-content;
+    gap: 12px 32px;
     margin-top: 4px;
+  }
+
+  .options .switch {
+    white-space: nowrap;
   }
 
   .hint {
@@ -412,23 +425,8 @@
   .fill {
     height: 100%;
     border-radius: inherit;
-    background:
-      repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.18) 0 8px, transparent 8px 16px),
-      linear-gradient(90deg, var(--accent-strong), var(--accent));
-    background-size:
-      22.6px 22.6px,
-      100% 100%;
-    box-shadow: var(--glow);
-    transition: width 0.35s ease-out;
-    animation: stripes 0.8s linear infinite;
-  }
-
-  @keyframes stripes {
-    to {
-      background-position:
-        22.6px 0,
-        0 0;
-    }
+    background: var(--accent);
+    transition: width 0.35s var(--ease);
   }
 
   .percent {
@@ -495,8 +493,15 @@
   }
 
   .key.danger {
-    background: #b91c1c;
-    border-color: var(--err);
-    box-shadow: var(--key-shadow);
+    background: var(--err);
+    color: #ffffff;
+    box-shadow: 0 2px 0 color-mix(in srgb, var(--err) 60%, #000000);
+  }
+
+  .style-pick {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 </style>

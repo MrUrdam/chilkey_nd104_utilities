@@ -353,5 +353,10 @@
   "fx.bottom.40": "Funkeln 4",
   "fx.bottom.41": "Funkeln 5",
   "fx.bottom.42": "Funkeln 6",
-  "ui.pic.animation": "Animation mit {frames} Einzelbildern – so wie auf dem Display"
+  "ui.pic.animation": "Animation mit {frames} Einzelbildern – so wie auf dem Display",
+  "ui.dash.next_at": "nächste {time}",
+  "ui.dash.firmware": "Firmware",
+  "ui.general.style": "Stil",
+  "ui.general.style_calm": "Ruhig",
+  "ui.general.style_gamer": "Gamer"
 }

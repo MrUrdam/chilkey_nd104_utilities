@@ -9,6 +9,7 @@
     "build": "vite build",
     "build:demo": "vite build --mode demo",
     "build:installer-ui": "vite build --config vite.installer.config.ts",
+    "build:installer-demo": "vite build --config vite.installer.config.ts --mode demo",
     "screenshots": "node scripts/screenshots.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri"

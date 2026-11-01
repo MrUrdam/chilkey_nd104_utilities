@@ -3,6 +3,7 @@
   // only "stored yes/no". Keys live in the Windows Credential Manager.
   import { api, type ProviderInfo } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
+  import Icon from "./Icon.svelte";
 
   let {
     provider,
@@ -82,7 +83,7 @@
   </form>
   {#if error}<span class="error-text selectable">{error}</span>{/if}
   {#if message}<span class="ok-text">{message}</span>{/if}
-  <span class="muted small">🔒 {t("ui.key.hint")}</span>
+  <span class="muted small with-icon"><Icon name="lock" size={14} />{t("ui.key.hint")}</span>
 </div>
 
 <style>

@@ -45,5 +45,8 @@
   "error.details": "Details",
   "webview2.title": "nd104-sync Setup",
   "webview2.question": "nd104-sync needs the Microsoft Edge WebView2 Runtime, which is missing on this PC.\n\nDownload and install it from Microsoft now?",
-  "webview2.failed": "The WebView2 Runtime could not be installed. Please install it from microsoft.com and run the setup again."
+  "webview2.failed": "The WebView2 Runtime could not be installed. Please install it from microsoft.com and run the setup again.",
+  "option.style": "Style",
+  "option.style_calm": "Calm",
+  "option.style_gamer": "Gamer"
 }

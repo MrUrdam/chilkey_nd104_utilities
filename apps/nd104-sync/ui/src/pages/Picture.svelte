@@ -3,6 +3,7 @@
   import { onDestroy } from "svelte";
   import { api, onPictureProgress, type Fit, type PictureCheck, type Status } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
+  import Icon from "../components/Icon.svelte";
 
   let { status }: { status: Status } = $props();
 
@@ -185,7 +186,7 @@
             {#if check.preview_frames.length}
               <img src={check.preview_frames[frame]} alt={t("ui.pic.preview")} width="320" height="172" />
             {:else}
-              <div class="empty">✕</div>
+              <div class="empty"><Icon name="x" size={32} /></div>
             {/if}
           </div>
           <span class="muted small name selectable">{check.name}</span>
@@ -213,7 +214,7 @@
     <h2>{t("ui.pic.send_title")}</h2>
     <p class="muted small">{t("ui.pic.send_hint")}</p>
     {#if !ready}
-      <div class="notice warn">🔌 {t("ui.light.not_connected")}</div>
+      <div class="notice warn"><Icon name="plug" />{t("ui.light.not_connected")}</div>
     {/if}
     <div class="row">
       <button class="key primary" onclick={send} disabled={!usable || !ready || sending}>
@@ -331,8 +332,7 @@
 
   .fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent-strong), var(--accent));
-    box-shadow: var(--glow);
+    background: var(--accent);
     transition: width 0.3s ease-out;
   }
 

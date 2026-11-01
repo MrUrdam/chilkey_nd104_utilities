@@ -88,6 +88,7 @@ pub struct SetupInfo {
     payload: bool,
     autostart: bool,
     desktop_shortcut: bool,
+    style: String,
 }
 
 /// Also shows the window (it starts hidden to avoid a white flash).
@@ -110,6 +111,11 @@ pub fn setup_info(window: WebviewWindow, state: State<'_, SetupState>) -> SetupI
         payload: payload::available(),
         autostart: installed.is_none() || system::autostart_enabled(),
         desktop_shortcut: system::has_desktop_shortcut(),
+        style: config::default_path()
+            .ok()
+            .and_then(|p| config::Config::load(&p).ok())
+            .map(|c| c.general.style)
+            .unwrap_or_else(|| "calm".into()),
         installed: installed.map(|i| i.version),
     };
     let _ = window.show();

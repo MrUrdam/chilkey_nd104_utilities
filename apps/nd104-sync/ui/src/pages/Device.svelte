@@ -2,6 +2,7 @@
   import { api, type AppInfo, type Config, type FirmwareInfo, type FirmwarePart, type Status } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
   import { dateTime } from "../lib/format";
+  import Icon from "../components/Icon.svelte";
 
   let {
     status,
@@ -50,7 +51,7 @@
 <div class="stack">
   <h1>{t("ui.nav.device")}</h1>
 
-  <div class="notice">🔌 {t("ui.device.wired_notice")}</div>
+  <div class="notice"><Icon name="plug" />{t("ui.device.wired_notice")}</div>
 
   <div class="card stack">
     <div class="head">

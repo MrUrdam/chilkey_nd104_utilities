@@ -37,10 +37,13 @@ pub struct Progress {
 
 pub type Report<'a> = &'a (dyn Fn(Progress) + Sync);
 
-#[derive(Debug, Clone, Copy, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct InstallOptions {
     pub autostart: bool,
     pub desktop_shortcut: bool,
+    /// Look of the app windows (`calm` / `gamer`); `None` keeps the setting.
+    #[serde(default)]
+    pub style: Option<String>,
 }
 
 /// Webview data of the app (cache, local storage).
@@ -130,7 +133,7 @@ pub fn install(options: InstallOptions, report: Report) -> Result<()> {
         say(Step::Finishing, 0.9);
         system::create_shortcuts(&exe, options.desktop_shortcut)?;
         system::set_autostart(options.autostart.then_some(exe.as_path()))?;
-        store_autostart(options.autostart)?;
+        store_settings(options.autostart, options.style.as_deref())?;
         system::register(&dir, nd104_core::APP_VERSION)
     })();
     if let Err(e) = integrated {
@@ -156,8 +159,9 @@ fn migrate_legacy(dir: &Path) {
     let _ = std::fs::remove_dir(dir);
 }
 
-/// The app re-applies `general.autostart` on every start, so it must agree.
-fn store_autostart(enabled: bool) -> Result<()> {
+/// The app re-applies `general.autostart` on every start, so it must agree;
+/// the style chosen in the setup is stored too.
+fn store_settings(enabled: bool, style: Option<&str>) -> Result<()> {
     let path = config::default_path()?;
     let mut config = if path.exists() {
         match Config::load(&path) {
@@ -168,8 +172,13 @@ fn store_autostart(enabled: bool) -> Result<()> {
     } else {
         Config::default()
     };
-    if config.general.autostart != enabled || !path.exists() {
+    let style = style.filter(|s| *s == "calm" || *s == "gamer");
+    let style_changed = style.is_some_and(|s| config.general.style != s);
+    if config.general.autostart != enabled || style_changed || !path.exists() {
         config.general.autostart = enabled;
+        if let Some(style) = style {
+            config.general.style = style.to_string();
+        }
         config.save(&path)?;
     }
     Ok(())
