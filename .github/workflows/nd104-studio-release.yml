@@ -140,17 +140,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # same notes and files as the main release, plus the setup under the
+          # name nd104-sync 1.x downloads (nd104-sync_<version>_x64-setup.exe)
           mkdir -p bridge
+          cp dist/*.zip dist/*.exe bridge/
+          cp dist/*.msi bridge/ 2>/dev/null || true
           cp "dist/nd104-studio_${VERSION}_x64-setup.exe" "bridge/nd104-sync_${VERSION}_x64-setup.exe"
-          (cd bridge && sha256sum *.exe > SHA256SUMS.txt)
-          cat > bridge/notes.md <<EOF
-          **nd104-sync is now ND104 Studio.** This release only exists so that
-          installed nd104-sync 1.x versions find the update: it contains the setup of
-          [ND104 Studio ${VERSION}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}).
-          Updating takes over your settings, keymap profiles and backups, API keys,
-          autostart and shortcuts, and removes nd104-sync.
-          EOF
+          (cd bridge && shopt -s nullglob && sha256sum *.zip *.exe *.msi > SHA256SUMS.txt)
+          {
+            echo "**nd104-sync is now ND104 Studio.** This is the same release as"
+            echo "[ND104 Studio ${VERSION}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}),"
+            echo "published under the old name so installed nd104-sync versions find the update."
+            echo "\`nd104-sync_${VERSION}_x64-setup.exe\` is the ND104 Studio setup under the name they download."
+            echo
+            cat dist/notes.md
+          } > bridge/notes.md
+          shopt -s nullglob
           gh release create "nd104-sync-v${VERSION}" \
-            bridge/*.exe bridge/SHA256SUMS.txt \
+            bridge/*.zip bridge/*.exe bridge/*.msi bridge/SHA256SUMS.txt \
             --target "$GITHUB_SHA" --latest=false \
             --title "nd104-sync ${VERSION} → ND104 Studio" --notes-file bridge/notes.md

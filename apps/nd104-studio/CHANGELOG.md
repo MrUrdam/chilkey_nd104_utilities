@@ -15,69 +15,52 @@ called nd104-sync. The format follows
 
 ## [2.0.0] – 2026-11-01
 
-nd104-sync is now **ND104 Studio** – it long does more than syncing time and
-weather. Installed nd104-sync versions find it as a
-normal update; settings, keymap profiles and backups, API keys, autostart and
-shortcuts are taken over. Plus keyboard settings (debounce and sleep times)
-and a livelier keymap page: pressed keys light up and Fn combinations show
-their layer. Update with **Settings → General → Install update**.
-
-### Changed
-- **New name ND104 Studio**, with the tagline "Display, lighting and keymap
-  for your Chilkey ND104" in the setup and under Settings → General.
-- **New icon:** a keycap with the screen, the knob and the light bar (amber
-  to lime, the accents of the two styles). The tray icons have the same
-  shape and keep their status colours.
-- **New locations** (see [README → Files](README.md#files)):
-  `%LOCALAPPDATA%\Programs\nd104-studio` (program),
-  `%APPDATA%\nd104-studio` (settings, keymap page, profiles),
-  `%LOCALAPPDATA%\nd104-studio` (logs, automatic keymap backups), Credential
-  Manager entries `<provider>.nd104-studio`, "Apps" entry, autostart entry
-  and shortcuts "ND104 Studio", program files `nd104-studio.exe` and
-  `nd104-studio-setup.exe`.
-- **Releases** are tagged `nd104-studio-vX.Y.Z`; the setup is
-  `nd104-studio_X.Y.Z_x64-setup.exe`, the MSI
-  `nd104-studio_X.Y.Z_x64_en-US.msi`. Each release also gets a bridge release
-  `nd104-sync-vX.Y.Z` so installed nd104-sync 1.x versions find the update.
-- The app folder in the repository is `apps/nd104-studio`; workflows and
-  screenshots moved along.
-- README: new intro, keymap screenshot first in the gallery and all
-  screenshots in sidebar order, a **Keymap** section in the feature list,
-  "Coming from nd104-sync", and a reworked "What it does NOT do" (no macros,
-  no tap/hold or combo editor, no key swapping or automatic profile
-  switching, no per-key colours, keyboard colour or polling rate).
+**nd104-sync is now ND104 Studio.** It does far more than syncing time and
+weather by now, so it got a new name and icon – plus keyboard settings and a
+livelier keymap page. Installed nd104-sync versions update as usual with
+**Settings → General → Install update**; settings, keymap profiles and
+backups, API keys, autostart and shortcuts are taken over.
 
 ### Added
-- **Takeover from nd104-sync:** the setup closes nd104-sync, installs
-  ND104 Studio and removes the old program folder, "Apps" entry, shortcuts
-  and autostart entry (autostart and the desktop shortcut are set up again
-  under the new name). Settings, keymap page settings, profiles, automatic
-  keymap backups, window storage and API keys move to the new name – also on
-  the app's first start, for the portable zip and the MSI. Existing data
-  under the new name is never overwritten; old logs are deleted.
-- Keymap backups and profile exports made with nd104-sync can still be
-  restored and imported.
-- **Keys light up in the keymap drawing while you press them** (looked up in
-  the keyboard's keymap, so remapped keys light up where they are; knob
-  turns flash the knob). Fn sends nothing itself, but a combination that
-  only exists on a higher layer (e.g. Fn+F5 → play/pause) shows that layer
-  while it is held. The layer stays put while a key is selected for
-  remapping or a text field has the focus.
-- The ISO Enter is drawn in its real shape (wide on the Tab row, narrower
-  below).
 - **Keyboard settings** on the Device & Firmware page: debounce mode (off /
   send first / debounce first), debounce time (1–200 ms), sleep and
-  deep-sleep time (1–60 min). Only the values Chilkey's web driver offers;
-  every change is stored in the keyboard right away and read back. Values
-  the firmware does not report show "–"; unsupported commands are reported
-  without locking. The USB polling rate (hidden in the driver), keyboard
-  colour and online RGB are left out.
+  deep-sleep time (1–60 min) – exactly the values Chilkey's web driver
+  offers, stored in the keyboard right away and read back. Values the
+  firmware does not report show "–"; an unsupported command is reported
+  without locking.
+- **Pressed keys light up in the keymap drawing** – remapped keys where they
+  really are, knob turns flash the knob. A combination that only exists on
+  a higher layer (e.g. Fn+F5 → play/pause) shows that layer while it is
+  held; the layer stays put while you are remapping a key or typing in a
+  field.
+- **ISO Enter** is drawn in its real shape.
+- **Takeover from nd104-sync:** the setup closes nd104-sync, installs
+  ND104 Studio and removes the old program folder, "Apps" entry, shortcuts
+  and autostart entry (autostart and the desktop shortcut come back under
+  the new name). Settings, keymap page settings, profiles, automatic keymap
+  backups, window storage and API keys move over – also on the app's first
+  start, for the portable zip and the MSI. Nothing that already exists under
+  the new name is overwritten; old logs are deleted. Keymap backups and
+  profile exports from nd104-sync can still be restored and imported.
+
+### Changed
+- **New name and icon:** ND104 Studio – "Display, lighting and keymap for
+  your Chilkey ND104". The icon is a keycap with the screen, the knob and
+  the light bar; the tray icons have the same shape and keep their status
+  colours.
+- **New locations:** `%LOCALAPPDATA%\Programs\nd104-studio` (program),
+  `%APPDATA%\nd104-studio` (settings, profiles), `%LOCALAPPDATA%\nd104-studio`
+  (logs, automatic keymap backups); see [README → Files](README.md#files).
+- **Release files** are named `nd104-studio_X.Y.Z_…` and tagged
+  `nd104-studio-vX.Y.Z`. Each release is also published as
+  `nd104-sync-vX.Y.Z`, so installed nd104-sync versions find it.
+- README: keymap screenshot and features, "Coming from nd104-sync", updated
+  "What it does NOT do".
 
 ### Fixed
 - **Light bar below Del / End / PgDn:** it belongs to the bottom lighting,
-  not to the background lighting. The keymap drawing now lights it in the
-  bottom lighting's solid colour (it showed the key lighting's colour,
-  faded), and the Lighting page and README say so.
+  not the background lighting. The keymap drawing now shows it in the bottom
+  lighting's colour, and the Lighting page and README say so.
 
 ## [1.5.0] – 2026-11-01
 
