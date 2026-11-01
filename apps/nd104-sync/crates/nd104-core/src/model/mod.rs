@@ -13,6 +13,7 @@ use std::fmt;
 use jiff::civil::DateTime;
 use serde::Serialize;
 
+use crate::lighting::{LightChange, LightField, LightZone};
 use crate::weather::WeatherReport;
 
 /// What a USB interface is used for.
@@ -114,10 +115,58 @@ pub enum ReportClass {
     Ack { command: u8, ok: bool },
     /// Answer to a firmware version query.
     Firmware(FirmwareInfo),
+    /// Answer to a lighting command (echo of a set/save, or a value read).
+    Light {
+        command: u8,
+        zone: LightZone,
+        field: Option<LightField>,
+        data: Vec<u8>,
+    },
+    /// The firmware does not support the command it was sent.
+    Unsupported,
+    /// Flow control of a picture transfer.
+    Transfer(TransferAck),
     /// Well-formed but unknown message: logged and ignored.
     Ignored(String),
     /// Damaged or structurally unknown: protocol violation.
     Malformed(String),
+}
+
+/// Flow-control answer during a picture transfer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransferAck {
+    /// Send the next page (after the last page: transfer complete).
+    Next,
+    /// Send the last page again.
+    Resend,
+}
+
+/// Size limits of the own picture/GIF.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct PictureSpec {
+    pub width: u32,
+    pub height: u32,
+    pub max_frames: usize,
+    /// Limit for the converted data sent to the screen.
+    pub max_bytes: usize,
+    /// Limit for the file the user picks (same as the vendor's tool).
+    pub max_file_bytes: usize,
+}
+
+/// One frame of a picture, already encoded for the model.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EncodedFrame {
+    pub jpeg: Vec<u8>,
+    /// Display time in 10 ms units.
+    pub delay: u8,
+}
+
+/// A picture transfer: start report, then pages of data reports.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PictureTransfer {
+    pub role: Role,
+    pub start: Vec<u8>,
+    pub pages: Vec<Vec<Vec<u8>>>,
 }
 
 /// Everything model-specific. Implementations must be pure: no I/O.
@@ -151,6 +200,30 @@ pub trait KeyboardModel: Send + Sync {
     fn official_firmware_sources(&self) -> &'static [OfficialSource];
     /// Vendor's firmware update instructions.
     fn firmware_instructions_url(&self) -> &'static str;
+    /// Lighting zones that can be controlled (empty: no lighting support).
+    fn lighting_zones(&self) -> &'static [LightZone] {
+        &[]
+    }
+    /// Reads one lighting value.
+    fn light_read(&self, _zone: LightZone, _field: LightField) -> Option<Packet> {
+        None
+    }
+    /// Changes one lighting value (not stored yet).
+    fn light_write(&self, _zone: LightZone, _change: LightChange) -> Option<Packet> {
+        None
+    }
+    /// Stores a zone's lighting in the keyboard.
+    fn light_save(&self, _zone: LightZone) -> Option<Packet> {
+        None
+    }
+    /// Own picture/GIF on the screen: limits, or `None` if not supported.
+    fn picture_spec(&self) -> Option<PictureSpec> {
+        None
+    }
+    /// Builds the transfer for encoded frames (checks the limits).
+    fn picture_transfer(&self, _frames: &[EncodedFrame]) -> anyhow::Result<PictureTransfer> {
+        anyhow::bail!("this keyboard does not support own pictures")
+    }
 }
 
 /// All supported models. Only the ND104 for now.

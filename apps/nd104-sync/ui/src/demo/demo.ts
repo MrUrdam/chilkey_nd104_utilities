@@ -229,6 +229,8 @@ export function installDemo(version: string) {
         return { local: civil(0), next_dst_change: nextDstChange() };
       case "timezones":
         return TIMEZONES;
+      case "light_read":
+        return { effect: 1, brightness: 255, speed: 128, hue: 128, sat: 220 };
       case "plugin:event|listen":
         return 1;
       default:

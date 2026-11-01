@@ -7,6 +7,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
+mod hardware;
 mod i18n;
 mod logging;
 mod self_update;
@@ -56,6 +57,8 @@ pub(crate) struct AppState {
     pub(crate) manual_firmware_check: AtomicBool,
     /// Modification time of our own last config write (not a user edit).
     own_write: Mutex<Option<SystemTime>>,
+    /// Picture picked on the Screen picture page.
+    pub(crate) picture: Mutex<Option<hardware::PendingPicture>>,
 }
 
 fn main() {
@@ -101,6 +104,7 @@ fn main() {
             Some(vec!["--minimized"]),
         ))
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::app_info,
@@ -119,6 +123,11 @@ fn main() {
             commands::engine_command,
             commands::open_target,
             commands::install_update,
+            hardware::light_read,
+            hardware::light_apply,
+            hardware::picture_pick,
+            hardware::picture_refit,
+            hardware::picture_upload,
         ])
         .setup(move |app| {
             if quit_request {
@@ -153,6 +162,7 @@ fn main() {
 
             app.manage(AppState {
                 own_write: Mutex::new(modified(&config_path)),
+                picture: Mutex::new(None),
                 config_path,
                 config: Mutex::new(config.clone()),
                 i18n: Mutex::new(i18n),

@@ -180,6 +180,64 @@ export interface TimePreview {
   next_dst_change: string | null;
 }
 
+export type LightZone = "per_key" | "bottom";
+
+export interface ZoneState {
+  effect: number | null;
+  brightness: number | null;
+  speed: number | null;
+  hue: number | null;
+  sat: number | null;
+}
+
+export type LightChange =
+  | { field: "brightness"; value: number }
+  | { field: "effect"; value: number }
+  | { field: "speed"; value: number }
+  | { field: "color"; hue: number; sat: number };
+
+export type Fit = "fill" | "contain";
+
+export type PictureProblem =
+  | { code: "file_too_large"; bytes: number; max: number }
+  | { code: "unsupported_format" }
+  | { code: "damaged"; detail: string }
+  | { code: "too_many_frames"; frames: number; max: number }
+  | { code: "too_large_after_conversion"; bytes: number; max: number };
+
+export type PictureNote =
+  | { code: "scaled"; width: number; height: number }
+  | { code: "enlarged" }
+  | { code: "cropped" }
+  | { code: "bars" }
+  | { code: "transparency" }
+  | { code: "delay_adjusted" }
+  | { code: "reduced_quality" };
+
+export interface PictureSpec {
+  width: number;
+  height: number;
+  max_frames: number;
+  max_bytes: number;
+  max_file_bytes: number;
+}
+
+export interface PictureCheck {
+  name: string;
+  file_bytes: number;
+  spec: PictureSpec;
+  problem: PictureProblem | null;
+  format: string | null;
+  width: number;
+  height: number;
+  frames: number;
+  payload_bytes: number;
+  notes: PictureNote[];
+  /** Frames as sent (JPEG data URLs) and their display times. */
+  preview_frames: string[];
+  delays_ms: number[];
+}
+
 export type EngineAction = "sync_now" | "pause" | "resume" | "recheck" | "check_updates";
 export type OpenTarget = "config" | "logs" | string;
 
@@ -202,7 +260,17 @@ export const api = {
   timezones: () => invoke<string[]>("timezones"),
   engine: (command: EngineAction) => invoke<void>("engine_command", { command }),
   open: (target: OpenTarget) => invoke<void>("open_target", { target }),
+  lightRead: (zone: LightZone) => invoke<ZoneState>("light_read", { zone }),
+  lightApply: (zone: LightZone, changes: LightChange[], save: boolean) =>
+    invoke<void>("light_apply", { zone, changes, save }),
+  picturePick: (fit: Fit) => invoke<PictureCheck | null>("picture_pick", { fit }),
+  pictureRefit: (fit: Fit) => invoke<PictureCheck>("picture_refit", { fit }),
+  pictureUpload: () => invoke<void>("picture_upload"),
 };
+
+export function onPictureProgress(handler: (progress: number) => void): Promise<UnlistenFn> {
+  return listen<number>("picture-progress", (event) => handler(event.payload));
+}
 
 /** OpenStreetMap page with a marker, to check a location in the browser. */
 export function osmUrl(lat: number, lon: number): string {

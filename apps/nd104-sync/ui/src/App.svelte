@@ -9,12 +9,16 @@
   import Clock from "./pages/Clock.svelte";
   import Device from "./pages/Device.svelte";
   import General from "./pages/General.svelte";
+  import Lighting from "./pages/Lighting.svelte";
+  import Picture from "./pages/Picture.svelte";
 
-  type Page = "dashboard" | "weather" | "clock" | "device" | "general";
+  type Page = "dashboard" | "weather" | "clock" | "lighting" | "picture" | "device" | "general";
   const pages: { id: Page; icon: string }[] = [
     { id: "dashboard", icon: "◉" },
     { id: "weather", icon: "☁" },
     { id: "clock", icon: "◷" },
+    { id: "lighting", icon: "✦" },
+    { id: "picture", icon: "▣" },
     { id: "device", icon: "⌨" },
     { id: "general", icon: "⚙" },
   ];
@@ -137,6 +141,10 @@
           <Weather bind:draft {info} {errors} />
         {:else if page === "clock"}
           <Clock bind:draft {errors} />
+        {:else if page === "lighting"}
+          <Lighting {status} />
+        {:else if page === "picture"}
+          <Picture {status} />
         {:else if page === "device"}
           <Device {status} {info} bind:draft {errors} />
         {:else}

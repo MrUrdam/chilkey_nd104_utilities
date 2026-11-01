@@ -40,7 +40,7 @@
       </svg>
 
       {#if weather}
-        <div class="icon"><WeatherIcon condition={weather.condition} isDay={weather.is_day} size="100%" /></div>
+        <div class="icon"><WeatherIcon condition={weather.condition} isDay={weather.is_day} size="100%" onLight /></div>
         <div class="temps">
           <span class="current">{deg(weather.current_c)}</span>
           <span class="range">{deg(weather.min_c)} ~ {deg(weather.max_c)}</span>
@@ -62,7 +62,7 @@
   .bezel {
     background: linear-gradient(180deg, #2b313b, #14171c);
     border: 1px solid #3b4350;
-    border-radius: 18px;
+    border-radius: 7% / 13%;
     padding: 3.2%;
     box-shadow:
       0 10px 30px rgba(0, 0, 0, 0.35),
@@ -75,7 +75,8 @@
     container-type: inline-size;
     position: relative;
     aspect-ratio: 320 / 172;
-    border-radius: 5cqw;
+    /* like the real screen: about 4.5 % of the width, same curve vertically */
+    border-radius: 4.5% / 8.4%;
     overflow: hidden;
     background:
       radial-gradient(60% 80% at 90% 85%, rgba(196, 181, 253, 0.35), transparent 70%),

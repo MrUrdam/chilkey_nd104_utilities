@@ -75,10 +75,20 @@ What this shows:
 - The screen UI image (`…_UI_…`) is not part of the version answer, so its
   version cannot be read this way.
 
-Still open:
-- Is there a variant marker other than the build date (e.g. in another report)?
-- Does the 12 h/°F variant expect temperatures in °F, or does it convert the °C
-  values it receives?
+What the firmware files show (both screen MCU images compared, read only):
+- Both builds contain the same code for °C/°F and 24 h/12 h (`%d.%d°%s`,
+  `%02d:%02d %s`, `F`, `am`, `pm`). Two flags in RAM select the unit and the
+  time format. The **°F build converts the °C values it receives**
+  (`value × 9 / 5 + 32`) and shows the 24 h time it receives as 12 h with
+  am/pm. Sending °C and 0–23 h is therefore right for both variants – the web
+  driver does the same.
+- The flags are set **once at start-up to a fixed value** (0 in the 24 h/°C
+  build, 1 in the 12 h/°F build) and nothing else writes or reports them. There
+  is **no USB command to read or change them**.
+- The 12 h/°F screen firmware is an older code base: it reports **V1.2.2**
+  (`Mar  5 2026 15:39:11`), the 24 h/°C one V1.2.4.
+- So the only way to tell the variant over USB is the version answer
+  (version + build date), matched against the files in the two Drive folders.
 
 ## Consequences for nd104-sync
 

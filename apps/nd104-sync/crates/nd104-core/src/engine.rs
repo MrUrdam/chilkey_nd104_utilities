@@ -9,16 +9,17 @@ use anyhow::{anyhow, Result};
 use jiff::civil::DateTime;
 use jiff::{SignedDuration, Timestamp};
 use serde::Serialize;
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{mpsc, oneshot, watch};
 use tokio::task::JoinHandle;
 use tokio::time::{interval, sleep_until, Instant, MissedTickBehavior};
 
 use crate::app_update::{self, UpdateStatus};
 use crate::clock::{ntp_offset, ClockSource};
 use crate::config::Config;
-use crate::device::{DeviceEvent, DeviceHandle, DeviceState, EventLevel};
+use crate::device::{DeviceEvent, DeviceHandle, DeviceState, EventLevel, Reply};
 use crate::firmware_update::{self, FirmwareReport};
-use crate::model::{self, KeyboardModel};
+use crate::lighting::{LightOp, ZoneState};
+use crate::model::{self, EncodedFrame, KeyboardModel};
 use crate::weather::{self, WeatherReport};
 
 const MAX_EVENTS: usize = 100;
@@ -80,7 +81,7 @@ impl Default for Status {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum EngineCommand {
     /// Send time and weather now (re-fetches the weather).
     SyncNow,
@@ -94,6 +95,14 @@ pub enum EngineCommand {
     CheckAppUpdate,
     /// Manual firmware update check.
     CheckFirmwareUpdate,
+    /// Read or change the keyboard lighting.
+    Light(LightOp, oneshot::Sender<Result<Option<ZoneState>, String>>),
+    /// Send an own picture/GIF to the screen; progress 0.0 … 1.0.
+    UploadPicture {
+        frames: Vec<EncodedFrame>,
+        progress: mpsc::UnboundedSender<f32>,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
     Shutdown,
 }
 
@@ -230,6 +239,13 @@ impl Engine {
                     }
                     Some(EngineCommand::CheckAppUpdate) => self.check_app_update().await,
                     Some(EngineCommand::CheckFirmwareUpdate) => self.check_firmware_update(true).await,
+                    Some(EngineCommand::Light(op, reply)) => {
+                        let result = self.device.light(op).await;
+                        let _ = reply.send(self.device_reply(result));
+                    }
+                    Some(EngineCommand::UploadPicture { frames, progress, reply }) => {
+                        let _ = reply.send(self.upload_picture(&frames, progress).await);
+                    }
                 },
             }
         }
@@ -335,6 +351,34 @@ impl Engine {
                 false
             }
         }
+    }
+
+    /// Takes over state and events of a device-thread operation.
+    fn device_reply<T>(&self, result: Result<Reply<T>>) -> Result<T, String> {
+        match result {
+            Ok((result, state, events)) => {
+                self.device_events(events);
+                self.set_device_state(state);
+                result
+            }
+            Err(e) => Err(format!("{e:#}")),
+        }
+    }
+
+    /// Time and weather wait while the picture is transferred (the engine
+    /// handles one command at a time).
+    async fn upload_picture(
+        &self,
+        frames: &[EncodedFrame],
+        progress: mpsc::UnboundedSender<f32>,
+    ) -> Result<(), String> {
+        let transfer = self
+            .ready_model()
+            .ok_or_else(|| "keyboard not ready".to_string())?
+            .picture_transfer(frames)
+            .map_err(|e| format!("{e:#}"))?;
+        let result = self.device.upload_picture(transfer, progress).await;
+        self.device_reply(result)
     }
 
     async fn send(&self, packet: crate::model::Packet) -> bool {

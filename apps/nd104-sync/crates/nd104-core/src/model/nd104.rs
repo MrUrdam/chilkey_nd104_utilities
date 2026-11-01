@@ -3,15 +3,19 @@
 use anyhow::Context;
 use jiff::civil::DateTime;
 use nd104_protocol::{
-    checksum8, crc16, keyboard_version_query, normalize_version, parse_version_response,
-    screen_version_query, time_packet, weather_packet, ClockTime, Target, Weather, WeatherIcon,
-    KEYBOARD, SCREEN, VENDOR_USAGE, VENDOR_USAGE_PAGE,
+    checksum8, crc16, keyboard_version_query, light_get, light_save, light_set, normalize_version,
+    parse_light_answer, parse_picture_ack, parse_version_response, picture_pages, picture_payload,
+    picture_start, screen_version_query, time_packet, weather_packet, ClockTime, LightAnswer,
+    LightValue, PictureAck, PictureFrame, Target, Weather, WeatherIcon, KEYBOARD, LIGHT_GET,
+    LIGHT_SAVE, LIGHT_SET, LIGHT_UNHANDLED, PICTURE_HEIGHT, PICTURE_MAX_BYTES, PICTURE_MAX_FRAMES,
+    PICTURE_WIDTH, SCREEN, VENDOR_USAGE, VENDOR_USAGE_PAGE,
 };
 
 use super::{
-    Capabilities, FirmwareInfo, InterfaceSpec, KeyboardModel, OfficialSource, Packet, ReportClass,
-    Role, ScreenVariant, VerifiedFirmware,
+    Capabilities, EncodedFrame, FirmwareInfo, InterfaceSpec, KeyboardModel, OfficialSource, Packet,
+    PictureSpec, PictureTransfer, ReportClass, Role, ScreenVariant, TransferAck, VerifiedFirmware,
 };
+use crate::lighting::{LightChange, LightField, LightZone};
 use crate::weather::{Condition, WeatherReport};
 
 const TIME_COMMAND: u8 = 0x38;
@@ -36,6 +40,24 @@ static INTERFACES: [InterfaceSpec; 2] = [
         report_len: 64,
     },
 ];
+
+static LIGHT_ZONES: [LightZone; 2] = [LightZone::PerKey, LightZone::Bottom];
+
+fn proto_zone(zone: LightZone) -> nd104_protocol::LightZone {
+    match zone {
+        LightZone::PerKey => nd104_protocol::LightZone::PerKey,
+        LightZone::Bottom => nd104_protocol::LightZone::Bottom,
+    }
+}
+
+fn proto_field(field: LightField) -> LightValue {
+    match field {
+        LightField::Brightness => LightValue::Brightness,
+        LightField::Effect => LightValue::Effect,
+        LightField::Speed => LightValue::Speed,
+        LightField::Color => LightValue::Color,
+    }
+}
 
 static VERIFIED: [VerifiedFirmware; 2] = [
     VerifiedFirmware {
@@ -139,6 +161,38 @@ impl Nd104 {
             return ReportClass::Malformed("keyboard frame with bad checksum".into());
         }
         Self::answer(command, &report[12..end])
+    }
+
+    /// VIA-style lighting answer on the keyboard interface.
+    fn classify_light_answer(report: &[u8]) -> ReportClass {
+        match parse_light_answer(report) {
+            Some(LightAnswer::Unhandled) => ReportClass::Unsupported,
+            Some(LightAnswer::Echo {
+                command,
+                zone,
+                value,
+                data,
+            }) => ReportClass::Light {
+                command,
+                zone: match zone {
+                    nd104_protocol::LightZone::PerKey => LightZone::PerKey,
+                    nd104_protocol::LightZone::Bottom => LightZone::Bottom,
+                },
+                field: value.map(|v| match v {
+                    LightValue::Brightness => LightField::Brightness,
+                    LightValue::Effect => LightField::Effect,
+                    LightValue::Color => LightField::Color,
+                    LightValue::Speed => LightField::Speed,
+                }),
+                data,
+            },
+            // other zones/values of the same command family (e.g. the web
+            // driver's keyboard settings): well-formed, not ours
+            None => ReportClass::Ignored(format!(
+                "keyboard settings answer 0x{:02X} {:02X} {:02X}",
+                report[0], report[1], report[2]
+            )),
+        }
     }
 
     /// `A5` answer straight from the screen.
@@ -265,6 +319,14 @@ impl KeyboardModel for Nd104 {
         match (role, report[0]) {
             (_, 0x11) => Self::firmware(role, report),
             (Role::Keyboard, 0x1C) => Self::classify_keyboard_frame(report),
+            (Role::Keyboard, LIGHT_SET | LIGHT_GET | LIGHT_SAVE | LIGHT_UNHANDLED) => {
+                Self::classify_light_answer(report)
+            }
+            (Role::Screen, 0xBA) => match parse_picture_ack(report) {
+                Some(PictureAck::Next) => ReportClass::Transfer(TransferAck::Next),
+                Some(PictureAck::Resend) => ReportClass::Transfer(TransferAck::Resend),
+                None => ReportClass::Ignored("screen transfer report (BA …)".into()),
+            },
             (Role::Screen, 0xA5) => Self::classify_screen_answer(report),
             (Role::Screen, 0x1C) if report[9] == 0xFB => {
                 ReportClass::Ignored("screen info report (1C … FB)".into())
@@ -289,6 +351,69 @@ impl KeyboardModel for Nd104 {
 
     fn firmware_instructions_url(&self) -> &'static str {
         "https://chilkey.com/pages/nd104_firmware_flashing_guide"
+    }
+
+    fn lighting_zones(&self) -> &'static [LightZone] {
+        &LIGHT_ZONES
+    }
+
+    fn light_read(&self, zone: LightZone, field: LightField) -> Option<Packet> {
+        Some(Packet {
+            role: Role::Keyboard,
+            command: LIGHT_GET,
+            bytes: light_get(proto_zone(zone), proto_field(field)),
+        })
+    }
+
+    fn light_write(&self, zone: LightZone, change: LightChange) -> Option<Packet> {
+        let (field, data) = match change {
+            LightChange::Brightness { value } => (LightField::Brightness, vec![value]),
+            LightChange::Effect { value } => (LightField::Effect, vec![value]),
+            LightChange::Speed { value } => (LightField::Speed, vec![value]),
+            LightChange::Color { hue, sat } => (LightField::Color, vec![hue, sat]),
+        };
+        Some(Packet {
+            role: Role::Keyboard,
+            command: LIGHT_SET,
+            bytes: light_set(proto_zone(zone), proto_field(field), &data),
+        })
+    }
+
+    fn light_save(&self, zone: LightZone) -> Option<Packet> {
+        Some(Packet {
+            role: Role::Keyboard,
+            command: LIGHT_SAVE,
+            bytes: light_save(proto_zone(zone)),
+        })
+    }
+
+    fn picture_spec(&self) -> Option<PictureSpec> {
+        Some(PictureSpec {
+            width: PICTURE_WIDTH.into(),
+            height: PICTURE_HEIGHT.into(),
+            max_frames: PICTURE_MAX_FRAMES,
+            max_bytes: PICTURE_MAX_BYTES,
+            max_file_bytes: PICTURE_MAX_BYTES,
+        })
+    }
+
+    fn picture_transfer(&self, frames: &[EncodedFrame]) -> anyhow::Result<PictureTransfer> {
+        let frames: Vec<PictureFrame> = frames
+            .iter()
+            .map(|f| PictureFrame {
+                jpeg: f.jpeg.clone(),
+                delay: f.delay,
+            })
+            .collect();
+        let payload = picture_payload(&frames)?;
+        Ok(PictureTransfer {
+            role: Role::Screen,
+            start: picture_start(payload.len()).to_vec(),
+            pages: picture_pages(&payload)
+                .into_iter()
+                .map(|page| page.into_iter().map(|r| r.to_vec()).collect())
+                .collect(),
+        })
     }
 
     fn manifest_part(&self, role: Role, variant: ScreenVariant) -> Option<&'static str> {

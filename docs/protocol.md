@@ -338,15 +338,86 @@ Local time of the PC is sent, so there is no time-zone information in the packet
 
 ---
 
-## 5. Keyboard commands (not used by nd104-sync)
+### 4.5 Own picture / GIF (raw reports to the screen) – used by nd104-sync
 
-These are listed only for completeness. nd104-sync never configures the keyboard.
+From the web driver (`ScreenView`, function `R`) and the screen's input
+handler. Sent straight to the **screen interface** (`5542:0001`, 64-byte
+reports, not wrapped in `1C`). No other command is needed before.
+
+```text
+payload = 55 42 | width u16 BE (0x0140) | height u16 BE (0x00AC) | 00 | frames u8
+        | one delay byte per frame (10 ms units; a still picture has one byte 01)
+        | one size per frame (u32 BE)
+        | the frames: baseline JPEG, 320 × 172 each
+start   = BA 06 AA B0 | payload length u32 BE              (one report)
+data    = BA n | n payload bytes, n ≤ 62                    (one report each)
+```
+
+- The data reports are grouped in **pages of 4096 payload bytes** (67 reports).
+- After the start report and after each page the screen answers
+  `BA ?? A5 B0 ?? 02 FE` → send the next page, or `BA ?? A5 B0 ?? 02 FD` → send
+  the last page again. After the last page the screen sends **no answer**
+  (verified on hardware); the web driver does not wait for one either.
+- The driver accepts files up to 2 MB and asks for fewer than 60 GIF frames;
+  still pictures are encoded with JPEG quality 1.0, GIF frames with 0.8.
+- Answers `BA ?? A5 FC …` belong to a second transfer type of the driver with
+  137 reports per block (not used).
+
+## 5. Keyboard commands
+
+The keyboard firmware is QMK based (strings `rgb_matrix_config`,
+`rgblight_config`) and speaks the **VIA** protocol on its vendor interface
+(`6D67:016C`, 32-byte reports, no `1C` frame). Every command is answered with
+an echo of the request; `FF` as the first byte means "not supported".
+
+### 5.1 Lighting – used by nd104-sync (on/off, brightness, colour)
+
+| Bytes | Meaning |
+|---|---|
+| `07 zone id data…` | set a value (live, not stored) |
+| `08 zone id` | read a value; the answer repeats the bytes and adds the data |
+| `09 zone` | store the zone in the keyboard's EEPROM |
+
+| Zone | Web driver name | QMK |
+|---|---|---|
+| `03` | Background lighting (per key) | `rgb_matrix` |
+| `02` | Bottom lighting | `rgblight` (underglow) |
+
+| id | Value |
+|---|---|
+| `01` | brightness 0–255 |
+| `02` | effect: `0` = all off, `1` = solid colour, more effects compiled into the firmware (≈ 18 per-key, 42 bottom) |
+| `03` | effect speed 0–255 |
+| `04` | colour: hue, saturation (0–255 each) |
+
+The effects are **built into the firmware**; the driver only sends their index
+and shows names for them. The driver reads zone `03` on connect but never zone
+`02` (it remembers that one in the browser).
+
+### 5.2 Keyboard settings (channel `00`) – not used by nd104-sync
+
+Write `07 00 04 id value`, then store with `09 00`; read `08 00 04 id`, the
+answer carries the value in byte 4.
+
+| id | Driver label | Values |
+|---|---|---|
+| `00` | USB polling rate | 1–8 (kHz) |
+| `01` | debounce speed | ms |
+| `02` | debounce mode | 0 none, 1 "send to debounce", 2 "debounce to send" |
+| `04` | **keyboard colour** | 0 red, 1 pink, 2 yellow, 3 green, 4 blue, 5 black, 6 white |
+| `05` | **online RGB** | 1 enable (default), 0 disable |
+| `06` / `07` | sleep / deep-sleep time | minutes (the driver writes sleep time with id `0B`) |
+
+The driver reads only ids `00`–`02` on connect; keyboard colour and online RGB
+come from the browser's storage (defaults 0 and 1), not from the keyboard. No
+text in the keyboard firmware names these two settings, so their effect is not
+documented yet.
+
+### 5.3 Other keyboard commands (not used)
 
 | Byte 0 | Meaning |
 |---|---|
 | `0x01` | protocol/layout version |
-| `0x08 0x03 n` | RGB: brightness / effect / speed / colour |
-| `0x08 0x00 0x04 n` | debounce, polling rate, sleep times, … |
 | `0x12` | read keymap |
 | `0x14` | read knob mapping |
 

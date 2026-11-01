@@ -62,6 +62,12 @@ your weather provider, your location, your clock source.
 - **Five weather providers** (two without API key) with a fallback provider
   and a city search for your location
 
+**Lighting and screen**
+- **Lighting:** background and bottom lighting on/off, effect, brightness,
+  speed and colour
+- **Own picture or GIF** on the screen: any PNG/JPEG/GIF/BMP is checked
+  (type, size, frames) and scaled to 320 × 172 before it is sent
+
 **Safety and updates**
 - **Firmware safety lock:** works with older/newer firmware too, but stops
   immediately as soon as the protocol behaves differently
@@ -86,17 +92,19 @@ your weather provider, your location, your clock source.
 - ❌ **No Linux / macOS support.** Windows 10/11 only.
 - ❌ **No firmware flashing.** It never downloads, installs or modifies firmware.
   It only tells you an update exists.
-- ❌ **No risky communication.** On firmware that isn't verified, only time and
-  weather are sent, and only while every protocol check passes. If anything
+- ❌ **No risky communication.** Time, weather, lighting and the own picture
+  are only sent while every protocol check passes. If anything
   looks different, the tool stops sending immediately and tells you why. There
   is no "ignore and continue" switch.
-- ❌ **No keyboard configuration.** Keymap, RGB lighting, macros, knob etc.
-  stay with the official [Chilkey driver](https://chilkey.com/pages/console).
-- ❌ **No image/GIF upload** and no display themes.
+- ❌ **No keyboard configuration.** Keymap, macros, knob, debounce, sleep
+  times etc. stay with the official [Chilkey driver](https://chilkey.com/pages/console).
+  Lighting covers on/off, effect, brightness, speed and colour.
+- ❌ **No display themes.**
 - ❌ **No °C/°F or 12/24 h switching on the display.** Chilkey ships two screen
-  firmware variants (24 h + °C, 12 h + °F) and the tool doesn't change which
-  one you have (see [docs/firmware.md](../../docs/firmware.md)). The UI unit is
-  independent of it.
+  firmware variants (24 h + °C, 12 h + °F). The unit and the time format are
+  fixed when the firmware is built and cannot be changed or read over USB; the
+  keyboard converts the °C values and the 24 h time it receives itself (see
+  [docs/firmware.md](../../docs/firmware.md)). The UI unit is independent of it.
 - ❌ **No other keyboard models.** Only the Chilkey ND104 is supported. The
   code has a model interface (`KeyboardModel` in
   [`crates/nd104-core/src/model/mod.rs`](crates/nd104-core/src/model/mod.rs)),
@@ -153,6 +161,10 @@ write:
 A lock is only lifted by re-connecting the keyboard or by
 "Check again", and either way all checks run again. There is intentionally
 **no "ignore and continue" override**.
+
+Lighting and the own picture use the same checks. They are extras: if the
+firmware answers "not supported" or does not answer, the page shows that and
+time/weather keep running; a damaged answer locks like everywhere else.
 
 ## Firmware update check
 
@@ -391,6 +403,8 @@ running in the tray.
 | **Dashboard** | Live preview of the keyboard display, keyboard and firmware state, last/next syncs (incl. next DST change), weather, recent events; Sync now, Pause/Resume |
 | **Weather** | Location via city search (with OpenStreetMap link to check a result) or coordinates; provider, fallback, interval, °C/°F in the window; Test button (fetches without sending) |
 | **Clock** | Source (System / Time zone / NTP / Manual), time zone, NTP test, summer/winter time mode, sync interval; live preview of the time sent |
+| **Lighting** | Background lighting (keys + light bar below Ins/Home/PgUp) and bottom lighting: on/off, effect, brightness, speed, colour (sent and stored right away) |
+| **Screen picture** | Choose a picture or GIF, see the checks and a preview (fill the screen or show the whole picture), send it to the screen with a progress bar |
 | **Device & Firmware** | Verified / unverified / locked state, installed vs. verified firmware, display variant, Check keyboard again, polling interval |
 | **General** | Start with Windows, language, appearance (like Windows / dark / light), update check, About with version, config file and log folder |
 

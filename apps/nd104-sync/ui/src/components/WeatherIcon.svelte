@@ -1,23 +1,36 @@
 <script lang="ts">
   // Same ten icon types as the keyboard display (docs/protocol.md § 4.2).
+  // `onLight`: colours for the light keyboard screen (light-blue clouds like
+  // the real display; white clouds would vanish there).
   import type { Condition } from "../lib/api";
 
   let {
     condition,
     isDay = true,
     size = 64,
-  }: { condition: Condition; isDay?: boolean; size?: number | string } = $props();
+    onLight = false,
+  }: { condition: Condition; isDay?: boolean; size?: number | string; onLight?: boolean } = $props();
 
   const cloud = "M17 47h30a10 10 0 0 0 1-20 15 15 0 0 0-28-4 11 11 0 0 0-3 24z";
   const backCloud = "M30 36h20a8 8 0 0 0 1-16 12 12 0 0 0-22-3 9 9 0 0 0 1 19z";
 
   let celestial = $derived(condition === "clear" || condition === "partly_cloudy");
+  // partly cloudy: small sun/moon top left, cloud in front of it – both
+  // completely inside the 64 × 64 box
   let small = $derived(condition === "partly_cloudy");
+  let skyTransform = $derived(small ? "translate(1 0) scale(0.62)" : undefined);
+  let cloudTransform = $derived(small ? "translate(6 6) scale(0.88)" : undefined);
+
+  let colors = $derived(
+    onLight
+      ? { cloud: "#a9d0f7", dark: "#8eaed0", back: "#7fb0e6", fog: "#9aa6b6" }
+      : { cloud: "#f1f5f9", dark: "#cbd5e1", back: "#94a3b8", fog: "#94a3b8" },
+  );
 </script>
 
 <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true">
   {#if celestial && isDay}
-    <g transform={small ? "translate(-8 -9) scale(0.75)" : "translate(0 0)"}>
+    <g transform={skyTransform}>
       <circle cx="32" cy="32" r="12" fill="#fbbf24" />
       {#each Array.from({ length: 8 }, (_, i) => i * 45) as angle (angle)}
         <line
@@ -33,7 +46,7 @@
       {/each}
     </g>
   {:else if celestial}
-    <g transform={small ? "translate(-6 -8) scale(0.75)" : "translate(0 0)"}>
+    <g transform={skyTransform}>
       <path d="M38 12a20 20 0 1 0 14 30A16 16 0 0 1 38 12z" fill="#a78bfa" />
       <circle cx="50" cy="14" r="2" fill="#c4b5fd" />
       <circle cx="56" cy="26" r="1.5" fill="#c4b5fd" />
@@ -41,11 +54,15 @@
   {/if}
 
   {#if condition === "overcast"}
-    <path d={backCloud} fill="#94a3b8" />
+    <path d={backCloud} fill={colors.back} />
   {/if}
 
   {#if condition !== "clear"}
-    <path d={cloud} fill={condition === "thunderstorm" || condition === "overcast" ? "#cbd5e1" : "#f1f5f9"} />
+    <path
+      d={cloud}
+      transform={cloudTransform}
+      fill={condition === "thunderstorm" || condition === "overcast" ? colors.dark : colors.cloud}
+    />
   {/if}
 
   {#if condition === "rain" || condition === "drizzle"}
@@ -60,7 +77,7 @@
     <path d="M33 46l-6 10h6l-3 8 10-12h-6l4-6z" fill="#facc15" />
   {:else if condition === "fog"}
     {#each [51, 57] as y (y)}
-      <rect x="14" {y} width="36" height="3.5" rx="1.75" fill="#94a3b8" />
+      <rect x="14" {y} width="36" height="3.5" rx="1.75" fill={colors.fog} />
     {/each}
   {/if}
 </svg>

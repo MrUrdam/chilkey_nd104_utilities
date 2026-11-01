@@ -8,6 +8,10 @@
 //!   unknown reports lock, well-formed unknown messages are logged and ignored
 //! - P6 screen variant recognised where possible (informational)
 //!
+//! Lighting and the own picture are optional extras: an unsupported command
+//! or a missing answer is reported to the caller without locking; damaged
+//! reports lock like everywhere else.
+//!
 //! Any failed check locks the device until it is re-plugged or re-checked.
 
 use std::collections::HashMap;
@@ -19,9 +23,21 @@ use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::hid::{HidBackend, HidChannel, HidInterfaceInfo};
-use crate::model::{FirmwareInfo, KeyboardModel, Packet, ReportClass, Role, ScreenVariant};
+use crate::lighting::{LightChange, LightField, LightOp, LightZone, ZoneState};
+use crate::model::{
+    FirmwareInfo, KeyboardModel, Packet, PictureTransfer, ReportClass, Role, ScreenVariant,
+    TransferAck,
+};
 
 const ANSWER_TIMEOUT: Duration = Duration::from_millis(1000);
+/// The screen writes each page to its flash before it answers.
+const PAGE_TIMEOUT: Duration = Duration::from_secs(5);
+/// Pause between data reports (the web driver uses 2 ms).
+const REPORT_GAP: Duration = Duration::from_millis(2);
+const PAGE_RETRIES: usize = 3;
+/// After the last page the screen usually stays silent (the web driver does
+/// not wait for an answer either); a short wait catches a "send again".
+const LAST_PAGE_TIMEOUT: Duration = Duration::from_millis(1500);
 const FIRMWARE_RETRIES: usize = 3;
 
 /// How far the connected firmware is trusted.
@@ -352,6 +368,240 @@ impl DeviceManager {
         ))
     }
 
+    fn model(&self) -> Result<&dyn KeyboardModel> {
+        match (&self.state, &self.active) {
+            (DeviceState::Ready(_), Some(active)) => Ok(self.models[active.model].as_ref()),
+            _ => Err(anyhow!("keyboard not ready")),
+        }
+    }
+
+    /// Writes a packet and returns the first answer `pick` accepts.
+    /// `Ok(None)`: the firmware answered "unsupported". A missing answer is
+    /// an error without lock (optional features); damaged reports lock.
+    fn exchange<T>(
+        &mut self,
+        packet: &Packet,
+        timeout: Duration,
+        pick: impl Fn(&ReportClass) -> Option<T>,
+    ) -> Result<Option<T>> {
+        if let Err(e) = self.drain(packet.role) {
+            self.lock(format!("P5: {e:#}"));
+            return Err(e);
+        }
+        if let Err(e) = self.write(packet) {
+            self.lock(format!("P4: {e:#}"));
+            return Err(e);
+        }
+        let deadline = Instant::now() + timeout;
+        loop {
+            let report = match self.read_until(packet.role, deadline) {
+                Ok(Some(report)) => report,
+                Ok(None) => {
+                    return Err(anyhow!(
+                        "no answer from the {} to command 0x{:02X}",
+                        packet.role,
+                        packet.command
+                    ))
+                }
+                Err(e) => {
+                    self.lock(format!("P4: {e:#}"));
+                    return Err(e);
+                }
+            };
+            let class = self.classify(packet.role, &report);
+            if let Some(found) = pick(&class) {
+                return Ok(Some(found));
+            }
+            match class {
+                ReportClass::Unsupported => return Ok(None),
+                ReportClass::Malformed(why) => {
+                    self.lock(format!("P5: {why}"));
+                    return Err(anyhow!(why));
+                }
+                other => self.note_unsolicited(other),
+            }
+        }
+    }
+
+    /// Reads a lighting zone. Values the firmware does not report stay `None`.
+    pub fn light_read(&mut self, zone: LightZone) -> Result<ZoneState> {
+        let mut state = ZoneState::default();
+        for field in [
+            LightField::Effect,
+            LightField::Brightness,
+            LightField::Speed,
+            LightField::Color,
+        ] {
+            let packet = self
+                .model()?
+                .light_read(zone, field)
+                .ok_or_else(|| anyhow!("this keyboard has no lighting control"))?;
+            let data = self.exchange(&packet, ANSWER_TIMEOUT, |c| match c {
+                ReportClass::Light {
+                    command,
+                    zone: z,
+                    field: Some(f),
+                    data,
+                } if *command == packet.command && *z == zone && *f == field => Some(data.clone()),
+                _ => None,
+            })?;
+            match (field, data.as_deref()) {
+                (LightField::Effect, Some([v, ..])) => state.effect = Some(*v),
+                (LightField::Brightness, Some([v, ..])) => state.brightness = Some(*v),
+                (LightField::Speed, Some([v, ..])) => state.speed = Some(*v),
+                (LightField::Color, Some([h, s, ..])) => {
+                    state.hue = Some(*h);
+                    state.sat = Some(*s);
+                }
+                _ => {}
+            }
+        }
+        tracing::info!("lighting {zone:?} read: {state:?}");
+        Ok(state)
+    }
+
+    /// Applies lighting changes, then stores them if `save`.
+    pub fn light_apply(
+        &mut self,
+        zone: LightZone,
+        changes: &[LightChange],
+        save: bool,
+    ) -> Result<()> {
+        for change in changes {
+            let packet = self
+                .model()?
+                .light_write(zone, *change)
+                .ok_or_else(|| anyhow!("this keyboard has no lighting control"))?;
+            let field = change.field();
+            let echoed = self.exchange(&packet, ANSWER_TIMEOUT, |c| match c {
+                ReportClass::Light {
+                    command,
+                    zone: z,
+                    field: Some(f),
+                    ..
+                } if *command == packet.command && *z == zone && *f == field => Some(()),
+                _ => None,
+            })?;
+            if echoed.is_none() {
+                tracing::warn!(
+                    "lighting {zone:?} {change:?}: [{}] not supported",
+                    hex(&packet.bytes)
+                );
+                return Err(anyhow!(
+                    "the keyboard does not support this lighting setting"
+                ));
+            }
+            tracing::info!(
+                "lighting {zone:?} {change:?}: sent [{}], echoed",
+                hex(&packet.bytes)
+            );
+        }
+        if save {
+            let packet = self
+                .model()?
+                .light_save(zone)
+                .ok_or_else(|| anyhow!("this keyboard has no lighting control"))?;
+            let echoed = self.exchange(&packet, ANSWER_TIMEOUT, |c| match c {
+                ReportClass::Light {
+                    command, zone: z, ..
+                } if *command == packet.command && *z == zone => Some(()),
+                _ => None,
+            })?;
+            if echoed.is_none() {
+                return Err(anyhow!("the keyboard cannot store lighting settings"));
+            }
+            tracing::info!(
+                "lighting {zone:?} stored: sent [{}], echoed",
+                hex(&packet.bytes)
+            );
+        }
+        Ok(())
+    }
+
+    /// Sends an own picture/GIF to the screen, page by page as the screen
+    /// asks for them. `progress` gets 0.0 … 1.0.
+    pub fn upload_picture(
+        &mut self,
+        transfer: &PictureTransfer,
+        progress: &mut dyn FnMut(f32),
+    ) -> Result<()> {
+        self.model()?;
+        let role = transfer.role;
+        let ack = |c: &ReportClass| match c {
+            ReportClass::Transfer(a) => Some(*a),
+            _ => None,
+        };
+        let start = Packet {
+            role,
+            command: transfer.start[0],
+            bytes: transfer.start.clone(),
+        };
+        self.event(
+            EventLevel::Info,
+            format!(
+                "Sending own picture to the screen ({} pages)",
+                transfer.pages.len()
+            ),
+        );
+        let mut answer = self.exchange(&start, PAGE_TIMEOUT, ack)?;
+        let mut next = 0usize;
+        let mut retries = 0usize;
+        loop {
+            let page = match answer {
+                Some(TransferAck::Next) if next == transfer.pages.len() => break,
+                Some(TransferAck::Next) => {
+                    retries = 0;
+                    next += 1;
+                    next - 1
+                }
+                Some(TransferAck::Resend) if next > 0 && retries < PAGE_RETRIES => {
+                    retries += 1;
+                    self.event(
+                        EventLevel::Warning,
+                        format!("Screen asked for page {next} again"),
+                    );
+                    next - 1
+                }
+                Some(TransferAck::Resend) => {
+                    return Err(anyhow!("the screen rejected the picture data"))
+                }
+                None => return Err(anyhow!("the screen does not support own pictures")),
+            };
+            let reports = &transfer.pages[page];
+            let last_page = page + 1 == transfer.pages.len();
+            for (i, report) in reports.iter().enumerate() {
+                let packet = Packet {
+                    role,
+                    command: report[0],
+                    bytes: report.clone(),
+                };
+                if i + 1 < reports.len() {
+                    if let Err(e) = self.write(&packet) {
+                        self.lock(format!("P4: {e:#}"));
+                        return Err(e);
+                    }
+                    thread::sleep(REPORT_GAP);
+                } else if !last_page {
+                    answer = self.exchange(&packet, PAGE_TIMEOUT, ack)?;
+                } else {
+                    // complete unless the screen asks for the page again
+                    answer = match self.exchange(&packet, LAST_PAGE_TIMEOUT, ack) {
+                        Ok(a) => a,
+                        Err(_) if matches!(self.state, DeviceState::Ready(_)) => {
+                            tracing::debug!("no answer after the last picture page (normal)");
+                            Some(TransferAck::Next)
+                        }
+                        Err(e) => return Err(e),
+                    };
+                }
+            }
+            progress(next as f32 / transfer.pages.len() as f32);
+        }
+        progress(1.0);
+        self.event(EventLevel::Info, "Own picture stored on the screen");
+        Ok(())
+    }
+
     fn drain(&mut self, role: Role) -> Result<()> {
         while let Some(report) = self.read_until(role, Instant::now())? {
             match self.classify(role, &report) {
@@ -372,6 +622,13 @@ impl DeviceManager {
                 ),
             ),
             ReportClass::Ignored(what) => self.event(EventLevel::Info, format!("Ignored: {what}")),
+            ReportClass::Light { command, .. } => {
+                tracing::debug!("ignored lighting answer 0x{command:02X}")
+            }
+            ReportClass::Unsupported => {
+                tracing::debug!("ignored unsupported-command answer")
+            }
+            ReportClass::Transfer(ack) => tracing::debug!("ignored transfer answer {ack:?}"),
             ReportClass::Receipt | ReportClass::Firmware(_) => {}
             ReportClass::Malformed(_) => unreachable!("handled by caller"),
         }
@@ -452,7 +709,16 @@ enum Command {
         Packet,
         oneshot::Sender<(Result<(), String>, DeviceState, Vec<DeviceEvent>)>,
     ),
+    Light(LightOp, oneshot::Sender<Reply<Option<ZoneState>>>),
+    Picture(
+        PictureTransfer,
+        mpsc::UnboundedSender<f32>,
+        oneshot::Sender<Reply<()>>,
+    ),
 }
+
+/// Result of a device-thread operation plus the state and events after it.
+pub type Reply<T> = (Result<T, String>, DeviceState, Vec<DeviceEvent>);
 
 /// Async handle to the device thread.
 #[derive(Clone)]
@@ -499,6 +765,34 @@ impl DeviceHandle {
                                 manager.take_events(),
                             ));
                         }
+                        Command::Light(op, reply) => {
+                            let result = match op {
+                                LightOp::Read(zone) => manager.light_read(zone).map(Some),
+                                LightOp::Apply {
+                                    zone,
+                                    changes,
+                                    save,
+                                } => manager.light_apply(zone, &changes, save).map(|()| None),
+                            }
+                            .map_err(|e| format!("{e:#}"));
+                            let _ = reply.send((
+                                result,
+                                manager.state().clone(),
+                                manager.take_events(),
+                            ));
+                        }
+                        Command::Picture(transfer, progress, reply) => {
+                            let result = manager
+                                .upload_picture(&transfer, &mut |p| {
+                                    let _ = progress.send(p);
+                                })
+                                .map_err(|e| format!("{e:#}"));
+                            let _ = reply.send((
+                                result,
+                                manager.state().clone(),
+                                manager.take_events(),
+                            ));
+                        }
                     }
                 }
             })
@@ -537,6 +831,30 @@ impl DeviceHandle {
     }
 }
 
+impl DeviceHandle {
+    pub async fn light(&self, op: LightOp) -> Result<Reply<Option<ZoneState>>> {
+        let (reply, rx) = oneshot::channel();
+        self.tx
+            .send(Command::Light(op, reply))
+            .await
+            .map_err(|_| gone())?;
+        rx.await.map_err(|_| gone())
+    }
+
+    pub async fn upload_picture(
+        &self,
+        transfer: PictureTransfer,
+        progress: mpsc::UnboundedSender<f32>,
+    ) -> Result<Reply<()>> {
+        let (reply, rx) = oneshot::channel();
+        self.tx
+            .send(Command::Picture(transfer, progress, reply))
+            .await
+            .map_err(|_| gone())?;
+        rx.await.map_err(|_| gone())
+    }
+}
+
 fn gone() -> anyhow::Error {
     anyhow!("device thread stopped (HID backend unavailable?)")
 }
@@ -560,6 +878,10 @@ mod tests {
         UnknownWellFormedFirst,
         SilentVersion,
         WriteFails,
+        /// Lighting commands answered with FF (unsupported).
+        NoLighting,
+        /// The screen asks for the first data page twice.
+        ResendOnce,
     }
 
     struct Shared {
@@ -568,6 +890,18 @@ mod tests {
         behaviour: Behaviour,
         written: Vec<(Role, Vec<u8>)>,
         queues: HashMap<Role, VecDeque<Vec<u8>>>,
+        /// (channel, value id) → data
+        lighting: HashMap<(u8, u8), Vec<u8>>,
+        /// Picture bytes left to receive in the current page / in total.
+        page_left: usize,
+        picture_left: usize,
+        resent: bool,
+    }
+
+    fn picture_ack(code: u8) -> Vec<u8> {
+        let mut r = vec![0u8; 64];
+        r[..7].copy_from_slice(&[0xBA, 5, 0xA5, 0xB0, 0, 2, code]);
+        r
     }
 
     struct MockBackend(Arc<Mutex<Shared>>);
@@ -667,6 +1001,52 @@ mod tests {
                         _ => answers.push(relayed_ack(kind, command, 0xFE)),
                     }
                 }
+                (Role::Keyboard, 0x07..=0x09) if s.behaviour == Behaviour::NoLighting => {
+                    let mut a = report.to_vec();
+                    a[0] = 0xFF;
+                    answers.push(a);
+                }
+                (Role::Keyboard, 0x07) => {
+                    let len = if report[2] == 4 { 2 } else { 1 };
+                    s.lighting
+                        .insert((report[1], report[2]), report[3..3 + len].to_vec());
+                    answers.push(report.to_vec());
+                }
+                (Role::Keyboard, 0x08) => {
+                    let mut a = report.to_vec();
+                    let data = s
+                        .lighting
+                        .get(&(report[1], report[2]))
+                        .cloned()
+                        .unwrap_or(vec![7, 7]);
+                    a[3..3 + data.len()].copy_from_slice(&data);
+                    answers.push(a);
+                }
+                (Role::Keyboard, 0x09) => answers.push(report.to_vec()),
+                (Role::Screen, 0xBA) if report[1] == 6 && report[2] == 0xAA => {
+                    s.picture_left =
+                        u32::from_be_bytes([report[4], report[5], report[6], report[7]]) as usize;
+                    s.page_left = s.picture_left.min(4096);
+                    answers.push(picture_ack(0xFE));
+                }
+                (Role::Screen, 0xBA) => {
+                    let n = report[1] as usize;
+                    s.page_left -= n;
+                    s.picture_left -= n;
+                    if s.page_left == 0 && s.picture_left == 0 {
+                        // the real screen does not answer the last page
+                    } else if s.page_left == 0 {
+                        if s.behaviour == Behaviour::ResendOnce && !s.resent {
+                            s.resent = true;
+                            s.picture_left += 4096.min(s.picture_left + 4096);
+                            s.page_left = 4096;
+                            answers.push(picture_ack(0xFD));
+                        } else {
+                            s.page_left = s.picture_left.min(4096);
+                            answers.push(picture_ack(0xFE));
+                        }
+                    }
+                }
                 _ => {}
             }
             let role = self.1;
@@ -691,6 +1071,10 @@ mod tests {
             behaviour,
             written: Vec::new(),
             queues: HashMap::new(),
+            lighting: HashMap::new(),
+            page_left: 0,
+            picture_left: 0,
+            resent: false,
         }));
         let m = DeviceManager::new(Box::new(MockBackend(shared.clone())), vec![Box::new(Nd104)]);
         (m, shared)
@@ -700,6 +1084,102 @@ mod tests {
         Nd104
             .encode_time(&"2026-10-31T12:00:00".parse().unwrap())
             .unwrap()
+    }
+
+    #[test]
+    fn lighting_is_set_saved_and_read_back() {
+        use crate::lighting::{LightChange, LightZone};
+        let (mut m, shared) = manager(Behaviour::Normal, "3.0.14");
+        m.poll();
+        m.light_apply(
+            LightZone::Bottom,
+            &[
+                LightChange::Effect { value: 1 },
+                LightChange::Brightness { value: 200 },
+                LightChange::Color { hue: 85, sat: 255 },
+            ],
+            true,
+        )
+        .unwrap();
+        let state = m.light_read(LightZone::Bottom).unwrap();
+        assert_eq!(state.effect, Some(1));
+        assert_eq!(state.brightness, Some(200));
+        assert_eq!((state.hue, state.sat), (Some(85), Some(255)));
+        let written: Vec<Vec<u8>> = shared
+            .lock()
+            .unwrap()
+            .written
+            .iter()
+            .filter(|(r, b)| *r == Role::Keyboard && (7..=9).contains(&b[0]))
+            .map(|(_, b)| b[..5].to_vec())
+            .collect();
+        assert_eq!(written[0], [7, 2, 2, 1, 0]);
+        assert_eq!(written[2], [7, 2, 4, 85, 255]);
+        assert_eq!(written[3], [9, 2, 0, 0, 0]);
+        assert!(matches!(m.state(), DeviceState::Ready(_)));
+    }
+
+    #[test]
+    fn unsupported_lighting_does_not_lock() {
+        use crate::lighting::{LightChange, LightZone};
+        let (mut m, _) = manager(Behaviour::NoLighting, "3.0.14");
+        m.poll();
+        let state = m.light_read(LightZone::PerKey).unwrap();
+        assert_eq!(state, crate::lighting::ZoneState::default());
+        assert!(m
+            .light_apply(
+                LightZone::PerKey,
+                &[LightChange::Brightness { value: 1 }],
+                false
+            )
+            .is_err());
+        assert!(matches!(m.state(), DeviceState::Ready(_)));
+    }
+
+    fn picture(len: usize) -> crate::model::PictureTransfer {
+        let frame = crate::model::EncodedFrame {
+            jpeg: vec![0x5A; len],
+            delay: 1,
+        };
+        Nd104.picture_transfer(&[frame]).unwrap()
+    }
+
+    #[test]
+    fn picture_is_sent_page_by_page() {
+        let (mut m, shared) = manager(Behaviour::Normal, "3.0.14");
+        m.poll();
+        let transfer = picture(9000);
+        let mut seen = Vec::new();
+        m.upload_picture(&transfer, &mut |p| seen.push(p)).unwrap();
+        assert_eq!(transfer.pages.len(), 3);
+        assert_eq!(seen.last(), Some(&1.0));
+        let s = shared.lock().unwrap();
+        assert_eq!(s.picture_left, 0);
+        let data = s
+            .written
+            .iter()
+            .filter(|(r, b)| *r == Role::Screen && b[0] == 0xBA)
+            .count();
+        assert_eq!(data, 1 + transfer.pages.iter().map(Vec::len).sum::<usize>());
+    }
+
+    #[test]
+    fn picture_page_is_resent_on_request() {
+        let (mut m, shared) = manager(Behaviour::ResendOnce, "3.0.14");
+        m.poll();
+        let transfer = picture(9000);
+        m.upload_picture(&transfer, &mut |_| {}).unwrap();
+        let s = shared.lock().unwrap();
+        assert!(s.resent);
+        let data = s
+            .written
+            .iter()
+            .filter(|(r, b)| *r == Role::Screen && b[0] == 0xBA)
+            .count();
+        assert_eq!(
+            data,
+            1 + transfer.pages.iter().map(Vec::len).sum::<usize>() + transfer.pages[0].len()
+        );
     }
 
     #[test]

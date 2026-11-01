@@ -12,6 +12,40 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] – 2026-11-01
+
+Lighting control and your own picture or GIF on the screen. Time and weather
+sync, protocol checks and configuration are unchanged. Update from 1.1.0 or
+1.2.0 with **Settings → General → Install update**.
+
+### Added
+- **Lighting** page for the background lighting (keys and the light bar
+  below Ins/Home/PgUp) and the bottom lighting: on/off, **effect** (all
+  effects of the keyboard firmware, names as in Chilkey's web driver, in
+  English and German), brightness, speed and colour. Speed is only active for
+  animated effects, colour only for effects that use it (one click switches
+  to solid colour). Every change is stored in the keyboard right away, like
+  in the web driver; switching on restores the last effect.
+- **Screen picture** page: send your own picture or animated GIF to the
+  screen. The file is checked first (PNG/JPEG/GIF/BMP, up to 2 MB, GIF up to
+  59 frames, size after conversion), scaled to 320 × 172 (fill the screen or
+  show the whole picture) and previewed – GIFs play in the preview with the
+  frame times the screen will use; sending shows a progress bar.
+
+### Fixed
+- Display preview: the weather icon was cut off (partly cloudy showed only
+  half a sun) and white clouds were invisible on the light screen; clouds are
+  now light blue like on the keyboard.
+- Display preview in the settings window and the setup: corner radius like
+  the real screen.
+
+### Changed
+- The firmware guard knows the keyboard's lighting answers and the screen's
+  picture-transfer answers. An unsupported or unanswered lighting/picture
+  command is reported on its page without locking time and weather.
+- docs: picture transfer (protocol § 4.5), lighting and keyboard settings
+  (§ 5), and why the 12 h/°F variant cannot be read over USB (firmware notes).
+
 ## [1.2.0] – 2026-11-01
 
 The display preview now looks like the keyboard's real weather page.
@@ -372,7 +406,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.2.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.3.0...HEAD
+[1.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.2.0...nd104-sync-v1.3.0
 [1.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.1.0...nd104-sync-v1.2.0
 [1.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.1...nd104-sync-v1.1.0
 [1.0.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.0...nd104-sync-v1.0.1
