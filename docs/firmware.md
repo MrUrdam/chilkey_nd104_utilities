@@ -90,13 +90,13 @@ What the firmware files show (both screen MCU images compared, read only):
 - So the only way to tell the variant over USB is the version answer
   (version + build date), matched against the files in the two Drive folders.
 
-## Consequences for nd104-sync
+## Consequences for ND104 Studio
 
 - The firmware update check cannot rely on the version text on the support page.
   It compares the **build date** reported by the device with the date in the
   newest Drive file name, for the matching screen variant.
-- Implemented in nd104-sync (see its
-  [firmware update check](../apps/nd104-sync/README.md#firmware-update-check)):
+- Implemented in ND104 Studio (see its
+  [firmware update check](../apps/nd104-studio/README.md#firmware-update-check)):
   1. The **firmware watch** action ([`firmware-watch.yml`](../.github/workflows/firmware-watch.yml),
      [`firmware/watch.py`](../firmware/watch.py)) checks the Drive folders and
      support pages every day and **opens an issue** when files, subfolders or

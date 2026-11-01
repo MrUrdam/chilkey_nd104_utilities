@@ -5,7 +5,7 @@ are stored here** – they stay with Chilkey (see [docs/firmware.md](../docs/fir
 
 | File | Purpose |
 |---|---|
-| [`versions.json`](versions.json) | Reviewed version list: newest firmware per model and part (build date, file name, download folder, instructions) plus the sources the watcher checks. nd104-sync checks Chilkey's official folders first and uses this list only as a **fallback**. |
+| [`versions.json`](versions.json) | Reviewed version list: newest firmware per model and part (build date, file name, download folder, instructions) plus the sources the watcher checks. ND104 Studio checks Chilkey's official folders first and uses this list only as a **fallback**. |
 | [`watch.py`](watch.py) | Firmware watcher: compares Chilkey's Google Drive folders and support pages with `versions.json`. Run by [`firmware-watch.yml`](../.github/workflows/firmware-watch.yml) every day; on changes it opens an issue. |
 
 ## When the watcher reports a change
@@ -25,7 +25,7 @@ are stored here** – they stay with Chilkey (see [docs/firmware.md](../docs/fir
 5. After installing and testing the new firmware on a real keyboard (M0
    checklist in [docs/protocol.md § 6](../docs/protocol.md)), add the version to
    the verified list in `crates/nd104-core/src/model/nd104.rs` and release a new
-   nd104-sync version.
+   ND104 Studio version.
 
 ## Format (schema 1)
 

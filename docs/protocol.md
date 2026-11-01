@@ -108,7 +108,7 @@ info dialog. These are the queries behind it.
 | 8… | ASCII | `V3.0.14 20260710_123331` → version + build date/time |
 
 The web driver shows only bytes 8–14 (7 characters), i.e. `V3.0.14`.
-nd104-sync reads the full text using the length byte and checks the CRC.
+ND104 Studio reads the full text using the length byte and checks the CRC.
 
 Right after that, the web driver sends `01 00 …` (32 bytes). The answer has
 byte 0 = `0x01`, and byte 2 holds a layout/protocol version that selects the
@@ -168,9 +168,9 @@ Whichever answer arrives last decides what the dialog shows, so you get an empty
 field, a bare number, or the right string. That fits the broken display you
 observed. The firmware itself probably answers correctly.
 
-**Consequence for nd104-sync:** use only the ASCII answer of the `0x11` query
+**Consequence for ND104 Studio:** use only the ASCII answer of the `0x11` query
 (§ 3.1 / § 3.2) and ignore the numeric byte. If a version string is not
-received within a timeout, the protocol check fails and the tool locks (firmware guard, see the [nd104-sync README](../apps/nd104-sync/README.md#firmware-safety)).
+received within a timeout, the protocol check fails and the tool locks (firmware guard, see the [ND104 Studio README](../apps/nd104-studio/README.md#firmware-safety)).
 
 ---
 
@@ -199,7 +199,7 @@ Order of calculation: fill in the bytes → 8-bit checksum → CRC-16 last.
 ✅ **Target device, verified on hardware:** time and weather packets work through
 **both** routes, the **keyboard** (`6D67:016C`, 32-byte report, like the web
 driver) and the **screen** (`5542:0001`, the same 32 bytes zero-padded to 64,
-like the gist). The keyboard passes the packet on to the screen. nd104-sync uses
+like the gist). The keyboard passes the packet on to the screen. ND104 Studio uses
 the keyboard route, as the web driver does.
 
 ### 4.1.1 Answers (acknowledgement) ✅
@@ -227,7 +227,7 @@ Recorded examples (keyboard route):
 - time: `1C 03 00 00 00 07 90 7E A5 38 00 02 FE 00 C7`
 - weather: `1C 02 00 00 00 07 8F F0 A5 FE 00 02 FE 00 01`
 
-nd104-sync's protocol check P5 expects exactly this pattern after every write.
+ND104 Studio's protocol check P5 expects exactly this pattern after every write.
 Missing answers, another status or a different structure lock the tool.
 
 **Unsolicited answers:** besides the acknowledgements for our packets, the
@@ -240,9 +240,9 @@ keyboard sometimes sends well-formed OK answers for commands we never sent:
 | `0x3A` (frame kind 03) | `1C 03 00 00 00 07 C5 44 A5 3A 00 02 FE 00 C5` |
 
 The first one arrived That is command `0x35`,
-status OK, which nd104-sync never sends. It is not caused by page changes or by
+status OK, which ND104 Studio never sends. It is not caused by page changes or by
 the time packet itself, and the web driver has no handling for it either. Its
-origin is still open, see § 6. **nd104-sync logs and ignores it** (decision
+origin is still open, see § 6. **ND104 Studio logs and ignores it** (decision
 2026-10-31).
 
 ### 4.2 Weather (command `0xFE`, len 8)
@@ -290,8 +290,8 @@ shown correctly, including the decimal.
 
 Notes:
 - **Icon 9 is a real thunderstorm icon.** The web driver and the community
-  notes map thunderstorms to rain, but nd104-sync will use 9.
-- Icons 1 and 3 are not used by the web driver. nd104-sync uses 1 for overcast
+  notes map thunderstorms to rain, but ND104 Studio will use 9.
+- Icons 1 and 3 are not used by the web driver. ND104 Studio uses 1 for overcast
   and 3 for cloudy, and 8 only for fog/mist.
 - Providers that only report "cloudy or overcast" (Open-Meteo WMO code 3,
   Bright Sky icon `cloudy`) are split by their cloud cover: below 88 % (7/8)
@@ -302,7 +302,7 @@ Notes:
 
 > 🐞 In the analysed bundle, the web driver works out the icon index but then
 > sends a **constant `0x02`** at offset 13. The icon is never actually used.
-> nd104-sync will send the real index at offset 13, as the gist describes.
+> ND104 Studio will send the real index at offset 13, as the gist describes.
 
 ### 4.3 Time (command `0x38`)
 
@@ -342,7 +342,7 @@ Local time of the PC is sent, so there is no time-zone information in the packet
 
 ---
 
-### 4.5 Own picture / GIF (raw reports to the screen) – used by nd104-sync
+### 4.5 Own picture / GIF (raw reports to the screen) – used by ND104 Studio
 
 From the web driver (`ScreenView`, function `R`) and the screen's input
 handler. Sent straight to the **screen interface** (`5542:0001`, 64-byte
@@ -374,7 +374,7 @@ The keyboard firmware is QMK based (strings `rgb_matrix_config`,
 (`6D67:016C`, 32-byte reports, no `1C` frame). Every command is answered with
 an echo of the request; `FF` as the first byte means "not supported".
 
-### 5.1 Lighting – used by nd104-sync (on/off, brightness, colour)
+### 5.1 Lighting – used by ND104 Studio (on/off, brightness, colour)
 
 | Bytes | Meaning |
 |---|---|
@@ -398,7 +398,7 @@ The effects are **built into the firmware**; the driver only sends their index
 and shows names for them. The driver reads zone `03` on connect but never zone
 `02` (it remembers that one in the browser).
 
-### 5.2 Keyboard settings (channel `00`) – not used by nd104-sync
+### 5.2 Keyboard settings (channel `00`) – debounce and sleep used by ND104 Studio
 
 Write `07 00 04 id value`, then store with `09 00`; read `08 00 04 id`, the
 answer carries the value in byte 4.
@@ -413,11 +413,24 @@ answer carries the value in byte 4.
 | `06` / `07` | sleep / deep-sleep time | minutes (the driver writes sleep time with id `0B`) |
 
 The driver reads only ids `00`–`02` on connect; keyboard colour and online RGB
-come from the browser's storage (defaults 0 and 1), not from the keyboard. No
+come from the browser's storage (defaults 0 and 1), not from the keyboard.
+
+What the driver shows and sends (ND104 Studio does the same, on the Device &
+Firmware page):
+
+| Setting | Written as | Read as | Values offered |
+|---|---|---|---|
+| Debounce mode | id `02` | id `02` | 0, 1, 2 |
+| Debounce time | id `01` (0 while the mode is 0) | id `01` | 1–20, 25–50 (step 5), 60–100 (step 10), 200 ms |
+| Sleep time | id **`0B`** | id `06` | 1–20, 25–50 (step 5), 60 min |
+| Deep-sleep time | id `07` | id `07` | same as sleep |
+
+Each write is followed by `09 00` (store). The polling-rate row exists in the
+driver but is hidden; keyboard colour and online RGB are not used. No
 text in the keyboard firmware names these two settings, so their effect is not
 documented yet.
 
-### 5.3 Keymap – used by nd104-sync for backup and restore
+### 5.3 Keymap – used by ND104 Studio (keymap page, backup and restore)
 
 VIA "dynamic keymap" commands, answered with an echo of the request (reads
 carry the data in the echo):
@@ -436,12 +449,12 @@ carry the data in the echo):
 - The knob is read and set for **layers 0–3**, left and right.
 - Macros: `0D` buffer size, `10` clear all, `0F off_hi off_lo len data…`
   write (the driver ends with one byte at offset `0x0A3F`, probably the
-  playback mode). The driver never reads macros back, so nd104-sync does not
+  playback mode). The driver never reads macros back, so ND104 Studio does not
   back them up.
 
 **Other programs:** Windows hands every input report to all programs that
 have the interface open. While Chilkey's web driver or VIA is connected,
-nd104-sync receives their answers too (e.g. the keymap read `12 …` the web
+ND104 Studio receives their answers too (e.g. the keymap read `12 …` the web
 driver sends on connect). The guard treats answers in the VIA range
 `0x01`–`0x16` (and the screen's `58 …`) as well-formed foreign traffic:
 logged, ignored, no lock.
@@ -472,13 +485,13 @@ logged, ignored, no lock.
 - [x] Icon 1 = two clouds (overcast), icon 3 = single cloud (cloudy). *(2026-10-31)*
 - [ ] Origin of the unsolicited `A5 35 … FE 00` answer (§ 4.1.1).
       Not seen again: 25 s while switching pages, 3 time syncs, 5 min idle
-      listening (11:39–11:44). Logged and ignored by nd104-sync.
+      listening (11:39–11:44). Logged and ignored by ND104 Studio.
 - [ ] *Not tested on purpose:* does the firmware check the CRC? Sending broken
-      packets is an avoidable risk, and nd104-sync always sends a valid CRC.
+      packets is an avoidable risk, and ND104 Studio always sends a valid CRC.
 - [x] Command `0x39` identified from the web driver: display menu navigation
-      (§ 4.4). Not sent by nd104-sync.
+      (§ 4.4). Not sent by ND104 Studio.
 - [x] Theme command `0xFD` rejected by screen V1.2.4 (status `FC`). *(2026-10-31)*
-- [ ] *Not tested on purpose:* command `0x39` (menu navigation). nd104-sync
+- [ ] *Not tested on purpose:* command `0x39` (menu navigation). ND104 Studio
       sends no unknown commands.
 
 **Result:** M0 passed for keyboard **V3.0.14** and screen **V1.2.4**

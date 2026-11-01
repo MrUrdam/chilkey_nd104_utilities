@@ -1,0 +1,17 @@
+[package]
+name = "nd104-cli"
+description = "Headless console runner for the ND104 Studio core (wired USB only)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+nd104-core.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+jiff.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

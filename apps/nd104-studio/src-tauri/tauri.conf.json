@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ND104 Studio",
+  "mainBinaryName": "nd104-studio",
+  "identifier": "io.github.mrurdam.nd104-studio",
+  "build": {
+    "frontendDist": "../ui/dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "msi"
+    ],
+    "publisher": "MrUrdam",
+    "homepage": "https://github.com/MrUrdam/chilkey_nd104_utilities",
+    "category": "Utility",
+    "copyright": "MIT License",
+    "license": "MIT",
+    "shortDescription": "Display, lighting and keymap for the Chilkey ND104 keyboard",
+    "longDescription": "Tray app for the Chilkey ND104 keyboard: keeps the display supplied with time and weather, shows your own pictures, sets the lighting and remaps keys, knob and round button. Wired USB connection only. Unofficial, not affiliated with Chilkey.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      }
+    }
+  }
+}

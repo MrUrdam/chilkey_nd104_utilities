@@ -5,7 +5,7 @@
 > the [community notes](https://gist.github.com/borrougagnou/a21613093f323a05167a92212ab1ff7b)
 > and our own hardware tests ([protocol.md](protocol.md)). **Wired USB only.**
 
-Legend: ✅ in nd104-sync · 🧪 verified on hardware, not in the app yet ·
+Legend: ✅ in ND104 Studio · 🧪 verified on hardware, not in the app yet ·
 📄 documented (web driver), not verified · ❌ not available / not planned
 
 ## Display (screen controller `5542:0001`, via keyboard relay or directly)
@@ -21,7 +21,7 @@ Legend: ✅ in nd104-sync · 🧪 verified on hardware, not in the app yet ·
 | Enter "test/upload mode" | `A5 34 00 01` | 📄 | sent by the web driver before image upload |
 | **Upload image / GIF** (320×172, ≤60 frames, ≤2 MB) | header `55 42 01 …` (size, frame count, delays) + chunks `BA 06 AA B0 …` | 📄 | largest open block; chunk acknowledgements `BA ?? A5 B0/FC`; needs careful hardware tests |
 | Reset display | `52 00 01` (community notes) | 📄 | not needed |
-| Firmware update (DFU) | `5542:1000` + `dfu-util` | ❌ | nd104-sync never flashes firmware |
+| Firmware update (DFU) | `5542:1000` + `dfu-util` | ❌ | ND104 Studio never flashes firmware |
 
 ## Keyboard (`6D67:016C`, vendor interface `FF60:0061`)
 
@@ -43,7 +43,7 @@ Legend: ✅ in nd104-sync · 🧪 verified on hardware, not in the app yet ·
 | Function | Status | Notes |
 |---|---|---|
 | Battery level over the wired USB interfaces | ❌ **not available** | The web driver has no battery query; no command or report for it was found on either USB interface. When the keyboard is plugged in by cable, it is charging anyway. |
-| Battery level over **Bluetooth** (standard BLE Battery Service) | possible, out of scope | Windows shows it under *Settings → Bluetooth & devices* while the keyboard is connected via Bluetooth. Reading it in nd104-sync would need the Windows BLE API and contradicts the *wired USB only* rule (R1) – would need a decision. |
+| Battery level over **Bluetooth** (standard BLE Battery Service) | possible, out of scope | Windows shows it under *Settings → Bluetooth & devices* while the keyboard is connected via Bluetooth. Reading it in ND104 Studio would need the Windows BLE API and contradicts the *wired USB only* rule (R1) – would need a decision. |
 | Battery over the 2.4 GHz dongle | unknown | the dongle was not analysed (wireless is out of scope) |
 
 ## Candidates for future milestones

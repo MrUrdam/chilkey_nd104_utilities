@@ -17,7 +17,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-USER_AGENT = "Mozilla/5.0 (nd104-sync firmware watch; +https://github.com/MrUrdam/chilkey_nd104_utilities)"
+USER_AGENT = "Mozilla/5.0 (nd104-studio firmware watch; +https://github.com/MrUrdam/chilkey_nd104_utilities)"
 DRIVE_FOLDER = "https://drive.google.com/drive/folders/{id}"
 
 # File names appear JSON-escaped in the folder page: \x22NAME.bin\x22
@@ -124,7 +124,7 @@ def main() -> int:
     if changes:
         lines += ["Chilkey's firmware sources changed. Please review and update "
                   "`firmware/versions.json` (latest build date, file names, `watch` lists) "
-                  "and – after testing – the verified firmware of nd104-sync.", "", *changes, ""]
+                  "and – after testing – the verified firmware of ND104 Studio.", "", *changes, ""]
     else:
         lines += ["No changes against `firmware/versions.json`.", ""]
     if errors:

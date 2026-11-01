@@ -1,14 +1,15 @@
 # Chilkey ND104 Utilities
 
-[![nd104-sync CI](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-sync-ci.yml/badge.svg)](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-sync-ci.yml)
+[![ND104 Studio CI](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-studio-ci.yml/badge.svg)](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-studio-ci.yml)
 [![Firmware watch](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/firmware-watch.yml/badge.svg)](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/firmware-watch.yml)
 [![License: MIT](https://img.shields.io/github/license/MrUrdam/chilkey_nd104_utilities)](LICENSE)
 ![Unofficial](https://img.shields.io/badge/Chilkey-unofficial%20%C2%B7%20not%20affiliated-lightgrey)
 ![USB cable only](https://img.shields.io/badge/connection-USB%20cable%20only-orange)
 
 Tools for the **Chilkey ND104** keyboard and its built-in 1.47" display, without
-the vendor software: always show the current time and weather for your own
-location, keep the clock in sync and know when new firmware is out.
+the vendor software: show the current time and weather or your own picture on
+the display, set the lighting, remap keys, knob and round button, and know
+when new firmware is out.
 
 > ⚠️ **Unofficial hobby project. Use at your own risk.** No warranty, no
 > guaranteed support, not affiliated with Chilkey. Only tested with the
@@ -26,35 +27,37 @@ location, keep the clock in sync and know when new firmware is out.
 <table>
   <tr>
     <td width="380" valign="top">
-      <a href="apps/nd104-sync/README.md">
-        <img src="docs/images/nd104-sync/dashboard.png" width="360" alt="nd104-sync settings window, dashboard page">
+      <a href="apps/nd104-studio/README.md">
+        <img src="docs/images/nd104-studio/dashboard.png" width="360" alt="ND104 Studio settings window, dashboard page">
       </a>
     </td>
     <td valign="top">
-      <h3><a href="apps/nd104-sync/README.md">nd104-sync</a></h3>
+      <h3><a href="apps/nd104-studio/README.md">ND104 Studio</a></h3>
       <p>
-        Small tray app that keeps the keyboard display up to date with the
-        <b>current time and weather</b>, controls the <b>lighting</b> and
-        shows <b>your own picture or GIF</b> on the screen. Set it up once,
-        then forget it.
+        Everything for the ND104 in one small tray app: keeps the display up
+        to date with the <b>current time and weather</b>, shows <b>your own
+        picture or GIF</b>, controls the <b>lighting</b> and <b>remaps keys,
+        knob and round button</b>. Set it up once, then forget it.
+        <i>Formerly nd104-sync.</i>
       </p>
       <ul>
         <li>Time sync with time zones, NTP and summer/winter time</li>
         <li>Weather from 5 providers, 2 of them without API key</li>
         <li>Lighting: on/off, effects, brightness, speed, colour</li>
         <li>Own picture or animated GIF on the screen, checked and scaled first</li>
+        <li>Keymap: keys, knob and round button on all layers, ISO/ANSI, labels, profiles, backups</li>
         <li>Firmware safety lock and firmware update notification</li>
         <li>Own setup with one-click updates from the app</li>
         <li>Settings window with live display preview, English/German, two styles in dark/light</li>
       </ul>
       <p>
-        <img src="https://img.shields.io/github/v/release/MrUrdam/chilkey_nd104_utilities?filter=nd104-sync-v*&label=version&color=0969da" alt="version">
+        <img src="https://img.shields.io/github/v/release/MrUrdam/chilkey_nd104_utilities?filter=nd104-studio-v*&label=version&color=0969da" alt="version">
         <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11">
       </p>
       <p>
-        📖 <a href="apps/nd104-sync/README.md">Documentation</a> ·
+        📖 <a href="apps/nd104-studio/README.md">Documentation</a> ·
         ⬇️ <a href="https://github.com/MrUrdam/chilkey_nd104_utilities/releases">Download</a> ·
-        📝 <a href="apps/nd104-sync/CHANGELOG.md">Changelog</a>
+        📝 <a href="apps/nd104-studio/CHANGELOG.md">Changelog</a>
       </p>
     </td>
   </tr>
@@ -99,7 +102,7 @@ the file names in Chilkey's Google Drive folders. Details and links:
 [docs/firmware.md](docs/firmware.md).
 
 The installed versions are read with `nd104-probe version`
-([apps/nd104-sync/crates/nd104-probe](apps/nd104-sync/crates/nd104-probe/README.md)).
+([apps/nd104-studio/crates/nd104-probe](apps/nd104-studio/crates/nd104-probe/README.md)).
 They are also shown in the [web driver](https://nd104.chilkey.com/) info dialog,
 but the screen version is often wrong there, see
 [docs/protocol.md § 3.3](docs/protocol.md#33-why-the-screen-version-looks-broken-on-the-web-driver).
@@ -108,7 +111,7 @@ but the screen version is often wrong there, see
 
 | Folder | Content |
 |---|---|
-| `apps/` | Standalone programs (e.g. `nd104-sync`) |
+| `apps/` | Standalone programs (e.g. `nd104-studio`) |
 | `scripts/` | Small scripts and experiments for the display and keyboard |
 | `docs/` | Protocol, firmware and hardware documentation, screenshots |
 | `firmware/` | Firmware version list (`versions.json`) and the firmware watcher, no vendor binaries ([details](firmware/README.md)) |
@@ -120,9 +123,9 @@ but the screen version is often wrong there, see
 |---|---|
 | [docs/protocol.md](docs/protocol.md) | USB HID protocol: devices, checksums, version queries, time and weather packets |
 | [docs/firmware.md](docs/firmware.md) | Where the latest firmware really comes from, screen variants (°C / °F) |
-| [docs/keyboard-api.md](docs/keyboard-api.md) | What the ND104 can do over USB, and what nd104-sync uses |
-| [nd104-probe](apps/nd104-sync/crates/nd104-probe/README.md) | Diagnostic CLI: read firmware versions, test time/weather packets |
-| [apps/nd104-sync/README.md](apps/nd104-sync/README.md) | nd104-sync features, installation, usage, building |
+| [docs/keyboard-api.md](docs/keyboard-api.md) | What the ND104 can do over USB, and what ND104 Studio uses |
+| [nd104-probe](apps/nd104-studio/crates/nd104-probe/README.md) | Diagnostic CLI: read firmware versions, test time/weather packets |
+| [apps/nd104-studio/README.md](apps/nd104-studio/README.md) | ND104 Studio features, installation, usage, building |
 
 ## Disclaimer
 
@@ -145,9 +148,9 @@ hardware, loss of data or any other harm caused by using it.
 - the Chilkey ND104,
 - connected with a **USB cable** (no 2.4 GHz dongle, no Bluetooth),
 - the firmware versions marked ✅ in [Firmware](#firmware),
-- the platforms named in each tool's README (nd104-sync: Windows 10/11).
+- the platforms named in each tool's README (ND104 Studio: Windows 10/11).
 
-Everything else may work, but is untested. nd104-sync has a safety lock that
+Everything else may work, but is untested. ND104 Studio has a safety lock that
 stops sending as soon as the keyboard behaves differently from what was tested,
 but that is a precaution, not a promise.
 

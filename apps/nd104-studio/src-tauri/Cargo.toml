@@ -1,0 +1,32 @@
+[package]
+name = "nd104-studio"
+description = "ND104 Studio: display, lighting and keymap for the Chilkey ND104 (tray app, wired USB only)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+nd104-core.workspace = true
+anyhow.workspace = true
+base64 = "0.22"
+jiff.workspace = true
+reqwest.workspace = true
+sha2 = "0.10"
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender = "0.2"
+sys-locale = "0.3"
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-autostart = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"

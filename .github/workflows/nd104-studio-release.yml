@@ -1,0 +1,156 @@
+# Builds and publishes an ND104 Studio release when a tag nd104-studio-vX.Y.Z is pushed.
+# Assets: own setup (.exe, crate installer/), MSI, portable zip and SHA256SUMS.txt.
+# Plus a bridge release nd104-sync-vX.Y.Z for installs of the former name
+# nd104-sync (1.x), whose update check only knows that tag (see the last step).
+# Release notes = the matching "## [X.Y.Z]" section of apps/nd104-studio/CHANGELOG.md.
+# 0.x versions are published as beta (title), but not as GitHub pre-release,
+# so the app update check finds them. Versions with a suffix (X.Y.Z-rc.1) are
+# published as pre-release (without MSI, which needs a plain X.Y.Z version) and
+# are ignored by the update check.
+name: ND104 Studio release
+
+on:
+  push:
+    tags: ["nd104-studio-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/nd104-studio
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/nd104-studio
+
+      - name: Check tag matches Cargo.toml version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#nd104-studio-v}"
+          CARGO_VERSION=$(tr -d '\r' < Cargo.toml | sed -nE 's/^version = "(.*)"/\1/p' | head -n1)
+          if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match Cargo.toml version $CARGO_VERSION"
+            exit 1
+          fi
+          echo "VERSION=$CARGO_VERSION" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/nd104-studio/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: |
+          npm run build
+          npm run build:installer-ui
+
+      - name: Test
+        run: cargo test --workspace --locked
+
+      # the setup is built last: it embeds the finished app (installer/build.rs)
+      - name: Build console tools
+        run: cargo build --workspace --release --locked --exclude nd104-studio-setup
+
+      - name: Build app and MSI
+        run: |
+          case "$VERSION" in
+            *-*) npx tauri build --no-bundle ;;
+            *)   npx tauri build --bundles msi ;;
+          esac
+
+      - name: Build setup
+        run: cargo build --release --locked -p nd104-studio-setup
+
+      - name: Package
+        run: |
+          NAME="nd104-studio-${VERSION}-windows-x64"
+          mkdir -p "dist/$NAME"
+          cp target/release/nd104-studio.exe target/release/nd104-cli.exe target/release/nd104-probe.exe \
+             README.md CHANGELOG.md ../../LICENSE "dist/$NAME/"
+          (cd dist && 7z a -tzip "$NAME.zip" "$NAME" > /dev/null)
+          cp target/release/nd104-studio-setup.exe "dist/nd104-studio_${VERSION}_x64-setup.exe"
+          # the MSI is named after the product name ("ND104 Studio"); no spaces in assets
+          for msi in target/release/bundle/msi/*.msi; do
+            [ -e "$msi" ] && cp "$msi" "dist/nd104-studio_${VERSION}_x64_en-US.msi"
+          done
+          cd dist
+          shopt -s nullglob
+          sha256sum *.zip *.exe *.msi > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          echo "PACKAGE=$NAME" >> "$GITHUB_ENV"
+
+      - name: Release notes from CHANGELOG
+        run: |
+          awk -v header="## [${VERSION}]" '
+            index($0, header) == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found && /^\[[^]]+\]: / { exit }
+            found { print }
+          ' <(tr -d '\r' < CHANGELOG.md) > dist/notes.md
+          if ! grep -q '[^[:space:]]' dist/notes.md; then
+            echo "::error::No section '## [${VERSION}]' in CHANGELOG.md"
+            exit 1
+          fi
+          cat >> dist/notes.md <<EOF
+
+          ---
+          **Downloads** (Windows 10/11, x64, wired USB connection only):
+          - \`nd104-studio_${VERSION}_x64-setup.exe\` – **recommended**: setup for install, update and uninstall, per user, no admin rights
+          - \`nd104-studio_${VERSION}_x64_en-US.msi\` – MSI for managed/per-machine installs (admin rights)
+          - \`${PACKAGE}.zip\` – portable: tray app \`nd104-studio.exe\`, console runner \`nd104-cli.exe\`, diagnostic tool \`nd104-probe.exe\`
+
+          The installers are not code-signed yet; Windows SmartScreen may ask for confirmation
+          ("More info" → "Run anyway"). Verify downloads with \`SHA256SUMS.txt\`.
+          EOF
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="ND104 Studio ${VERSION}"
+          FLAGS=""
+          case "$VERSION" in
+            *-*) FLAGS="--prerelease"; TITLE="$TITLE (pre-release)" ;;
+            0.*) TITLE="$TITLE (beta)" ;;
+          esac
+          shopt -s nullglob
+          gh release create "$GITHUB_REF_NAME" \
+            dist/*.zip dist/*.exe dist/*.msi dist/SHA256SUMS.txt \
+            --title "$TITLE" --notes-file dist/notes.md $FLAGS
+
+      # nd104-sync 1.x looks only for releases tagged nd104-sync-v* and for a
+      # setup named nd104-sync_<version>_x64-setup.exe. This release hands it
+      # the same ND104 Studio setup under that name; run with --update, the
+      # setup moves the installation, settings, keymap backups, API keys,
+      # autostart and shortcuts over and removes nd104-sync.
+      - name: Bridge release for nd104-sync 1.x
+        if: ${{ !contains(env.VERSION, '-') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p bridge
+          cp "dist/nd104-studio_${VERSION}_x64-setup.exe" "bridge/nd104-sync_${VERSION}_x64-setup.exe"
+          (cd bridge && sha256sum *.exe > SHA256SUMS.txt)
+          cat > bridge/notes.md <<EOF
+          **nd104-sync is now ND104 Studio.** This release only exists so that
+          installed nd104-sync 1.x versions find the update: it contains the setup of
+          [ND104 Studio ${VERSION}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}).
+          Updating takes over your settings, keymap profiles and backups, API keys,
+          autostart and shortcuts, and removes nd104-sync.
+          EOF
+          gh release create "nd104-sync-v${VERSION}" \
+            bridge/*.exe bridge/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --latest=false \
+            --title "nd104-sync ${VERSION} → ND104 Studio" --notes-file bridge/notes.md
