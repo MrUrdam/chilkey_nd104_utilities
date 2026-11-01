@@ -1,6 +1,5 @@
 # Chilkey ND104 Utilities
 
-[![Latest nd104-sync release](https://img.shields.io/github/v/release/MrUrdam/chilkey_nd104_utilities?filter=nd104-sync-v*&label=nd104-sync&color=0969da)](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
 [![nd104-sync CI](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-sync-ci.yml/badge.svg)](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-sync-ci.yml)
 [![Firmware watch](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/firmware-watch.yml/badge.svg)](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/firmware-watch.yml)
 [![License: MIT](https://img.shields.io/github/license/MrUrdam/chilkey_nd104_utilities)](LICENSE)
