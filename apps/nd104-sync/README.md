@@ -27,7 +27,7 @@ window: set it up once, then forget it.
   </tr>
   <tr>
     <td align="center"><img src="../../docs/images/nd104-sync/device.png" width="370" alt="Device and Firmware page"><br><sub>Device & Firmware: safety state, update check</sub></td>
-    <td align="center"><img src="../../docs/images/nd104-sync/tray.png" width="370" alt="Tray icon and menu"><br><sub>Tray icon and menu</sub></td>
+    <td align="center"><img src="../../docs/images/nd104-sync/general.png" width="370" alt="General page"><br><sub>General: autostart, language, theme, updates</sub></td>
   </tr>
 </table>
 

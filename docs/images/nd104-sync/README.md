@@ -3,15 +3,26 @@
 Used by the [main README](../../../README.md) and the
 [nd104-sync README](../../../apps/nd104-sync/README.md).
 
-| File | What to show |
-|---|---|
-| `dashboard.png` | Settings window, **Dashboard** page with the live display preview (hero image) |
-| `weather.png` | **Weather** page with a location picked |
-| `clock.png` | **Clock** page |
-| `device.png` | **Device & Firmware** page, ideally in the verified state |
-| `tray.png` | Tray icon with the open tray menu |
+**Generated, do not edit by hand.** The workflow
+[`nd104-sync-screenshots.yml`](../../../.github/workflows/nd104-sync-screenshots.yml)
+renders them from the demo build of the settings window (sample data, no
+keyboard) and commits them whenever the UI changes. It can also be started by
+hand under *Actions*.
 
-Tips:
-- PNG, window only (Win + Shift + S → window snip), same theme for all shots.
-- Use a public city (for example Berlin), not your home location.
-- No API keys or personal paths on screen.
+| File | Page |
+|---|---|
+| `dashboard.png` | Dashboard with the live display preview (hero image) |
+| `weather.png` | Weather, with a test result |
+| `clock.png` | Clock |
+| `device.png` | Device & Firmware, verified state |
+| `general.png` | General |
+
+Locally (Windows recommended for the right font):
+
+```bash
+cd apps/nd104-sync
+npm ci
+npm i --no-save playwright && npx playwright install chromium
+npm run build:demo
+npm run screenshots          # options: -- --lang de --theme light --out <dir>
+```

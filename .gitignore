@@ -19,6 +19,7 @@ apps/*/src-tauri/gen/
 # Node / Frontend
 node_modules/
 apps/*/ui/dist/
+apps/*/ui/dist-demo/
 apps/*/ui/.svelte-kit/
 npm-debug.log*
 

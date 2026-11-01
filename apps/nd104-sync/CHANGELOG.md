@@ -12,6 +12,25 @@ All notable changes to nd104-sync are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.0.1] – 2026-11-01
+
+No changes to the app's behaviour. Documentation and tooling only.
+
+### Changed
+- READMEs reworked: screenshots and badges at the top, a current feature
+  overview instead of the roadmap, and a full
+  [disclaimer](../../README.md#disclaimer): use at your own risk, no
+  warranty, no guaranteed support, not affiliated with Chilkey, tested only
+  with the listed firmware versions.
+- The implemented project plan (`docs/PLAN.md`) was removed.
+
+### Added
+- **Demo mode** for the settings window (`npm run build:demo`): runs in a
+  normal browser with sample data, without app or keyboard. Never part of the
+  app itself.
+- Screenshot script (`npm run screenshots`) and the workflow
+  `nd104-sync-screenshots.yml`, which keep the README screenshots up to date.
+
 ## [1.0.0] – 2026-10-31 · Stable
 
 > **First stable release.** nd104-sync keeps the display of the
@@ -290,7 +309,8 @@ All notable changes to nd104-sync are listed here. The format follows
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.1...HEAD
+[1.0.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.0.0...nd104-sync-v1.0.1
 [1.0.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.5.0...nd104-sync-v1.0.0
 [0.5.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.4.0...nd104-sync-v0.5.0
 [0.4.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v0.3.0...nd104-sync-v0.4.0
