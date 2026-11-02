@@ -13,6 +13,43 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.3.1] – 2026-11-02
+
+**OpenRGB, Artemis and Aurora** can now colour every LED of the ND104 too –
+through a small OpenRGB interface in ND104 Studio, no SignalRGB needed.
+Update with **Settings → General → Install update**.
+
+### Added
+- **OpenRGB interface** (Lighting page, off by default): ND104 Studio runs an
+  OpenRGB SDK server on 127.0.0.1 (port 6743). OpenRGB connects to it as an
+  SDK client, Artemis and Aurora as an OpenRGB server; they see the ND104 as
+  a keyboard with three zones – keys (a matrix with every key in its own
+  cell), light bar and edge glow – and the modes "Direct" and "Keyboard
+  effects". The keyboard is offered only while it is connected by USB cable
+  and its checks passed; when the last program disconnects, its own
+  lighting returns. The card shows whether the interface runs and how many
+  programs are connected.
+
+### Changed
+- The connection matrix and the PC lighting texts name all supported
+  programs: OpenRGB, Artemis, Aurora and SignalRGB.
+- The SignalRGB plugin names the `\` keys correctly (they showed as `\\`).
+
+### Fixed
+- **Keyboard connected only after minutes** (e.g. while OpenRGB was
+  running): the HID library ND104 Studio used scans every HID device of the
+  PC whenever it starts – even in its "without scan" mode – which takes
+  minutes while Windows answers slowly. On Windows, ND104 Studio now talks to
+  the keyboard with Windows' own HID functions and never scans: the keyboard
+  connects within a fraction of a second. If Windows answers slowly for a
+  device, ND104 Studio keeps waiting for that answer instead of giving up for
+  30 seconds.
+- **OpenRGB interface stopped answering:** colours were sent faster than the
+  keyboard accepts them. One writer now sends the newest colours at a pace
+  the keyboard takes (about 20 frames a second); the connections never wait
+  for the keyboard.
+
+
 ## [2.3.0] – 2026-11-02
 
 **SignalRGB** can now colour every LED of the ND104, a new switch decides
@@ -783,7 +820,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.1...HEAD
+[2.3.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.0...nd104-studio-v2.3.1
 [2.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.2.0...nd104-studio-v2.3.0
 [2.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.1.0...nd104-studio-v2.2.0
 [2.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.2...nd104-studio-v2.1.0

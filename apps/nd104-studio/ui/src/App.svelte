@@ -209,7 +209,7 @@
         {:else if page === "clock"}
           <Clock bind:draft {errors} />
         {:else if page === "lighting"}
-          <Lighting {status} />
+          <Lighting {status} bind:draft {errors} />
         {:else if page === "picture"}
           <Picture {status} />
         {:else if page === "keymap"}

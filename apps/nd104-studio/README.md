@@ -140,7 +140,7 @@ the rest of the documentation, the app and the setup point here.
 | Time and weather on the display | ✅ | ✅ | ✅ |
 | Own picture or GIF on the screen | ✅ | ❌ | ❌ |
 | Lighting | ✅ | ✅ | ✅ |
-| Per-key colours from SignalRGB ([PC lighting software](#pc-lighting-software-signalrgb)) | ✅ | ❌ | ❌ |
+| Per-key colours from PC lighting programs – OpenRGB, Artemis, Aurora, SignalRGB ([PC lighting software](#pc-lighting-software-openrgb-signalrgb)) | ✅ | ❌ | ❌ |
 | Keymap (remap, backup, profiles, pressed keys in the drawing) | ✅ | ✅ | ✅ |
 | Keyboard settings (debounce, sleep times) | ✅ | ✅ | ✅ |
 | Keyboard firmware version and firmware update check | ✅ | ✅ | ☑️ ¹ |
@@ -179,37 +179,61 @@ shown as long as the keyboard is also connected via Bluetooth.
 
 The same overview is in the app: **Device → Connection modes**.
 
-## PC lighting software (SignalRGB)
+## PC lighting software (OpenRGB, SignalRGB)
 
 Besides its own effects, the ND104 can let a lighting program on the PC
 colour every LED individually: 130 LEDs – the keys, the light bar under
-Del / End / Page Down and the edge glow.
+Del / End / Page Down and the edge glow. USB cable only (the lighting channel
+is not available over Bluetooth or 2.4 GHz).
 
 | Program | Works with the ND104 |
 |---|---|
+| **OpenRGB** | ✅ through ND104 Studio's OpenRGB interface (as an SDK client) |
+| **Artemis**, **Aurora** and other OpenRGB SDK programs | ✅ through ND104 Studio's OpenRGB interface |
 | **SignalRGB** | ✅ with the plugin from ND104 Studio |
-| OpenRGB | ❌ talks only to the keyboard's VIA channel, not to its lighting channel |
+| OpenRGB on its own (device detection) | ❌ it talks to the keyboard's VIA channel, not its lighting channel |
 | Windows Dynamic Lighting | ❌ the keyboard does not answer Windows' lighting request (firmware V3.0.14) |
 
-Setup:
-1. **Lighting → PC lighting software:** set the switch to *Allowed*
-   (Fn + Shift + L does the same on the keyboard).
-2. **Install plugin** in the same card. It goes to
+First, in either case: **Lighting → PC lighting software** set to *Allowed*
+(Fn + Shift + L does the same on the keyboard).
+
+### OpenRGB, Artemis, Aurora
+
+ND104 Studio runs a small OpenRGB SDK server – only on this PC (127.0.0.1),
+off until you switch it on:
+
+1. **Lighting → OpenRGB interface:** switch on, keep port **6743** (OpenRGB's
+   own server uses 6742), **Save**. The card shows whether it runs and how
+   many programs are connected.
+2. **OpenRGB:** tab *SDK Client* → IP `127.0.0.1`, port `6743` → *Connect*.
+   **Artemis / Aurora:** add `127.0.0.1:6743` as an OpenRGB server.
+3. The ND104 appears as a keyboard with three zones – *Keyboard* (a 24 × 6
+   matrix, every key in its own cell), *Light bar* and *Edge glow* – and two
+   modes: *Direct* (the program's colours) and *Keyboard effects* (the
+   keyboard's own lighting).
+
+The keyboard is offered only while it is connected by USB cable and its
+firmware checks passed; programs are told when that changes. When the last
+program disconnects (or the interface is switched off), the keyboard's own
+lighting returns.
+
+### SignalRGB
+
+1. **Install plugin** in the *PC lighting software* card. It goes to
    `Documents\WhirlwindFX\Plugins\Chilkey_ND104.js`, where SignalRGB keeps
    it across updates.
-3. Restart SignalRGB (or reload its plugins). The ND104 appears under
+2. Restart SignalRGB (or reload its plugins). The ND104 appears under
    *Devices*; place it on the canvas.
 
-Good to know:
-- USB cable only – the lighting channel is not available over Bluetooth or
-  2.4 GHz.
-- The colours are not stored in the keyboard. When SignalRGB closes, the
-  keyboard's own lighting returns; any change on the Lighting page also ends
-  SignalRGB's control.
-- The plugin is also in the repository:
-  [`signalrgb/Chilkey_ND104.js`](signalrgb/Chilkey_ND104.js), generated from
-  the LED table the keyboard reports ([`signalrgb/leds.json`](signalrgb/leds.json),
-  [`make_plugin.py`](signalrgb/make_plugin.py)).
+### Good to know
+
+- The colours are not stored in the keyboard. Any change on the Lighting
+  page also ends a program's control.
+- Both use the same LED table, read from the keyboard:
+  [`signalrgb/layout.json`](signalrgb/layout.json), made by
+  [`make_plugin.py`](signalrgb/make_plugin.py) from
+  [`leds.json`](signalrgb/leds.json); the plugin is
+  [`signalrgb/Chilkey_ND104.js`](signalrgb/Chilkey_ND104.js).
 - Technical details: [protocol.md § 5.4](../../docs/protocol.md#54-other-keyboard-commands-not-used).
 
 ## What it does NOT do

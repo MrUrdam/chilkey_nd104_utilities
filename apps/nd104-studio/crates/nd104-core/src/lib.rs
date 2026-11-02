@@ -29,6 +29,7 @@ pub mod keyboard_settings;
 pub mod keymap;
 pub mod lighting;
 pub mod model;
+pub mod openrgb;
 pub mod picture;
 pub mod rebrand;
 pub mod secrets;

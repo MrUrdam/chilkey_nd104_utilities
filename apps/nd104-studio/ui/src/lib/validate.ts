@@ -29,6 +29,8 @@ export function validate(c: Config, info: AppInfo): Record<string, string> {
 
   if (!Number.isInteger(c.device.poll_interval_s) || c.device.poll_interval_s < 1 || c.device.poll_interval_s > 60)
     e["device.poll"] = "ui.err.poll";
+  if (!Number.isInteger(c.device.openrgb_port) || c.device.openrgb_port < 1024 || c.device.openrgb_port > 65535)
+    e["device.openrgb_port"] = "ui.err.port";
   if (!Number.isInteger(c.updates.check_interval_h) || c.updates.check_interval_h < 1)
     e["updates.interval"] = "ui.err.interval_positive";
   return e;

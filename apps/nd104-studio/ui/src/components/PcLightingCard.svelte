@@ -1,11 +1,18 @@
 <script lang="ts">
   // Whether PC lighting software (OpenRGB, SignalRGB) may take over the
-  // keyboard's LEDs. Read from the keyboard; a change is stored right away.
-  import { api, type SignalRgbStatus, type Status } from "../lib/api";
+  // keyboard's LEDs – read from the keyboard, a change is stored right away.
+  // It is the gate for everything below: the OpenRGB server and the SignalRGB
+  // plugin only work (and are only shown) while it is allowed.
+  import { api, type Config, type SignalRgbStatus, type Status } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
   import Icon from "./Icon.svelte";
+  import OpenRgbCard from "./OpenRgbCard.svelte";
 
-  let { status }: { status: Status } = $props();
+  let {
+    status,
+    draft = $bindable(),
+    errors,
+  }: { status: Status; draft: Config; errors: Record<string, string> } = $props();
 
   let ready = $derived(status.device.kind === "ready");
   /** 1: PC software may take over, 0: blocked, null: not read / not reported. */
@@ -90,6 +97,14 @@
   {/if}
   {#if error}<div class="notice err selectable"><Icon name="alert" />{error}</div>{/if}
 
+  {#if allowed === 0}
+    <p class="muted small">{t("ui.pcl.blocked_hint")}</p>
+    {#if draft.device.openrgb_server}<p class="muted small">{t("ui.pcl.server_waits")}</p>{/if}
+  {/if}
+
+  {#if allowed === 1}
+  <OpenRgbCard bind:draft {errors} />
+
   <div class="plugin stack">
     <div class="head">
       <div>
@@ -123,6 +138,7 @@
     {#if plugin}<p class="faint small selectable">{plugin.folder}</p>{/if}
     {#if pluginError}<div class="notice err selectable"><Icon name="alert" />{pluginError}</div>{/if}
   </div>
+  {/if}
 </div>
 
 <style>

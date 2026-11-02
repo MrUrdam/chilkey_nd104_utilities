@@ -64,6 +64,10 @@ pub struct DeviceSettings {
     /// `auto` = detect by USB IDs.
     pub model: String,
     pub poll_interval_s: u32,
+    /// Offer the keyboard to OpenRGB SDK clients (OpenRGB, Artemis, Aurora)
+    /// on 127.0.0.1 – off by default.
+    pub openrgb_server: bool,
+    pub openrgb_port: u16,
 }
 
 impl Default for DeviceSettings {
@@ -71,6 +75,8 @@ impl Default for DeviceSettings {
         Self {
             model: "auto".into(),
             poll_interval_s: 3,
+            openrgb_server: false,
+            openrgb_port: crate::openrgb::DEFAULT_PORT,
         }
     }
 }

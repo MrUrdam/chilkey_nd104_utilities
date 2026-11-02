@@ -558,7 +558,10 @@ send that, so it would need its own controller or plugin.
 
 LEDs 0–114 are the keys (wide keys have two), 115–119 the light bar under
 Del / End / Page Down, 120–129 the edge glow. ND104 Studio ships a SignalRGB
-plugin built from this (`apps/nd104-studio/signalrgb/`).
+plugin built from this (`apps/nd104-studio/signalrgb/`) and, since 2.3.1, an
+OpenRGB SDK server (`nd104_core::openrgb`, `src-tauri/src/openrgb.rs`) that
+offers the keyboard to OpenRGB, Artemis and Aurora and sends their colours
+with the same `25` / `24` / `26` reports.
 
 All vendor and lighting collections of the keyboard over USB:
 

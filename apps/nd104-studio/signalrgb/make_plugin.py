@@ -4,20 +4,24 @@ the keyboard reports (OpenRGB command 05 on the lighting channel:
 Each LED: index, x/y position (QMK points), flags, three unknown bytes and
 the keycode of the key above it.
 
-    python make_plugin.py leds.json Chilkey_ND104.js
+    python make_plugin.py leds.json Chilkey_ND104.js layout.json
+
+layout.json (index, QMK position, name, zone) is read by ND104 Studio's
+OpenRGB server, so the plugin and the server name and place the LEDs alike.
 """
 import json, sys
 from collections import Counter
 
 leds = json.load(open(sys.argv[1]))
 out_path = sys.argv[2]
+layout_path = sys.argv[3]
 
 names = {0x28: "Enter", 0x29: "Esc", 0x2a: "Backspace", 0x2b: "Tab", 0x2c: "Space", 0x2d: "-", 0x2e: "=",
-         0x2f: "[", 0x30: "]", 0x31: "\\\\", 0x32: "#", 0x33: ";", 0x34: "'", 0x35: "`", 0x36: ",", 0x37: ".",
+         0x2f: "[", 0x30: "]", 0x31: "\\", 0x32: "#", 0x33: ";", 0x34: "'", 0x35: "`", 0x36: ",", 0x37: ".",
          0x38: "/", 0x39: "Caps Lock", 0x46: "Print Screen", 0x47: "Scroll Lock", 0x48: "Pause", 0x49: "Insert",
          0x4a: "Home", 0x4b: "Page Up", 0x4c: "Delete", 0x4d: "End", 0x4e: "Page Down", 0x4f: "Right",
          0x50: "Left", 0x51: "Down", 0x52: "Up", 0x53: "Num Lock", 0x54: "Num /", 0x55: "Num *", 0x56: "Num -",
-         0x57: "Num +", 0x58: "Num Enter", 0x62: "Num 0", 0x63: "Num .", 0x64: "ISO \\\\", 0x65: "Menu",
+         0x57: "Num +", 0x58: "Num Enter", 0x62: "Num 0", 0x63: "Num .", 0x64: "ISO \\", 0x65: "Menu",
          0xe0: "Left Ctrl", 0xe1: "Left Shift", 0xe2: "Left Alt", 0xe3: "Left Win", 0xe4: "Right Ctrl",
          0xe5: "Right Shift", 0xe6: "Right Alt", 0xe7: "Right Win", 0xa8: "Mute", 0xa9: "Volume Up",
          0xaa: "Volume Down", 0xb2: "Calculator"}
@@ -32,21 +36,22 @@ for c in range(0x59, 0x62):
     names[c] = f"Num {c - 0x58}"
 
 W, H = 23, 8
-led_names, positions, seen = [], [], Counter()
+led_names, positions, seen, zones = [], [], Counter(), []
 bar = edge = 0
 for l in leds:
     if l["i"] >= 120:
         edge += 1
-        n = f"Edge light {edge}"
+        n, zone = f"Edge light {edge}", "edge"
     elif l["i"] >= 115:
         bar += 1
-        n = f"Light bar {bar}"
+        n, zone = f"Light bar {bar}", "bar"
     else:
-        n = names.get(l["keycode"], f"Key {l['keycode']:02X}")
+        n, zone = names.get(l["keycode"], f"Key {l['keycode']:02X}"), "keys"
         seen[n] += 1
         if seen[n] > 1:
             n = f"{n} {seen[n]}"
     led_names.append(n)
+    zones.append(zone)
     # QMK LED points: x 0-226, y 12-84 → canvas W x H
     positions.append([min(W - 1, round(l["x"] / 226 * (W - 1))), min(H - 1, round((l["y"] - 12) / 72 * (H - 1)))])
 
@@ -127,4 +132,7 @@ function hexToRgb(hex) {{
 }}
 '''
 open(out_path, "w", encoding="utf-8", newline="\n").write(js)
+layout = [{"i": l["i"], "x": l["x"], "y": l["y"], "name": n, "zone": z} for l, n, z in zip(leds, led_names, zones)]
+with open(layout_path, "w", encoding="utf-8", newline="\n") as f:
+    f.write("[\n" + ",\n".join(json.dumps(e, ensure_ascii=False) for e in layout) + "\n]\n")
 print("ok", len(led_names), "LEDs", len(set(map(tuple, positions))), "distinct positions")

@@ -33,7 +33,7 @@ export type DstMode = "auto" | "force_summer" | "force_winter";
 export interface Config {
   schema: number;
   general: { language: string; theme: string; style: "calm" | "gamer"; autostart: boolean };
-  device: { model: string; poll_interval_s: number };
+  device: { model: string; poll_interval_s: number; openrgb_server: boolean; openrgb_port: number };
   clock: {
     source: ClockSource;
     timezone: string;
@@ -278,6 +278,7 @@ export const api = {
   keyboardSettingsRead: () => invoke<KeyboardSettings>("keyboard_settings_read"),
   bluetoothStatus: () => invoke<BluetoothKeyboard | null>("bluetooth_status"),
   signalRgbStatus: () => invoke<SignalRgbStatus>("signalrgb_status"),
+  openRgbStatus: () => invoke<OpenRgbStatus>("openrgb_status"),
   signalRgbInstall: () => invoke<SignalRgbStatus>("signalrgb_install"),
   signalRgbRemove: () => invoke<SignalRgbStatus>("signalrgb_remove"),
   keyboardSettingsWrite: (setting: KeyboardSetting, value: number) =>
@@ -302,6 +303,16 @@ export interface Keymap {
 
 /** The keyboard connected over Bluetooth (as Windows reports it). */
 /** The SignalRGB plugin of ND104 Studio in Documents\WhirlwindFX\Plugins. */
+/** ND104 Studio's OpenRGB SDK server. */
+export interface OpenRgbStatus {
+  running: boolean;
+  port: number;
+  clients: number;
+  /** The keyboard is offered to clients (connected by USB, checks passed). */
+  offered: boolean;
+  error: string | null;
+}
+
 export interface SignalRgbStatus {
   signalrgb_found: boolean;
   installed: boolean;

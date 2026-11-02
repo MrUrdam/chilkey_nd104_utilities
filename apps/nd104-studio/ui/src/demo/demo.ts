@@ -40,7 +40,7 @@ function nextDstChange(): string {
 const config: Config = {
   schema: 1,
   general: { language, theme, style, autostart: true },
-  device: { model: "chilkey-nd104", poll_interval_s: 3 },
+  device: { model: "chilkey-nd104", poll_interval_s: 3, openrgb_server: true, openrgb_port: 6743 },
   clock: {
     source: "timezone",
     timezone: "Europe/Berlin",
@@ -388,6 +388,8 @@ export function installDemo(version: string) {
         demoKeys = structuredClone(target);
         return new Promise((resolve) => setTimeout(() => resolve(n), 700));
       }
+      case "openrgb_status":
+        return { running: true, port: 6743, clients: 1, offered: true, error: null };
       case "signalrgb_status":
         return { ...demoSignalRgb };
       case "signalrgb_install":

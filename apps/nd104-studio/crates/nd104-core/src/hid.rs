@@ -2,11 +2,13 @@
 //! without hardware.
 
 use std::collections::HashMap;
+#[cfg(not(windows))]
 use std::ffi::CString;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context, Result};
+#[cfg(not(windows))]
 use hidapi::HidApi;
 
 /// One enumerated HID interface (collection).
@@ -51,17 +53,21 @@ pub trait HidBackend {
 /// Bluetooth keyboard that is not connected stays in Windows' device list,
 /// and opening it blocks for many seconds each time.
 const INFO_TIMEOUT: Duration = Duration::from_secs(3);
-/// When to try an interface again that was too slow or could not be opened.
+/// When to try an interface again that could not be opened.
 const INFO_RETRY: Duration = Duration::from_secs(30);
 
-/// Real backend using hidapi (pure-Rust Windows backend).
+/// Real backend.
 ///
-/// On Windows it does not use hidapi's enumeration, which opens every HID
-/// device of the PC (and waits for each stale Bluetooth one): it takes the
-/// HID device paths from Windows, reads vendor/product ID from the path,
-/// and opens only the interfaces of supported keyboards and receivers –
-/// each with a time limit, and only once while it stays plugged in.
+/// On Windows it does not use hidapi at all: hidapi's context always scans
+/// every HID device of the PC when it is created (`HidApi::new` calls
+/// `add_devices(0, 0)`, also via `new_without_enumerate`), which takes
+/// minutes while Windows answers slowly (e.g. while OpenRGB scans). Instead
+/// it takes the HID device paths from Windows, reads vendor/product ID from
+/// the path, reads the details of only the interfaces of supported
+/// keyboards and receivers, and talks to them with Windows' HID functions
+/// ([`win::WinHid`]). Elsewhere it uses hidapi.
 pub struct HidapiBackend {
+    #[cfg(not(windows))]
     api: HidApi,
     /// Vendor/product IDs worth opening (keyboards, screens, receivers).
     wanted: Vec<(u16, u16)>,
@@ -69,6 +75,10 @@ pub struct HidapiBackend {
     known: HashMap<String, HidInterfaceInfo>,
     /// Interfaces that were too slow or failed, and when to try again.
     skipped: HashMap<String, Instant>,
+    /// Interfaces whose details did not come in time: their answer is still
+    /// awaited (not asked again), e.g. while another program scans every HID
+    /// device of the PC and Windows answers slowly.
+    pending: HashMap<String, mpsc::Receiver<Result<HidInterfaceInfo>>>,
 }
 
 impl HidapiBackend {
@@ -82,10 +92,12 @@ impl HidapiBackend {
             }
         }
         Ok(Self {
+            #[cfg(not(windows))]
             api: hidapi_without_scan().context("cannot initialise HID API")?,
             wanted,
             known: HashMap::new(),
             skipped: HashMap::new(),
+            pending: HashMap::new(),
         })
     }
 }
@@ -112,6 +124,7 @@ pub fn ids_from_path(path: &str) -> Option<(u16, u16)> {
 /// what blocks on stale Bluetooth devices). ND104 Studio, its setup and the
 /// device thread are the only hidapi users in their processes, so the
 /// global switch behind it is fine here.
+#[cfg(not(windows))]
 #[allow(deprecated)]
 fn hidapi_without_scan() -> hidapi::HidResult<HidApi> {
     HidApi::new_without_enumerate()
@@ -354,12 +367,16 @@ impl HidBackend for HidapiBackend {
         // forget what is gone
         self.known.retain(|p, _| paths.contains(p));
         self.skipped.retain(|p, _| paths.contains(p));
+        self.pending.retain(|p, _| paths.contains(p));
         let now = Instant::now();
         let mut found = Vec::new();
         let mut opening = Vec::new();
         for path in paths {
             if let Some(info) = self.known.get(&path) {
                 found.push(info.clone());
+            } else if let Some(rx) = self.pending.remove(&path) {
+                // still waiting for the earlier request
+                opening.push((path, rx));
             } else if !self.skipped.get(&path).is_some_and(|at| now < *at) {
                 let rx = interface_info(&path);
                 opening.push((path, rx));
@@ -378,8 +395,11 @@ impl HidBackend for HidapiBackend {
                     tracing::debug!("HID interface {path} skipped: {e:#}");
                     self.skipped.insert(path, now + INFO_RETRY);
                 }
-                Err(_) => {
-                    tracing::debug!("HID interface {path} too slow (stale Bluetooth?), skipped");
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    tracing::debug!("HID interface {path}: Windows answers slowly, still waiting");
+                    self.pending.insert(path, rx);
+                }
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
                     self.skipped.insert(path, now + INFO_RETRY);
                 }
             }
@@ -388,6 +408,14 @@ impl HidBackend for HidapiBackend {
         Ok(found)
     }
 
+    #[cfg(windows)]
+    fn open(&mut self, info: &HidInterfaceInfo) -> Result<Box<dyn HidChannel>> {
+        Ok(Box::new(win::WinHid::open(&info.path).with_context(
+            || format!("cannot open {:04x}:{:04x}", info.vid, info.pid),
+        )?))
+    }
+
+    #[cfg(not(windows))]
     fn open(&mut self, info: &HidInterfaceInfo) -> Result<Box<dyn HidChannel>> {
         let path = CString::new(info.path.clone()).map_err(|_| anyhow!("invalid HID path"))?;
         let device = self
@@ -413,12 +441,199 @@ impl HidBackend for HidapiBackend {
     }
 }
 
+/// Windows' own HID functions, without hidapi (see [`HidapiBackend`]).
+#[cfg(windows)]
+pub mod win {
+    use std::time::Duration;
+
+    use anyhow::{anyhow, Context, Result};
+    use windows::core::HSTRING;
+    use windows::Win32::Devices::HumanInterfaceDevice::{
+        HidD_FreePreparsedData, HidD_GetPreparsedData, HidP_GetCaps, HidP_GetValueCaps,
+        HidP_Output, HIDP_CAPS, HIDP_STATUS_SUCCESS, HIDP_VALUE_CAPS, PHIDP_PREPARSED_DATA,
+    };
+    use windows::Win32::Foundation::{
+        CloseHandle, ERROR_IO_PENDING, GENERIC_READ, GENERIC_WRITE, HANDLE, WAIT_OBJECT_0,
+    };
+    use windows::Win32::Storage::FileSystem::{
+        CreateFileW, ReadFile, WriteFile, FILE_FLAG_OVERLAPPED, FILE_SHARE_READ, FILE_SHARE_WRITE,
+        OPEN_EXISTING,
+    };
+    use windows::Win32::System::Threading::{CreateEventW, ResetEvent, WaitForSingleObject};
+    use windows::Win32::System::IO::{CancelIoEx, GetOverlappedResult, OVERLAPPED};
+
+    /// How long a write may take (as in hidapi).
+    const WRITE_TIMEOUT_MS: u32 = 1000;
+
+    /// One opened HID collection.
+    pub struct WinHid {
+        handle: HANDLE,
+        event: HANDLE,
+        /// Report lengths including the report ID byte.
+        input_len: usize,
+        output_len: usize,
+        /// 0 if the collection has no report ID.
+        report_id: u8,
+    }
+
+    // The handles may be used from another thread (one user at a time).
+    unsafe impl Send for WinHid {}
+
+    impl WinHid {
+        pub fn open(path: &str) -> Result<Self> {
+            let handle = unsafe {
+                CreateFileW(
+                    &HSTRING::from(path),
+                    (GENERIC_READ | GENERIC_WRITE).0,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE,
+                    None,
+                    OPEN_EXISTING,
+                    FILE_FLAG_OVERLAPPED,
+                    None,
+                )
+            }
+            .context("CreateFile")?;
+            let caps = unsafe { caps(handle) };
+            let event = unsafe { CreateEventW(None, true, false, None) };
+            match (caps, event) {
+                (Some((caps, report_id)), Ok(event)) => Ok(Self {
+                    handle,
+                    event,
+                    input_len: usize::from(caps.InputReportByteLength),
+                    output_len: usize::from(caps.OutputReportByteLength),
+                    report_id,
+                }),
+                (_, event) => {
+                    unsafe {
+                        let _ = CloseHandle(handle);
+                        if let Ok(e) = event {
+                            let _ = CloseHandle(e);
+                        }
+                    }
+                    Err(anyhow!("no HID capabilities"))
+                }
+            }
+        }
+
+        /// The report ID this collection's reports carry (0: none).
+        pub fn report_id(&self) -> u8 {
+            self.report_id
+        }
+
+        /// Runs one overlapped transfer, waiting up to `timeout_ms`; `None`
+        /// on timeout (the transfer is cancelled and waited for).
+        fn transfer(
+            &self,
+            timeout_ms: u32,
+            start: impl FnOnce(*mut OVERLAPPED) -> windows::core::Result<()>,
+        ) -> Result<Option<usize>> {
+            let mut ov = OVERLAPPED {
+                hEvent: self.event,
+                ..Default::default()
+            };
+            unsafe {
+                let _ = ResetEvent(self.event);
+                if let Err(e) = start(&mut ov) {
+                    if e.code() != ERROR_IO_PENDING.to_hresult() {
+                        return Err(anyhow!(e));
+                    }
+                }
+                let mut done = 0u32;
+                if WaitForSingleObject(self.event, timeout_ms) != WAIT_OBJECT_0 {
+                    let _ = CancelIoEx(self.handle, Some(&ov));
+                    // the cancelled transfer must finish before `ov` goes away
+                    let _ = GetOverlappedResult(self.handle, &ov, &mut done, true);
+                    return Ok(None);
+                }
+                GetOverlappedResult(self.handle, &ov, &mut done, false)?;
+                Ok(Some(done as usize))
+            }
+        }
+    }
+
+    /// Report lengths and the output report ID from Windows' parsed
+    /// descriptor (nothing is sent to the device).
+    unsafe fn caps(handle: HANDLE) -> Option<(HIDP_CAPS, u8)> {
+        let mut data = PHIDP_PREPARSED_DATA::default();
+        if !HidD_GetPreparsedData(handle, &mut data) {
+            return None;
+        }
+        let mut caps = HIDP_CAPS::default();
+        let ok = HidP_GetCaps(data, &mut caps) == HIDP_STATUS_SUCCESS;
+        let mut report_id = 0;
+        if ok && caps.NumberOutputValueCaps > 0 {
+            let mut values =
+                vec![HIDP_VALUE_CAPS::default(); usize::from(caps.NumberOutputValueCaps)];
+            let mut n = caps.NumberOutputValueCaps;
+            if HidP_GetValueCaps(HidP_Output, values.as_mut_ptr(), &mut n, data)
+                == HIDP_STATUS_SUCCESS
+                && n > 0
+            {
+                report_id = values[0].ReportID;
+            }
+        }
+        HidD_FreePreparsedData(data);
+        ok.then_some((caps, report_id))
+    }
+
+    impl super::HidChannel for WinHid {
+        fn write(&mut self, report: &[u8]) -> Result<()> {
+            // Windows wants exactly the output report length, ID in front
+            let mut buf = vec![0u8; self.output_len.max(1)];
+            buf[0] = self.report_id;
+            let n = report.len().min(buf.len() - 1);
+            buf[1..=n].copy_from_slice(&report[..n]);
+            match self
+                .transfer(WRITE_TIMEOUT_MS, |ov| unsafe {
+                    WriteFile(self.handle, Some(&buf), None, Some(ov))
+                })
+                .context("HID write failed")?
+            {
+                Some(_) => Ok(()),
+                None => Err(anyhow!("HID write failed: no answer within 1 s")),
+            }
+        }
+
+        fn read(&mut self, timeout: Duration) -> Result<Option<Vec<u8>>> {
+            let mut buf = vec![0u8; self.input_len.max(1)];
+            let ms = u32::try_from(timeout.as_millis()).unwrap_or(u32::MAX);
+            let ptr = buf.as_mut_ptr();
+            let len = buf.len();
+            let n = self
+                .transfer(ms, |ov| unsafe {
+                    // `buf` outlives the transfer (it is cancelled and waited for)
+                    ReadFile(
+                        self.handle,
+                        Some(std::slice::from_raw_parts_mut(ptr, len)),
+                        None,
+                        Some(ov),
+                    )
+                })
+                .context("HID read failed")?;
+            // Windows always puts the report ID (or 0) in front
+            Ok(n.filter(|&n| n > 1).map(|n| buf[1..n].to_vec()))
+        }
+    }
+
+    impl Drop for WinHid {
+        fn drop(&mut self) {
+            unsafe {
+                let _ = CancelIoEx(self.handle, None);
+                let _ = CloseHandle(self.handle);
+                let _ = CloseHandle(self.event);
+            }
+        }
+    }
+}
+
+#[cfg(not(windows))]
 struct HidapiChannel {
     device: hidapi::HidDevice,
     /// 0 over USB; the collection's report ID over Bluetooth.
     report_id: u8,
 }
 
+#[cfg(not(windows))]
 impl HidChannel for HidapiChannel {
     fn write(&mut self, report: &[u8]) -> Result<()> {
         let mut buf = Vec::with_capacity(report.len() + 1);

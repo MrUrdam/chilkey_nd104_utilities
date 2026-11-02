@@ -3,14 +3,18 @@
   // zones. Like Chilkey's web driver, every change is sent and stored in the
   // keyboard right away (slider moves are bundled first).
   import { onDestroy } from "svelte";
-  import { api, type LightChange, type LightZone, type Status } from "../lib/api";
+  import { api, type Config, type LightChange, type LightZone, type Status } from "../lib/api";
   import { EFFECTS, EFFECT_OFF, EFFECT_SOLID, effect as effectInfo } from "../lib/effects";
   import { t } from "../lib/i18n.svelte";
   import Icon from "../components/Icon.svelte";
   import UsbRequired from "../components/UsbRequired.svelte";
   import PcLightingCard from "../components/PcLightingCard.svelte";
 
-  let { status }: { status: Status } = $props();
+  let {
+    status,
+    draft = $bindable(),
+    errors,
+  }: { status: Status; draft: Config; errors: Record<string, string> } = $props();
 
   const zones: LightZone[] = ["per_key", "bottom"];
   const SEND_DELAY = 200;
@@ -312,7 +316,7 @@
 
   <p class="muted small">{t("ui.light.effects_hint")}</p>
 
-  <PcLightingCard {status} />
+  <PcLightingCard {status} bind:draft {errors} />
 </div>
 
 <style>

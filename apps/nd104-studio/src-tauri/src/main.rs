@@ -13,6 +13,7 @@ mod i18n;
 mod keymap_backup;
 mod keymap_page;
 mod logging;
+mod openrgb;
 mod self_update;
 mod signalrgb;
 mod tray;
@@ -139,6 +140,7 @@ fn main() {
             hardware::light_apply,
             bluetooth::bluetooth_status,
             signalrgb::signalrgb_status,
+            openrgb::openrgb_status,
             signalrgb::signalrgb_install,
             signalrgb::signalrgb_remove,
             hardware::keyboard_settings_read,
@@ -205,6 +207,13 @@ fn main() {
                 manual_update_check: AtomicBool::new(false),
                 manual_firmware_check: AtomicBool::new(false),
             });
+
+            app.manage(openrgb::OpenRgbServer::default());
+            openrgb::apply(
+                &handle,
+                config.device.openrgb_server,
+                config.device.openrgb_port,
+            );
 
             tauri::async_runtime::spawn(watch_status(handle.clone(), engine.status.clone()));
             tauri::async_runtime::spawn(watch_config(handle.clone()));
@@ -358,6 +367,11 @@ fn activate_config(app: &AppHandle, config: Config) {
     if previous.general.autostart != config.general.autostart {
         apply_autostart(app, config.general.autostart);
     }
+    openrgb::apply(
+        app,
+        config.device.openrgb_server,
+        config.device.openrgb_port,
+    );
     if previous.general.language != config.general.language {
         *state.i18n.lock().unwrap() = I18n::new(&config.general.language);
     }
