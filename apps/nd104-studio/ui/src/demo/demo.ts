@@ -273,7 +273,7 @@ function demoPicture() {
   };
 }
 
-/** A plausible keymap: layer 0 as printed, layer 1 with media and display keys. */
+/** A plausible keymap: layer 0 as printed, the Fn layers as Chilkey ships them. */
 function demoKeymap(): Keymap {
   const layers = Array.from({ length: 6 }, (_, n) => Array<number>(128).fill(n === 0 ? 0 : 1));
   for (const key of layout("iso")) for (const [r, c] of key.pos) layers[0][r * 16 + c] = key.hid;
@@ -281,14 +281,21 @@ function demoKeymap(): Keymap {
   layers[0][7 * 16 + 9] = 0x7e35;
   layers[0][4 * 16 + 1] = 0x1c; // German QWERTZ habits: Y and Z swapped
   layers[0][2 * 16 + 6] = 0x1d;
-  const fn = layers[1];
-  [0xae, 0xac, 0xab, 0xad].forEach((code, i) => (fn[0 * 16 + 5 + i] = code));
-  [0xa8, 0xaa, 0xa9].forEach((code, i) => (fn[0 * 16 + 9 + i] = code));
-  fn[5 * 16 + 1] = 0x700b;
-  fn[1 * 16 + 1] = 0x7820;
-  fn[1 * 16 + 2] = 0x7821;
-  fn[4 * 16 + 12] = 0x7827;
-  fn[5 * 16 + 12] = 0x7828;
+  // Fn and Fn + Shift layers as Chilkey ships them: [layer, slot, code]
+  const factory: [number, number, number][] = [
+    [1, 33, 0x7e04], [1, 34, 0x7e05], [1, 42, 0x7823], [1, 43, 0x7825], [1, 44, 0x7e0e],
+    [1, 48, 0x7e07], [1, 58, 0x7824], [1, 59, 0x7826], [1, 60, 0x7e17], [1, 65, 0x7e09],
+    [1, 66, 0x7e0a], [1, 67, 0x7e0b], [1, 68, 0x7e0d], [1, 70, 0x7013], [1, 71, 0x7e14],
+    [1, 74, 0x7e06], [1, 75, 0x5222], [1, 76, 0x7827], [1, 81, 0x7e0c], [1, 83, 0x7e08],
+    [1, 84, 0x7e08], [1, 85, 0x7e08], [1, 86, 0x7e08], [1, 92, 0x7828], [1, 93, 0x7829],
+    [1, 100, 0x7e0f], [1, 102, 0x7e10], [1, 105, 0x7e0e], [1, 106, 0x7821], [1, 107, 0x7820],
+    [1, 108, 0x782a], [1, 120, 0x5222], [1, 121, 0x7e22], [1, 124, 0x7e21], [2, 42, 0x7823],
+    [2, 43, 0x7825], [2, 44, 0x7e18], [2, 54, 0x7e15], [2, 57, 0x7e23], [2, 58, 0x7824],
+    [2, 59, 0x7826], [2, 60, 0x7e16], [2, 75, 0x5222], [2, 76, 0x7827], [2, 92, 0x7828],
+    [2, 93, 0x7829], [2, 100, 0x7e0f], [2, 102, 0x7e10], [2, 105, 0x7e18], [2, 106, 0x7821],
+    [2, 107, 0x7820], [2, 108, 0x782a], [2, 120, 0x5222], [2, 121, 0x7e22],
+  ];
+  for (const [l, i, code] of factory) layers[l][i] = code;
   const knob = [
     [0xaa, 0xa9],
     [0x7e10, 0x7e0f],

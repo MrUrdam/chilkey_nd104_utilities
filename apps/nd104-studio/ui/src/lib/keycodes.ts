@@ -139,17 +139,23 @@ export const KEYS: KeyDef[] = [
   d(0xdb, "Wheel left", "mouse", { de: "Mausrad links", short: "W←" }),
   d(0xdc, "Wheel right", "mouse", { de: "Mausrad rechts", short: "W→" }),
 
-  d(0x7820, "Lighting on/off", "light", { de: "Licht an/aus", short: "RGB" }),
-  d(0x7821, "Next effect", "light", { de: "Nächster Effekt", short: "Eff+" }),
-  d(0x7822, "Previous effect", "light", { de: "Vorheriger Effekt", short: "Eff−" }),
-  d(0x7823, "Hue +", "light", { de: "Farbton +", short: "Hue+" }),
-  d(0x7824, "Hue −", "light", { de: "Farbton −", short: "Hue−" }),
-  d(0x7825, "Saturation +", "light", { de: "Sättigung +", short: "Sat+" }),
-  d(0x7826, "Saturation −", "light", { de: "Sättigung −", short: "Sat−" }),
-  d(0x7827, "Brightness +", "light", { de: "Helligkeit +", short: "Bri+" }),
-  d(0x7828, "Brightness −", "light", { de: "Helligkeit −", short: "Bri−" }),
-  d(0x7829, "Speed +", "light", { de: "Tempo +", short: "Spd+" }),
-  d(0x782a, "Speed −", "light", { de: "Tempo −", short: "Spd−" }),
+  d(0x7820, "Backlight on/off", "light", { de: "Hintergrundbeleuchtung an/aus", short: "RGB" }),
+  d(0x7821, "Backlight: next effect", "light", { de: "Hintergrundbeleuchtung: nächster Effekt", short: "Eff+" }),
+  d(0x7822, "Backlight: previous effect", "light", { de: "Hintergrundbeleuchtung: vorheriger Effekt", short: "Eff−" }),
+  d(0x7823, "Backlight hue +", "light", { de: "Hintergrundbeleuchtung: Farbton +", short: "Hue+" }),
+  d(0x7824, "Backlight hue −", "light", { de: "Hintergrundbeleuchtung: Farbton −", short: "Hue−" }),
+  d(0x7825, "Backlight saturation +", "light", { de: "Hintergrundbeleuchtung: Sättigung +", short: "Sat+" }),
+  d(0x7826, "Backlight saturation −", "light", { de: "Hintergrundbeleuchtung: Sättigung −", short: "Sat−" }),
+  d(0x7827, "Backlight brightness +", "light", { de: "Hintergrundbeleuchtung heller", short: "Bri+" }),
+  d(0x7828, "Backlight brightness −", "light", { de: "Hintergrundbeleuchtung dunkler", short: "Bri−" }),
+  d(0x7829, "Backlight speed +", "light", { de: "Hintergrundbeleuchtung schneller", short: "Spd+" }),
+  d(0x782a, "Backlight speed −", "light", { de: "Hintergrundbeleuchtung langsamer", short: "Spd−" }),
+  // Chilkey functions (checked on the keyboard; the test ends with any other key)
+  d(0x7e06, "Lighting test (hold 3 s)", "light", { de: "Lichttest (3 s halten)", short: "LTest" }),
+  d(0x7e15, "Battery brightness limit (50 % / 100 %)", "light", {
+    de: "Helligkeit im Akkubetrieb (50 % / 100 %)",
+    short: "BatBri",
+  }),
 
   ...layerKeys(),
 
@@ -159,7 +165,21 @@ export const KEYS: KeyDef[] = [
   d(0x7e16, "Display back", "special", { de: "Display: Zurück", short: "LCD⟲" }),
   d(0x7e17, "Display confirm", "special", { de: "Display: Bestätigen", short: "LCD✓" }),
   d(0x7e21, "Display calculator", "special", { de: "Display-Rechner", short: "LCalc" }),
-  d(0x700b, "Lock Win key", "special", { de: "Win-Taste sperren", short: "WinLk" }),
+  d(0x7e18, "Show typed keys on the display", "special", { de: "Getippte Zeichen im Display", short: "LcdKey" }),
+  d(0x7e22, "Restart display", "special", { de: "Display neu starten", short: "LcdRst" }),
+  d(0x7e35, "Show desktop", "special", { de: "Desktop anzeigen", short: "Desk" }),
+  // connection and keyboard functions of Chilkey's firmware (names checked on the keyboard)
+  d(0x7e08, "USB mode", "special", { de: "USB-Modus", short: "USB" }),
+  d(0x7e09, "Bluetooth device 1", "special", { de: "Bluetooth-Gerät 1", short: "BT1" }),
+  d(0x7e0a, "Bluetooth device 2", "special", { de: "Bluetooth-Gerät 2", short: "BT2" }),
+  d(0x7e0b, "Bluetooth device 3", "special", { de: "Bluetooth-Gerät 3", short: "BT3" }),
+  d(0x7e0d, "2.4 GHz wireless", "special", { de: "2,4-GHz-Funk", short: "2.4G" }),
+  d(0x7e0c, "Lock Win key", "special", { de: "Win-Taste sperren", short: "WinLk" }),
+  d(0x7e07, "Keyboard sleep", "special", { de: "Tastatur-Ruhezustand", short: "Sleep" }),
+  d(0x7013, "N-key rollover on/off", "special", { de: "N-Key-Rollover an/aus", short: "NKRO" }),
+  d(0x7e14, "Charging indicator on/off", "special", { de: "Ladeanzeige an/aus", short: "ChgLED" }),
+  // QMK's own Win lock; the ND104 uses 0x7E0C instead
+  d(0x700b, "Lock Win key (alternative)", "special", { de: "Win-Taste sperren (Alternative)", short: "WinLk2" }),
   d(0x7e04, "Windows mode", "special", { de: "Windows-Modus", short: "Win" }),
   d(0x7e05, "Mac mode", "special", { de: "Mac-Modus", short: "Mac" }),
   d(0x7e00, "Mission Control", "special", { short: "MissC" }),
@@ -169,11 +189,9 @@ export const KEYS: KeyDef[] = [
 
 const BY_CODE = new Map(KEYS.map((k) => [k.code, k]));
 
-/** Display names as reported by the driver for codes we know but don't offer. */
-const EXTRA: Record<number, string> = {
-  0x7e35: "Display key",
-  0x7e18: "LcdLet",
-  0x7e22: "Display reset",
+/** Codes found on the keyboard that are not offered (no known function). */
+const EXTRA: Record<number, { en: string; de: string; short: string }> = {
+  0x7e23: { en: "Undocumented function", de: "Undokumentierte Funktion", short: "Undoc." },
 };
 
 const MOD_NAMES = ["Ctrl", "Shift", "Alt", "Win"];
@@ -195,19 +213,150 @@ export interface Described {
   short: string;
   known: boolean;
   category: Category | null;
+  /** What the function does, for functions that need more than a name. */
+  hint?: string;
+}
+
+/** Short explanations (English, German) where the name alone is not enough. */
+const HINTS: Record<number, [string, string]> = {
+  [KC_NO]: ["The key does nothing.", "Die Taste tut nichts."],
+  [KC_TRNS]: ["Does what this key does on the layer below.", "Tut, was die Taste auf der Ebene darunter tut."],
+  0x7c16: ["Esc; with Shift or Win: ^ (German) or `.", "Esc; mit Shift oder Win: ^ (bzw. ` auf Englisch)."],
+  0x7e0c: ["E.g. so it cannot open the Start menu in games.", "Z. B. damit sie im Spiel nicht das Startmenü öffnet."],
+  0x700b: ["Not used by the ND104 – use \"Lock Win key\".", "Von der ND104 nicht genutzt – nimm „Win-Taste sperren“."],
+  0x7013: ["On: any number of keys at once. Off: works with every PC.", "An: beliebig viele Tasten gleichzeitig. Aus: läuft an jedem PC."],
+  0x7e06: ["Hold 3 s; any other key ends the test.", "3 s halten; jede andere Taste beendet den Test."],
+  0x7e15: ["On battery: backlight at most 50 % or 100 %.", "Im Akkubetrieb: Hintergrundbeleuchtung höchstens 50 % oder 100 %."],
+  0x7e22: ["Hold long: update mode (ends after 3 min).", "Lange halten: Update-Modus (endet nach 3 Min.)."],
+  0x7e17: ["Calculator on the display on/off.", "Rechner im Display an/aus."],
+  0x7e35: ["Minimises all windows, or brings them back.", "Minimiert alle Fenster oder holt sie zurück."],
+  0x7e04: ["Hold 3 s.", "3 s halten."],
+  0x7e05: ["Hold 3 s.", "3 s halten."],
+  0x7e00: ["macOS only.", "Nur macOS."],
+  0x7e01: ["macOS only.", "Nur macOS."],
+};
+
+/** Explanations of the layer functions (n = layer). */
+/** Name of layer `n` as the keymap page shows it (set by the page). */
+let layerLabel = (n: number, lang: string) => (lang === "de" ? `Ebene ${n}` : `Layer ${n}`);
+
+/** Lets the layer functions use the page's layer names ("Zu Eigene 1 wechseln"). */
+export function setLayerLabel(label: (n: number, lang: string) => string) {
+  layerLabel = label;
+}
+
+type LayerKind = "hold" | "toggle" | "to" | "oneshot" | "base";
+
+function layerKind(code: number): LayerKind | null {
+  if (code >= 0x5220 && code <= 0x523f) return "hold";
+  if (code >= 0x5260 && code <= 0x527f) return "toggle";
+  if (code >= 0x5200 && code <= 0x521f) return "to";
+  if (code >= 0x5280 && code <= 0x529f) return "oneshot";
+  if (code >= 0x5240 && code <= 0x525f) return "base";
+  return null;
+}
+
+/** Name and explanation of a layer function, with the layer's name. */
+function layerFunction(code: number, lang: string): { name: string; hint: string } | null {
+  const kind = layerKind(code);
+  if (!kind) return null;
+  const n = layerLabel(code & 0x1f, lang);
+  const de = lang === "de";
+  switch (kind) {
+    case "hold":
+      return de
+        ? { name: `Halten: ${n}`, hint: "Aktiv, solange die Taste gehalten wird." }
+        : { name: `Hold: ${n}`, hint: "Active while the key is held." };
+    case "toggle":
+      return de
+        ? { name: `${n} umschalten`, hint: "An oder aus; bleibt bis zum nächsten Druck." }
+        : { name: `Toggle ${n}`, hint: "On or off; stays until pressed again." };
+    case "to":
+      return de
+        ? { name: `Zu ${n} wechseln`, hint: "Schaltet die anderen Ebenen aus." }
+        : { name: `Switch to ${n}`, hint: "Turns the other layers off." };
+    case "oneshot":
+      return de
+        ? { name: `Nächste Taste auf ${n}`, hint: "Nur der nächste Tastendruck nutzt diese Ebene." }
+        : { name: `Next key on ${n}`, hint: "Only the next key press uses this layer." };
+    case "base":
+      return de
+        ? { name: `Grundebene: ${n}`, hint: "Macht diese Ebene zur Grundebene." }
+        : { name: `Base layer: ${n}`, hint: "Makes this layer the base layer." };
+  }
+}
+
+function hintFor(code: number, lang: string): string | undefined {
+  const h = HINTS[code];
+  return h ? (lang === "de" ? h[1] : h[0]) : layerFunction(code, lang)?.hint;
 }
 
 /**
  * Name of a key code. `basicName` gives the name of a basic key in the
  * current label preset (so KC_Y can read "Z" on a German layout).
  */
-export function describe(code: number, lang: string, basicName: (code: number) => string | null = () => null): Described {
+/**
+ * The ND104 firmware gives some codes another meaning on layer 2 (Fn + right
+ * Shift): the lighting keys control the bottom lighting, the display page keys
+ * the display brightness, the display restart becomes a factory reset of the
+ * display (checked on the keyboard).
+ */
+export const UNDERGLOW_LAYER = 2;
+
+const ON_LAYER_2: Record<number, { en: string; de: string; short?: string; hint: [string, string] }> = {
+  0x7820: { en: "Bottom lighting on/off", de: "Untere Beleuchtung an/aus", hint: ["", ""] },
+  0x7821: { en: "Bottom lighting: next effect", de: "Untere Beleuchtung: nächster Effekt", hint: ["", ""] },
+  0x7822: { en: "Bottom lighting: previous effect", de: "Untere Beleuchtung: vorheriger Effekt", hint: ["", ""] },
+  0x7823: { en: "Bottom lighting hue +", de: "Untere Beleuchtung: Farbton +", hint: ["", ""] },
+  0x7824: { en: "Bottom lighting hue −", de: "Untere Beleuchtung: Farbton −", hint: ["", ""] },
+  0x7825: { en: "Bottom lighting saturation +", de: "Untere Beleuchtung: Sättigung +", hint: ["", ""] },
+  0x7826: { en: "Bottom lighting saturation −", de: "Untere Beleuchtung: Sättigung −", hint: ["", ""] },
+  0x7827: { en: "Bottom lighting brightness +", de: "Untere Beleuchtung heller", hint: ["", ""] },
+  0x7828: { en: "Bottom lighting brightness −", de: "Untere Beleuchtung dunkler", hint: ["", ""] },
+  0x7829: { en: "Bottom lighting speed +", de: "Untere Beleuchtung schneller", hint: ["", ""] },
+  0x782a: { en: "Bottom lighting speed −", de: "Untere Beleuchtung langsamer", hint: ["", ""] },
+  0x7e0f: { en: "Display brightness +", de: "Display heller", short: "LCD+", hint: ["", ""] },
+  0x7e10: { en: "Display brightness −", de: "Display dunkler", short: "LCD−", hint: ["", ""] },
+  0x7e22: {
+    en: "Display factory reset",
+    de: "Display auf Werkszustand",
+    short: "LcdRes",
+    hint: ["", ""],
+  },
+};
+
+const LAYER_NOTE: [string, string] = [
+  "With Fn + Shift: bottom lighting.",
+  "Mit Fn + Shift: untere Beleuchtung.",
+];
+
+export function describe(
+  code: number,
+  lang: string,
+  basicName: (code: number) => string | null = () => null,
+  layer = 0,
+): Described {
+  const de = lang === "de";
+  const special = layer === UNDERGLOW_LAYER ? ON_LAYER_2[code] : undefined;
+  if (special) {
+    const base = describe(code, lang, basicName, 0);
+    const hint = special.hint[0] ? (de ? special.hint[1] : special.hint[0]) : undefined;
+    return { ...base, name: de ? special.de : special.en, short: special.short ?? base.short, hint };
+  }
   const def = BY_CODE.get(code);
   if (def) {
     const fromPreset = def.category === "basic" ? basicName(code) : null;
-    const name = fromPreset ?? (lang === "de" && def.de ? def.de : def.en);
+    const name = fromPreset ?? layerFunction(code, lang)?.name ?? (lang === "de" && def.de ? def.de : def.en);
     const short = (lang === "de" ? def.deShort : undefined) ?? def.short ?? def.en;
-    return { name, short: fromPreset ?? short, known: true, category: def.category };
+    let hint = hintFor(code, lang);
+    // the codes that mean something else on layer 2 say so
+    if (ON_LAYER_2[code] && code >= 0x7820 && code <= 0x782a) {
+      hint = [hint, de ? LAYER_NOTE[1] : LAYER_NOTE[0]].filter(Boolean).join(" ");
+    } else if (ON_LAYER_2[code]) {
+      const other = de ? ON_LAYER_2[code].de : ON_LAYER_2[code].en;
+      hint = [hint, de ? `Mit Fn + Shift: ${other}.` : `With Fn + Shift: ${other}.`].filter(Boolean).join(" ");
+    }
+    return { name, short: fromPreset ?? short, known: true, category: def.category, hint };
   }
   // Modifier + key (e.g. Ctrl+C): 0x0100–0x1FFF
   if (code >= 0x0100 && code <= 0x1fff) {
@@ -220,17 +369,28 @@ export function describe(code: number, lang: string, basicName: (code: number) =
     const inner = describe(code & 0xff, lang, basicName);
     const mods = modText((code >> 8) & 0x1f);
     const name = lang === "de" ? `${inner.name} / gehalten ${mods}` : `${inner.name} / hold ${mods}`;
-    return { name, short: `${inner.short}/${mods}`, known: false, category: "mods" };
+    const hint =
+      lang === "de" ? `Tippen: ${inner.name}. Halten: ${mods}.` : `Tap: ${inner.name}. Hold: ${mods}.`;
+    return { name, short: `${inner.short}/${mods}`, known: false, category: "mods", hint };
   }
   // Layer-tap: layer when held, key when tapped
   if (code >= 0x4000 && code <= 0x4fff) {
     const inner = describe(code & 0xff, lang, basicName);
     const layer = (code >> 8) & 0x0f;
     const name = lang === "de" ? `${inner.name} / gehalten Ebene ${layer}` : `${inner.name} / hold layer ${layer}`;
-    return { name, short: `${inner.short}/L${layer}`, known: false, category: "layer" };
+    const hint =
+      lang === "de"
+        ? `Tippen: ${inner.name}. Halten: Ebene ${layer} ist aktiv.`
+        : `Tap: ${inner.name}. Hold: layer ${layer} is active.`;
+    return { name, short: `${inner.short}/L${layer}`, known: false, category: "layer", hint };
   }
   const extra = EXTRA[code];
-  return { name: extra ? `${extra} (${hex(code)})` : hex(code), short: hex(code), known: false, category: null };
+  if (extra) {
+    const hint = lang === "de" ? "Von Chilkey nicht beschrieben; bleibt, wie sie ist." : "Not described by Chilkey; stays as it is.";
+    return { name: lang === "de" ? extra.de : extra.en, short: extra.short, known: false, category: null, hint };
+  }
+  const hint = lang === "de" ? "Unbekannte Funktion; bleibt, wie sie ist." : "Unknown function; stays as it is.";
+  return { name: lang === "de" ? "Unbekannte Funktion" : "Unknown function", short: "?", known: false, category: null, hint };
 }
 
 export function keysIn(category: Category): KeyDef[] {

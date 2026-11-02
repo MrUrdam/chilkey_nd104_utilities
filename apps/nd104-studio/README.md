@@ -521,6 +521,29 @@ nd104-cli --version
 
 Set `RUST_LOG=debug` for more output.
 
+### Key combinations of the ND104
+
+Set in the keymap (and changeable on the Keymap page). Layer 2 is reached
+with **Fn + right Shift**; there the same lighting keys control the bottom
+lighting and the display keys the display brightness. ISO DE key names in
+brackets.
+
+| Fn + … | Fn + right Shift + … |
+|---|---|
+| ↑ / ↓: backlight brightness, ← / →: backlight speed | ↑ / ↓: bottom lighting brightness |
+| `\|` (`#`): backlight on/off, `]` (`+`): next effect | `\|` (`#`): bottom lighting on/off, `]` (`+`): next effect |
+| P / `;` (Ö): hue + / −, `[` (Ü) / `'` (Ä): saturation + / − | the same for the bottom lighting |
+| Del or knob press: display on/off; PgUp / PgDn or knob turn: display page | Del or knob press: typed characters on the display; PgUp / PgDn: display brightness |
+| Disp: restart display (hold long: display update mode, ends after 3 min idle) | Disp: display factory reset |
+| Calc or Enter: display calculator | H: battery brightness limit (50 % / 100 %) |
+| Q / W held 3 s: Windows / Mac key layout | |
+| Z / X / C: Bluetooth 1–3, V: 2.4 GHz, Space: USB | |
+| Win: lock Win key, M: charging indicator, N: N-key rollover, Caps: sleep, `/`: lighting test (hold 3 s) | |
+
+Built into the firmware (not in the keymap, so not changeable): **Fn +
+Backspace** on battery – the LEDs show the battery level; **Space +
+Backspace for 5 s** – keyboard factory reset.
+
 ### App command-line options
 
 ```

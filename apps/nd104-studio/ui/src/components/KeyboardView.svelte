@@ -3,7 +3,7 @@
     /** Shifted legend (small, above) – only for printed legends. */
     top?: string;
     main: string;
-    kind: "default" | "remapped" | "trns" | "none" | "locked";
+    kind: "default" | "remapped" | "assigned" | "trns" | "none" | "locked";
     /** Differs from what is on the keyboard now. */
     changed: boolean;
     title: string;

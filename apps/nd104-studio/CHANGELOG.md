@@ -13,6 +13,50 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.0.1] – 2026-11-02
+
+A clearer keymap page: every function of the ND104 has a proper name and,
+where needed, a short explanation; a new overview shows which keys they are
+on. Update with **Settings → General → Install update**.
+
+### Added
+- **Names for the ND104's own functions** (they showed as internal codes),
+  checked on the keyboard: USB mode, Bluetooth 1–3, 2.4 GHz wireless, lock
+  Win key, keyboard sleep, N-key rollover, charging indicator, lighting test,
+  battery brightness limit, typed characters on the display, restart display
+  and show desktop (the Disp key). They can be assigned to other keys too, in
+  the category "Keyboard & display". One function Chilkey does not document
+  shows as "Undocumented function".
+- **Key functions overview** (button on the keymap page): every function of
+  the keyboard – connection, lighting, display, layers – with the keys it is
+  on, e.g. "Fn + Y" for Bluetooth 1, plus the two combinations built into the
+  keyboard (battery level, factory reset).
+- **Short explanations** for functions that need more than a name (layer
+  keys, Win lock, N-key rollover, lighting test, display update mode,
+  tap/hold keys …): in the key's tooltip, below the current function and in
+  the function list.
+- README: table of the ND104's key combinations.
+
+### Changed
+- **Names follow the layer:** on the Fn + Shift layer the ND104 uses the
+  same keys for other things, and the keymap page now says so – the lighting
+  keys control the bottom lighting, PgUp / PgDn the display brightness, Disp
+  resets the display.
+- **Layer names:** "Fn + Shift layer" for layer 2 (Fn + right Shift) and
+  "Custom 1–3" for the empty layers 3–5 by default. Layer functions use the
+  names, also your own: "Switch to Custom 1", "Hold: Fn + Shift layer".
+- The lighting functions say what they control: "Backlight on/off",
+  "Backlight brightness +" and so on.
+- Internal codes are no longer shown anywhere; an unknown function is
+  called "Unknown function".
+
+### Fixed
+- **Fn layers no longer look "changed" everywhere:** orange marks only keys
+  on the basic layer that do something else than printed on them. Fn +
+  Backspace, the battery display built into the keyboard, reads "Battery".
+- Display brightness on PgUp / PgDn of the Fn + Shift layer fits on the key
+  ("LCD+" / "LCD−").
+
 ## [2.0.0] – 2026-11-01
 
 **nd104-sync is now ND104 Studio.** It does far more than syncing time and
@@ -570,7 +614,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.1...HEAD
+[2.0.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.0...nd104-studio-v2.0.1
 [2.0.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.5.0...nd104-studio-v2.0.0
 [1.5.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.2...nd104-sync-v1.5.0
 [1.4.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.1...nd104-sync-v1.4.2

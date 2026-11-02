@@ -8,10 +8,11 @@
   import { t } from "../lib/i18n.svelte";
   import { dateTime } from "../lib/format";
   import { BUILTIN_PRESETS, layout, resolveLegends, type CustomLegendPreset, type PhysicalKey, type Shape } from "../lib/keyboard";
-  import { KC_NO, KC_TRNS, describe } from "../lib/keycodes";
+  import { KC_NO, KC_TRNS, describe, setLayerLabel } from "../lib/keycodes";
   import Icon from "../components/Icon.svelte";
   import KeyboardView, { type KeyFace } from "../components/KeyboardView.svelte";
   import KeyPicker from "../components/KeyPicker.svelte";
+  import KeyFunctionsOverview from "../components/KeyFunctionsOverview.svelte";
   import KeymapBackup from "../components/KeymapBackup.svelte";
   import DisplayPreview from "../components/DisplayPreview.svelte";
   import { glowOf, type Glow } from "../lib/glow";
@@ -81,6 +82,7 @@
   let layer = $state(0);
   let selected = $state<string | null>(null);
   let mode = $state<"assign" | "labels">("assign");
+  let overview = $state(false);
 
   let keys = $derived(layout(settings.shape));
   let resolved = $derived(resolveLegends(settings.preset, settings.custom));
@@ -110,12 +112,19 @@
   function defaultLayerName(n: number): string {
     if (n === 0) return t("ui.km.layer_basic");
     if (n === 1) return t("ui.km.layer_fn");
+    // reached with Fn + right Shift on the ND104
+    if (n === 2) return t("ui.km.layer_fn_shift");
+    // empty in the ND104's keymap and not reachable until a layer key points there
+    if (n >= 3) return t("ui.km.layer_custom", { n: n - 2 });
     return t("ui.km.layer_n", { n });
   }
 
   function layerName(n: number): string {
     return settings.layerNames[n]?.trim() || defaultLayerName(n);
   }
+
+  // layer functions are named after the layers ("Zu Eigene 1 wechseln")
+  setLayerLabel((n) => layerName(n));
 
   async function read() {
     if (!ready) return;
@@ -263,8 +272,8 @@
     for (const key of keys) {
       const code = codeAt(edit, layer, key);
       const changed = !!device && key.pos.some((p) => device!.layers[layer][slot(p)] !== edit!.layers[layer][slot(p)]);
-      const d = describe(code, info.language, basicName);
-      const title = `${legends[key.id]?.replace("\n", " ") || key.id} → ${d.name}`;
+      const d = describe(code, info.language, basicName, layer);
+      const title = `${legends[key.id]?.replace("\n", " ") || key.id} → ${d.name}${d.hint ? `\n${d.hint}` : ""}`;
       if (mode === "labels" || !edit) {
         out[key.id] = { ...legendFace(key), kind: "default", changed: false, title: legends[key.id] ?? "" };
       } else if (isLocked(key)) {
@@ -273,10 +282,16 @@
         out[key.id] = { ...legendFace(key), kind: "default", changed, title };
       } else if (code === KC_TRNS) {
         out[key.id] = { ...legendFace(key), kind: "trns", changed, title };
+      } else if (code === KC_NO && layer === 1 && key.id === "bksp") {
+        // Fn + Backspace is the battery display built into the firmware
+        out[key.id] = { main: t("ui.km.builtin_battery"), kind: "trns", changed, title: t("ui.km.builtin_battery_hint") };
       } else if (code === KC_NO) {
         out[key.id] = { main: "", kind: "none", changed, title };
       } else {
-        out[key.id] = { main: d.short, kind: code === key.hid ? "default" : "remapped", changed, title };
+        // orange only where a key does something else than printed on it;
+        // on the other layers an assigned function is the normal case
+        const kind = code === key.hid ? "default" : layer === 0 ? "remapped" : "assigned";
+        out[key.id] = { main: d.short, kind, changed, title };
       }
     }
     return out;
@@ -352,7 +367,7 @@
             ? t("ui.km.knob_press")
             : key
               ? baseLine(legends[key.id]) || key.id
-              : t("ui.km.slot", { row: Math.floor(i / COLS), col: i % COLS });
+              : t("ui.km.slot");
         const slots = key ? key.pos.map(slot) : [i];
         list.push({
           id,
@@ -382,7 +397,8 @@
     return list;
   });
 
-  const nameOf = (code: number) => describe(code, info.language, basicName).name;
+  const nameOf = (code: number, l = layer) => describe(code, info.language, basicName, l).name;
+  const hintOf = (code: number) => describe(code, info.language, basicName, layer).hint;
 
   function discard() {
     if (device) edit = structuredClone($state.snapshot(device) as Keymap);
@@ -570,6 +586,18 @@
 
 <svelte:window onkeydown={onKeyDown} onkeyup={onKeyUp} onblur={releaseAll} />
 
+{#if overview && (device ?? edit)}
+  <KeyFunctionsOverview
+    keymap={(device ?? edit)!}
+    {keys}
+    {legends}
+    lang={info.language}
+    {basicName}
+    {layerName}
+    onclose={() => (overview = false)}
+  />
+{/if}
+
 <div class="stack page">
   <div class="title">
     <h1>{t("ui.nav.keymap")}</h1>
@@ -656,11 +684,14 @@
       </div>
       {#if mode === "assign"}
         <span class="legend muted small">
-          <span class="sw remapped"></span>{t("ui.km.legend_remapped")}
+          {#if layer === 0}<span class="sw remapped"></span>{t("ui.km.legend_remapped")}{/if}
           <span class="sw changed"></span>{t("ui.km.legend_changed")}
           {#if layer > 0}<span class="sw trns">▽</span>{t("ui.km.legend_trns")}{/if}
         </span>
       {/if}
+      <button class="key small-key" onclick={() => (overview = true)} disabled={!edit}>
+        <Icon name="info" />{t("ui.km.overview")}
+      </button>
       <label class="switch light-switch" title={lightingAnimated ? t("ui.km.lighting_animated") : ""}>
         <input
           type="checkbox"
@@ -756,11 +787,13 @@
         {@const code = knobSlot === "press" ? knobCodes.press : (knobSlot === "left" ? knobCodes.left : knobCodes.right)}
         {#if code !== null}
           <div class="current">{t("ui.km.now")}: <strong>{nameOf(code)}</strong></div>
+          {#if hintOf(code)}<p class="muted small hint">{hintOf(code)}</p>{/if}
           <KeyPicker
             {code}
             lang={info.language}
             {basicName}
             allowTrns={layer > 0}
+            {layer}
             onpick={(c) => (knobSlot === "press" ? setPress(c) : setKnob(knobSlot === "left" ? 0 : 1, c))}
           />
         {/if}
@@ -777,7 +810,8 @@
               <button class="link" onclick={() => setKey(key, key.hid)}>{t("ui.km.back_to_default")}</button>
             {/if}
           </div>
-          <KeyPicker {code} lang={info.language} {basicName} allowTrns={layer > 0} onpick={(c) => setKey(key, c)} />
+          {#if hintOf(code)}<p class="muted small hint">{hintOf(code)}</p>{/if}
+          <KeyPicker {code} lang={info.language} {basicName} allowTrns={layer > 0} {layer} onpick={(c) => setKey(key, c)} />
         {/if}
       {:else}
         <h2>{t("ui.km.assign_title")}</h2>
@@ -796,7 +830,7 @@
             <li>
               <span class="badge">{layerName(c.layer)}</span>
               <span class="what">{c.what}</span>
-              <span class="muted small arrow">{nameOf(c.from)} → <strong>{nameOf(c.to)}</strong></span>
+              <span class="muted small arrow">{nameOf(c.from, c.layer)} → <strong>{nameOf(c.to, c.layer)}</strong></span>
               <button class="icon-btn" title={t("ui.km.revert")} aria-label={t("ui.km.revert")} onclick={c.revert}>
                 <Icon name="x" size={14} />
               </button>
@@ -1044,8 +1078,14 @@
     align-items: center;
   }
 
-  .light-switch {
+  .small-key {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
     margin-left: auto;
+  }
+
+  .light-switch {
     gap: 8px;
   }
 
@@ -1099,6 +1139,10 @@
 
   .editor {
     min-width: 0;
+  }
+
+  .hint {
+    margin: -6px 0 0;
   }
 
   .current {
