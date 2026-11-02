@@ -13,6 +13,16 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.0.2] – 2026-11-02
+
+Clearer help for the connection keys. Update with **Settings → General →
+Install update**.
+
+### Changed
+- Bluetooth 1–3 and 2.4 GHz explain short and long press: a short press
+  switches to the device or receiver, holding the key pairs a new one.
+- README: the key combination table says the same.
+
 ## [2.0.1] – 2026-11-02
 
 A clearer keymap page: every function of the ND104 has a proper name and,
@@ -614,7 +624,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.1...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.2...HEAD
+[2.0.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.1...nd104-studio-v2.0.2
 [2.0.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.0...nd104-studio-v2.0.1
 [2.0.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.5.0...nd104-studio-v2.0.0
 [1.5.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.4.2...nd104-sync-v1.5.0

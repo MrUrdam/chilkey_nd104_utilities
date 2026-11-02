@@ -222,6 +222,13 @@ const HINTS: Record<number, [string, string]> = {
   [KC_NO]: ["The key does nothing.", "Die Taste tut nichts."],
   [KC_TRNS]: ["Does what this key does on the layer below.", "Tut, was die Taste auf der Ebene darunter tut."],
   0x7c16: ["Esc; with Shift or Win: ^ (German) or `.", "Esc; mit Shift oder Win: ^ (bzw. ` auf Englisch)."],
+  0x7e09: ["Short press: switch to device 1. Hold: pair a new device.", "Kurz: zu Gerät 1 wechseln. Lang halten: neues Gerät koppeln."],
+  0x7e0a: ["Short press: switch to device 2. Hold: pair a new device.", "Kurz: zu Gerät 2 wechseln. Lang halten: neues Gerät koppeln."],
+  0x7e0b: ["Short press: switch to device 3. Hold: pair a new device.", "Kurz: zu Gerät 3 wechseln. Lang halten: neues Gerät koppeln."],
+  0x7e0d: [
+    "Short press: switch to the 2.4 GHz receiver. Hold: pair the receiver.",
+    "Kurz: zum 2,4-GHz-Empfänger wechseln. Lang halten: Empfänger koppeln.",
+  ],
   0x7e0c: ["E.g. so it cannot open the Start menu in games.", "Z. B. damit sie im Spiel nicht das Startmenü öffnet."],
   0x700b: ["Not used by the ND104 – use \"Lock Win key\".", "Von der ND104 nicht genutzt – nimm „Win-Taste sperren“."],
   0x7013: ["On: any number of keys at once. Off: works with every PC.", "An: beliebig viele Tasten gleichzeitig. Aus: läuft an jedem PC."],

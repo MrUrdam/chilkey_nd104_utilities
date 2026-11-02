@@ -537,7 +537,7 @@ brackets.
 | Disp: restart display (hold long: display update mode, ends after 3 min idle) | Disp: display factory reset |
 | Calc or Enter: display calculator | H: battery brightness limit (50 % / 100 %) |
 | Q / W held 3 s: Windows / Mac key layout | |
-| Z / X / C: Bluetooth 1–3, V: 2.4 GHz, Space: USB | |
+| Z / X / C: Bluetooth 1–3, V: 2.4 GHz – short press switches, hold to pair; Space: USB | |
 | Win: lock Win key, M: charging indicator, N: N-key rollover, Caps: sleep, `/`: lighting test (hold 3 s) | |
 
 Built into the firmware (not in the keymap, so not changeable): **Fn +
