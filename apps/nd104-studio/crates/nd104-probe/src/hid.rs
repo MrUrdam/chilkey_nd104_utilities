@@ -21,6 +21,8 @@ pub struct Probe {
 pub struct Device {
     target: Target,
     handle: HidDevice,
+    /// 0 over USB; the collection's report ID over Bluetooth.
+    report_id: u8,
 }
 
 impl Probe {
@@ -69,6 +71,24 @@ impl Probe {
         Ok(())
     }
 
+    /// Prints the HID report descriptor of the vendor collection (read-only):
+    /// report IDs and lengths, e.g. to see how the keyboard talks over
+    /// Bluetooth.
+    pub fn descriptor(&self, target: Target) -> Result<()> {
+        let device = self.open(target)?;
+        let mut buf = [0u8; 4096];
+        let len = device
+            .handle
+            .get_report_descriptor(&mut buf)
+            .context("cannot read the report descriptor")?;
+        println!("{} report descriptor ({len} bytes):", target.name());
+        for (i, chunk) in buf[..len].chunks(16).enumerate() {
+            let hex: Vec<String> = chunk.iter().map(|b| format!("{b:02x}")).collect();
+            println!("  {:04x}  {}", i * 16, hex.join(" "));
+        }
+        Ok(())
+    }
+
     /// Opens the vendor HID collection (usage page FF60, usage 61) of a device.
     pub fn open(&self, target: Target) -> Result<Device> {
         let id = target.usb_id();
@@ -95,7 +115,22 @@ impl Probe {
         let handle = info
             .open_device(&self.api)
             .with_context(|| format!("cannot open {}", target.name()))?;
-        Ok(Device { target, handle })
+        // over USB the collection has no report ID; over Bluetooth (HID over
+        // GATT) it has one, declared in the descriptor (tag 0x85)
+        let mut desc = [0u8; 4096];
+        let report_id = handle
+            .get_report_descriptor(&mut desc)
+            .ok()
+            .and_then(|len| desc[..len].windows(2).find(|w| w[0] == 0x85).map(|w| w[1]))
+            .unwrap_or(0);
+        if report_id != 0 {
+            println!("({} uses report ID {report_id} – Bluetooth)", target.name());
+        }
+        Ok(Device {
+            target,
+            handle,
+            report_id,
+        })
     }
 
     /// Queries both devices. Missing devices or silent firmware → `None`.
@@ -158,6 +193,7 @@ impl Device {
             );
         }
         let mut buf = vec![0u8; report_len + 1];
+        buf[0] = self.report_id;
         buf[1..=packet.len()].copy_from_slice(packet);
         self.handle.write(&buf).with_context(|| {
             format!(
@@ -168,6 +204,19 @@ impl Device {
         Ok(())
     }
 
+    /// The next input report within `timeout` (report ID removed).
+    pub fn read_one(&self, timeout: Duration) -> Option<Vec<u8>> {
+        let mut buf = [0u8; 65];
+        let ms = i32::try_from(timeout.as_millis()).unwrap_or(i32::MAX);
+        match self.handle.read_timeout(&mut buf, ms) {
+            Ok(n) if n > 0 && self.report_id != 0 && buf[0] == self.report_id => {
+                Some(buf[1..n].to_vec())
+            }
+            Ok(n) if n > 0 => Some(buf[..n].to_vec()),
+            _ => None,
+        }
+    }
+
     /// Collects all input reports arriving within `duration`.
     pub fn read_reports(&self, duration: Duration) -> Vec<Vec<u8>> {
         let deadline = Instant::now() + duration;
@@ -176,6 +225,10 @@ impl Device {
         while Instant::now() < deadline {
             match self.handle.read_timeout(&mut buf, 50) {
                 Ok(0) => {}
+                // with a report ID, Windows puts it in front of the data
+                Ok(n) if self.report_id != 0 && buf[0] == self.report_id => {
+                    reports.push(buf[1..n].to_vec())
+                }
                 Ok(n) => reports.push(buf[..n].to_vec()),
                 Err(e) => {
                     println!("read error on {}: {e}", self.target.name());

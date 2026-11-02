@@ -61,8 +61,12 @@ export function installDemo(version: string) {
             ["done", 1],
           ]);
           return null;
-        case "keyboard_connected":
-          return true;
+        case "keyboard_connected": {
+          // ?keyboard=cycle switches USB → Bluetooth → none every 4 s
+          const k = new URLSearchParams(location.search).get("keyboard");
+          if (k === "cycle") return ["usb", "bluetooth", null][Math.floor(Date.now() / 4000) % 3];
+          return k === "bluetooth" ? "bluetooth" : k === "none" ? null : "usb";
+        }
         default:
           // launch_app, open_link, window commands …
           return null;

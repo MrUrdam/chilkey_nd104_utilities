@@ -4,6 +4,7 @@
   import { api, onPictureProgress, type Fit, type PictureCheck, type Status } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
   import Icon from "../components/Icon.svelte";
+  import UsbRequired from "../components/UsbRequired.svelte";
 
   let { status }: { status: Status } = $props();
 
@@ -15,7 +16,8 @@
   let result = $state<"ok" | string | null>(null);
   let error = $state<string | null>(null);
 
-  let ready = $derived(status.device.kind === "ready");
+  // the picture goes straight to the screen controller: USB only
+  let ready = $derived(status.device.kind === "ready" && status.device.connection === "usb");
   let usable = $derived(!!check && !check.problem);
 
   const kb = (bytes: number) => `${Math.ceil(bytes / 1024).toLocaleString()} KB`;
@@ -214,7 +216,7 @@
     <h2>{t("ui.pic.send_title")}</h2>
     <p class="muted small">{t("ui.pic.send_hint")}</p>
     {#if !ready}
-      <div class="notice warn"><Icon name="plug" />{t("ui.light.not_connected")}</div>
+      <UsbRequired feature="picture" />
     {/if}
     <div class="row">
       <button class="key primary" onclick={send} disabled={!usable || !ready || sending}>

@@ -3,8 +3,8 @@
   // top left, battery top right, weather icon left, temperature right with
   // low ~ high below. Light like the device in every app theme. Sizes follow
   // the screen width (container units), so it works large and small.
-  // The battery is a fixed placeholder – nd104-studio cannot read battery level
-  // or charging state.
+  // The battery shows the level Windows reports over Bluetooth; without one
+  // it is a fixed placeholder.
   import type { WeatherReport } from "../lib/api";
   import WeatherIcon from "./WeatherIcon.svelte";
 
@@ -16,13 +16,20 @@
     dim = false,
     overlay = null,
     noWeather = "",
+    battery = null,
   }: {
     time: Date | null;
     weather: ScreenWeather | null;
     dim?: boolean;
     overlay?: string | null;
     noWeather?: string;
+    /** Battery level in percent; `null`: unknown (placeholder). */
+    battery?: number | null;
   } = $props();
+
+  // inner bar of the symbol: 3.6 … 26.4 wide at most
+  let fill = $derived(battery === null ? 15 : Math.max(1.5, (22.8 * Math.min(100, battery)) / 100));
+  let fillColor = $derived(battery !== null && battery <= 20 ? "#e5893b" : "#5bbf6a");
 
   const pad = (n: number) => String(n).padStart(2, "0");
   const deg = (c: number) => `${c.toFixed(1)}°C`;
@@ -36,7 +43,10 @@
       <svg class="battery" viewBox="0 0 34 16" aria-hidden="true">
         <rect x="1" y="1" width="28" height="14" rx="4" fill="none" stroke="#8a8f98" stroke-width="1.6" />
         <rect x="30" y="5" width="3" height="6" rx="1" fill="#8a8f98" />
-        <rect x="3.6" y="3.6" width="15" height="8.8" rx="2.4" fill="#5bbf6a" />
+        <rect x="3.6" y="3.6" width={fill} height="8.8" rx="2.4" fill={fillColor} />
+        {#if battery !== null}
+          <text x="15" y="11.3" text-anchor="middle" class="pct">{battery}</text>
+        {/if}
       </svg>
 
       {#if weather}
@@ -101,6 +111,11 @@
     top: 6.5%;
     font-size: 6cqw;
     line-height: 1;
+  }
+
+  .battery .pct {
+    font: 700 8.6px "Segoe UI", system-ui, sans-serif;
+    fill: #1d2a20;
   }
 
   .battery {

@@ -4,7 +4,7 @@
 [![CI](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-studio-ci.yml/badge.svg)](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-studio-ci.yml)
 [![License: MIT](https://img.shields.io/github/license/MrUrdam/chilkey_nd104_utilities)](../../LICENSE)
 ![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
-![USB cable only](https://img.shields.io/badge/connection-USB%20cable%20only-orange)
+[![Connection modes: USB, Bluetooth, 2.4 GHz](https://img.shields.io/badge/connection%20modes-matrix-blue)](#connection-modes)
 <br>
 ![Rust](https://img.shields.io/badge/Rust-1.80%2B-000000?logo=rust&logoColor=white)
 ![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)
@@ -49,8 +49,8 @@ knob and the round button** on all layers. Set it up once, then forget it.
 > ⚠️ **Use at your own risk.** Unofficial hobby project, not affiliated with
 > Chilkey. No warranty and no guaranteed support. Only tested with the
 > firmware versions listed under [Supported firmware](#supported-firmware),
-> on Windows 10/11, with the keyboard connected by **USB cable** (no 2.4 GHz
-> dongle, no Bluetooth). Full text: [disclaimer](../../README.md#disclaimer).
+> on Windows 10/11, with the connections marked ✅ in
+> [Connection modes](#connection-modes). Full text: [disclaimer](../../README.md#disclaimer).
 
 ---
 
@@ -129,9 +129,60 @@ picture and the keymap.
 - **Console runner** `nd104-cli` for scripting and testing
 - **No telemetry** (see [Privacy](#privacy--network-access))
 
+## Connection modes
+
+The ND104 connects by USB cable, Bluetooth (3 devices) or 2.4 GHz receiver.
+**This table is the one place that says what works on which connection** –
+the rest of the documentation, the app and the setup point here.
+
+| Feature | USB cable | Bluetooth | 2.4 GHz |
+|---|:-:|:-:|:-:|
+| Time and weather on the display | ✅ | ✅ | ❌ |
+| Own picture or GIF on the screen | ✅ | ❌ | ❌ |
+| Lighting | ✅ | ✅ | ❌ |
+| Keymap (remap, backup, profiles, pressed keys in the drawing) | ✅ | ✅ | ❌ |
+| Keyboard settings (debounce, sleep times) | ✅ | ✅ | ❌ |
+| Keyboard firmware version and firmware update check | ✅ | ✅ | ❌ |
+| Screen firmware version | ✅ | ☑️ ¹ | ❌ |
+| Battery level (app and live preview) | ☑️ ² | ✅ | ❌ |
+| App updates, weather download, settings window | ✅ | ✅ | ✅ |
+
+✅ works · ☑️ with a limitation (footnote) · ❌ not available
+
+¹ Taken from the last USB connection. **Connect the keyboard once by cable**
+before using Bluetooth; until then ND104 Studio waits ("Connecting …") and
+says so – it does not lock.
+² Over the cable itself the keyboard does not report its battery level; it is
+shown as long as the keyboard is also connected via Bluetooth.
+
+- **The cable wins:** when the keyboard is connected by cable and Bluetooth
+  at the same time, ND104 Studio uses the cable (and still shows the battery
+  level from Bluetooth). Plugging in the cable also ends a lock that
+  happened over Bluetooth – all checks run again.
+- **Sleep over Bluetooth:** when the keyboard sleeps, Windows drops the
+  Bluetooth link. ND104 Studio shows "Connecting …" and connects again as
+  soon as the keyboard wakes up (press a key) – no lock; only a wrong answer
+  locks, like over USB.
+- The sidebar shows the current mode (green "USB" or "Bluetooth"), the tray
+  status line adds "(Bluetooth)", and the footer and Dashboard show the
+  battery level.
+- **How it works:** over Bluetooth the keyboard offers the same command
+  channel as over USB (HID over Bluetooth LE, one extra report ID byte), and
+  it forwards time and weather to the screen as it does over the cable. The
+  screen controller itself is a second USB device inside the keyboard and is
+  not available over Bluetooth – hence picture and screen version need the
+  cable. Details: [protocol.md § 5.5](../../docs/protocol.md#55-over-bluetooth-analysis-2026-11-02).
+- The picture page says "Sending a picture needs a USB connection" over
+  Bluetooth.
+- **2.4 GHz** has not been analysed yet; ND104 Studio does not look for the
+  receiver.
+
+The same overview is in the app: **Device → Connection modes**.
+
 ## What it does NOT do
 
-- ❌ **No wireless support.** No 2.4 GHz dongle, no Bluetooth. USB cable only.
+- ❌ **Not every feature on every connection** – see
+  [Connection modes](#connection-modes).
 - ❌ **No Linux / macOS support.** Windows 10/11 only.
 - ❌ **No firmware flashing.** It never downloads, installs or modifies firmware.
   It only tells you an update exists.
@@ -173,7 +224,7 @@ picture and the keymap.
 | | |
 |---|---|
 | OS | Windows 10 (21H2+) or Windows 11, 64-bit |
-| Connection | Chilkey ND104 via **USB cable** |
+| Connection | Chilkey ND104, connected as listed in [Connection modes](#connection-modes) |
 | Firmware | Verified versions, or other versions while the protocol checks pass (see below) |
 | Runtime | Microsoft Edge WebView2 (pre-installed on Windows 11 and current Windows 10) |
 
@@ -306,8 +357,8 @@ Summer/winter time: **Auto** (from time-zone rules) · force summer · force win
 
 ## Installation
 
-All options need Windows 10/11 (64-bit) and the keyboard connected **by USB
-cable**. Releases are published on the
+All options need Windows 10/11 (64-bit) and the keyboard connected (see
+[Connection modes](#connection-modes)). Releases are published on the
 [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
 (tag `nd104-studio-vX.Y.Z`).
 Each release has:
@@ -333,7 +384,7 @@ Each release has:
    entry and an entry in Windows **Apps**.
 5. **Start ND104 Studio**. Its icon appears in the tray (maybe behind the **^**
    arrow; drag it onto the taskbar to keep it visible). The last page of the
-   setup also tells you whether your keyboard is connected by cable.
+   setup also shows how your keyboard is connected (and follows changes).
 6. The settings window opens on first start: **Weather → Location** → search
    your city, check it on the map (🗺) if needed, pick it, **Apply**. Without
    this, Berlin is used.
@@ -446,7 +497,8 @@ instead of misreading it.
 
 ## Usage
 
-1. Connect the ND104 with a **USB cable**.
+1. Connect the ND104 – the first time with the **USB cable**, then any
+   connection from [Connection modes](#connection-modes).
 2. Close the official Chilkey web driver / weather plugin.
 3. Start ND104 Studio (Start menu, or automatically with Windows). The tray icon
    appears and time and weather are sent right away.
@@ -560,6 +612,7 @@ nd104-studio.exe --settings     # open the settings window right away
 | Logs | `%LOCALAPPDATA%\nd104-studio\logs\` |
 | Keymap page settings, profiles | `%APPDATA%\nd104-studio\keymap-page.json`, `keymap-profiles\` |
 | Automatic keymap backups | `%LOCALAPPDATA%\nd104-studio\keymap-backups\` (the last 20) |
+| Screen firmware from the last USB connection (for Bluetooth) | `%LOCALAPPDATA%\nd104-studio\screen-firmware.json` |
 | API keys | Windows Credential Manager (`nd104-studio/<provider>`) |
 | Program (setup) | `%LOCALAPPDATA%\Programs\nd104-studio\` (includes `nd104-studio-setup.exe` for uninstalling) |
 
@@ -582,7 +635,9 @@ No telemetry, no analytics, no IP-based location unless you turn it on.
 
 | Problem | Fix |
 |---|---|
-| "Not connected" | Use a USB **cable** (wireless is not supported); try another port; avoid unpowered hubs |
+| "Not connected" | Use a connection from [Connection modes](#connection-modes); try another USB port; avoid unpowered hubs; wake the keyboard by pressing a key |
+| Over Bluetooth it stays at "Connecting …" | The first time, connect the keyboard once with the USB cable; ND104 Studio remembers the screen firmware, then Bluetooth works |
+| Over Bluetooth it shows "Connecting …" now and then | The keyboard is asleep; it connects again as soon as you press a key |
 | Amber icon / locked | A protocol check failed (the reason is in the tray status line, the notification and the log). Re-connect the cable or use "Check keyboard again"; if it stays locked, your firmware behaves differently – please open an issue with the log |
 | No tray icon | It may be hidden behind the **^** arrow in the taskbar; drag it out. Is ND104 Studio running (Task Manager)? |
 | SmartScreen blocks the setup | The setup is not code-signed: **More info → Run anyway** |
@@ -658,10 +713,12 @@ Stable releases follow SemVer (MAJOR.MINOR.PATCH); pre-releases use `X.Y.Z-rc.N`
    Its notes are the CHANGELOG section for that version plus a download list.
    - `X.Y.Z-rc.N` → GitHub pre-release without MSI (WiX needs a plain version),
      ignored by the app update check.
-   - It also publishes a **bridge release** `nd104-sync-vX.Y.Z` with the same
-     setup named `nd104-sync_X.Y.Z_x64-setup.exe`: installed nd104-sync 1.x
-     versions only look for that tag and file name, and so update to
-     ND104 Studio (see [Coming from nd104-sync](#coming-from-nd104-sync)).
+   - Installed nd104-sync 1.x versions only look for `nd104-sync-v*` tags.
+     For them there is one **bridge release** `nd104-sync-v2.0.0` with the
+     setup named `nd104-sync_2.0.0_x64-setup.exe`; it updates them to
+     ND104 Studio, which then finds all later releases by itself (see
+     [Coming from nd104-sync](#coming-from-nd104-sync)). No new bridge
+     releases are made.
 
 Every push to `main` also runs [`nd104-studio-ci.yml`](../../.github/workflows/nd104-studio-ci.yml):
 frontend type check and build, Rust format check, clippy (warnings are errors)

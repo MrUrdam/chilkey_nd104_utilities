@@ -31,7 +31,8 @@ export const runInstall = (autostart: boolean, desktopShortcut: boolean, style: 
   invoke<void>("run_install", { options: { autostart, desktop_shortcut: desktopShortcut, style } });
 export const runUninstall = (keepSettings: boolean) => invoke<void>("run_uninstall", { keepSettings });
 export const launchApp = () => invoke<void>("launch_app");
-export const keyboardConnected = () => invoke<boolean>("keyboard_connected");
+/** How the keyboard is connected: "usb", "bluetooth" or not at all (null). */
+export const keyboardConnected = () => invoke<"usb" | "bluetooth" | null>("keyboard_connected");
 export const openLink = (which: "project" | "license" | "changelog") => invoke<void>("open_link", { which });
 export const onProgress = (handler: (p: Progress) => void): Promise<UnlistenFn> =>
   listen<Progress>("progress", (e) => handler(e.payload));

@@ -13,6 +13,76 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.1.0] – 2026-11-02
+
+ND104 Studio now works **over Bluetooth**: time, weather, lighting, keymap
+and keyboard settings no longer need the cable – only your own picture does.
+Update with **Settings → General → Install update**, then connect the
+keyboard **once by USB cable** before switching to Bluetooth.
+
+### Added
+- **Bluetooth mode:** connected over Bluetooth, ND104 Studio syncs time and
+  weather and lets you change the lighting, the keymap (including backups,
+  profiles and pressed keys) and the keyboard settings – the same commands
+  as over USB, checked on the keyboard. The sidebar shows "Bluetooth" in
+  green, the tray status line adds "(Bluetooth)".
+- **Battery level:** connected via Bluetooth, the footer and Dashboard show
+  the battery level – also while the cable is plugged in and in use – and the
+  battery symbol in the live preview shows the real level with the
+  percentage inside. It comes from Windows (the value in
+  its Bluetooth settings); nothing is sent to the keyboard for it.
+- **Connection modes overview** in the app (Device page) and in the README:
+  what works over USB cable, Bluetooth and 2.4 GHz.
+- `nd104-probe` works over Bluetooth and has new commands for diagnosis:
+  `descriptor`, `query`, `light`, `setting`, `key`, `knob`, `keymap` and
+  `picture` (reads by default; writes only with an explicit value).
+
+### Changed
+- **Firmware check over Bluetooth:** the screen controller is reachable by
+  cable only. ND104 Studio remembers the screen firmware from the last USB
+  connection and uses it over Bluetooth; before the first USB connection it
+  waits ("Connecting …") with the hint to connect the cable once – no lock,
+  no notification.
+- **Plugging in the cable ends a Bluetooth lock:** switching to the cable
+  counts as re-connecting, so all checks run again; no "Check keyboard
+  again" needed.
+- **A sleeping keyboard does not lock:** when the keyboard sleeps, Windows
+  drops its Bluetooth link. ND104 Studio then shows "Connecting …" and
+  connects again (with all checks) as soon as it wakes up; a missing answer
+  is retried with the next sync. A wrong answer still locks, as over USB.
+- **The cable wins:** connected by cable and Bluetooth at the same time,
+  ND104 Studio uses the cable.
+- Pages say what they need: the picture page "Sending a picture needs a USB
+  connection", the other pages "… needs a connection to the keyboard (USB or
+  Bluetooth)". The app and the setup no longer say "USB only".
+- **Sidebar shows the connection:** at the bottom the current mode with its
+  symbol – "USB" or "Bluetooth" (green), "Bluetooth" (orange) while
+  connecting, or "Not connected" (grey). The status light next to the model
+  name uses the same colours and turns red when the keyboard is locked;
+  outdated weather no longer changes it.
+- The live preview no longer puts a text over the screen. Without a
+  connection it shows the time as ND104 Studio would send it (with your clock
+  settings) and the latest weather; it is dimmed only when the keyboard is
+  not connected at all.
+- The "Collapse sidebar" button label no longer gets cut off.
+- **One release per version:** no more `nd104-sync-vX.Y.Z` bridge releases.
+  nd104-sync 1.x installs update through the bridge release of 2.0.0 and
+  from there find new ND104 Studio versions by themselves.
+
+### Fixed
+- **"Sleep after" was always empty** on the Device page: the keyboard
+  answers 0 for the id the web driver reads it with. ND104 Studio now reads
+  it with the id it is written with, so the stored value is shown.
+- **Lock when plugging in a charger:** the keyboard reports the same IDs
+  over Bluetooth as over USB. When its Bluetooth link was rebuilt (e.g. on
+  plugging in a charger), ND104 Studio took it for a USB connection without
+  the command channel and locked ("P1 … not found"). Bluetooth is now handled
+  as its own connection. The locked state is red everywhere – sidebar (a
+  lock instead of "USB"), footer, Dashboard and Device page.
+- The setup said "connected by cable" when the keyboard was connected over
+  Bluetooth. It now says just "Keyboard connected via USB" or "… via
+  Bluetooth", and follows changes live (plugging in, unplugging, switching).
+
 ## [2.0.2] – 2026-11-02
 
 Clearer help for the connection keys. Update with **Settings → General →
@@ -624,7 +694,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.2...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.1.0...HEAD
+[2.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.2...nd104-studio-v2.1.0
 [2.0.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.1...nd104-studio-v2.0.2
 [2.0.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.0...nd104-studio-v2.0.1
 [2.0.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-sync-v1.5.0...nd104-studio-v2.0.0

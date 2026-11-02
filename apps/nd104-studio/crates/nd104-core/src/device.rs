@@ -55,11 +55,62 @@ pub enum Trust {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ConnectedDevice {
+    /// USB cable (keyboard and screen) or Bluetooth (keyboard only).
+    pub connection: Connection,
     pub model_id: &'static str,
     pub model_name: &'static str,
     pub firmware: Vec<FirmwareInfo>,
     pub trust: Trust,
     pub screen_variant: ScreenVariant,
+}
+
+/// The device did not answer in time (as opposed to a wrong answer).
+#[derive(Debug)]
+struct NoAnswer(String);
+
+impl std::fmt::Display for NoAnswer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for NoAnswer {}
+
+/// The device answered something it must not (locks also over Bluetooth).
+#[derive(Debug)]
+struct WrongAnswer(String);
+
+impl std::fmt::Display for WrongAnswer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for WrongAnswer {}
+
+/// Reading or writing the HID channel failed: over Bluetooth this means the
+/// link is gone (keyboard asleep or out of range), not a protocol problem.
+#[derive(Debug)]
+struct LinkLost(String);
+
+impl std::fmt::Display for LinkLost {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for LinkLost {}
+
+/// How the keyboard is connected.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Connection {
+    /// Keyboard and screen controller over the USB cable: everything works.
+    Usb,
+    /// Keyboard over Bluetooth (report ID 2): time, weather, lighting,
+    /// keymap and settings; the screen controller (own picture, screen
+    /// version) is cable-only.
+    Bluetooth,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -94,6 +145,7 @@ pub struct DeviceEvent {
 
 struct Active {
     model: usize,
+    connection: Connection,
     channels: HashMap<Role, (Box<dyn HidChannel>, usize)>,
 }
 
@@ -103,6 +155,17 @@ pub struct DeviceManager {
     active: Option<Active>,
     state: DeviceState,
     events: Vec<DeviceEvent>,
+    /// Screen firmware last verified over USB. Over Bluetooth the screen
+    /// cannot be asked, so this is what its check relies on.
+    known_screen: Option<FirmwareInfo>,
+    /// Where `known_screen` is kept between runs (none in tests).
+    screen_memory: Option<std::path::PathBuf>,
+    /// The connection a lock happened on; the lock ends when that
+    /// connection goes away (re-plug), e.g. by switching to the cable.
+    locked_over: Option<Connection>,
+    /// Over Bluetooth, waiting for one USB connection (screen unknown);
+    /// said once in the events, not every poll.
+    waiting_for_usb: bool,
 }
 
 impl DeviceManager {
@@ -113,6 +176,47 @@ impl DeviceManager {
             active: None,
             state: DeviceState::NotConnected,
             events: Vec::new(),
+            known_screen: None,
+            screen_memory: None,
+            locked_over: None,
+            waiting_for_usb: false,
+        }
+    }
+
+    /// Keeps the screen firmware seen over USB in `path`, for Bluetooth.
+    pub fn with_screen_memory(mut self, path: std::path::PathBuf) -> Self {
+        self.known_screen = std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|text| serde_json::from_str(&text).ok());
+        self.screen_memory = Some(path);
+        self
+    }
+
+    /// The screen firmware a Bluetooth connection relies on (tests).
+    pub fn set_known_screen(&mut self, firmware: Option<FirmwareInfo>) {
+        self.known_screen = firmware;
+    }
+
+    fn remember_screen(&mut self, firmware: &[FirmwareInfo]) {
+        let Some(screen) = firmware.iter().find(|f| f.role == Role::Screen) else {
+            return;
+        };
+        if self.known_screen.as_ref() == Some(screen) {
+            return;
+        }
+        self.known_screen = Some(screen.clone());
+        if let Some(path) = &self.screen_memory {
+            let saved = serde_json::to_string(screen)
+                .map_err(anyhow::Error::from)
+                .and_then(|json| {
+                    if let Some(dir) = path.parent() {
+                        std::fs::create_dir_all(dir)?;
+                    }
+                    Ok(std::fs::write(path, json)?)
+                });
+            if let Err(e) = saved {
+                tracing::warn!("cannot remember the screen firmware: {e:#}");
+            }
         }
     }
 
@@ -151,6 +255,7 @@ impl DeviceManager {
             ),
         };
         self.event(EventLevel::Error, format!("Locked: {reason}"));
+        self.locked_over = self.active.as_ref().map(|a| a.connection);
         self.active = None;
         self.state = DeviceState::Locked {
             model_name,
@@ -159,24 +264,85 @@ impl DeviceManager {
         };
     }
 
+    /// A check failed: locks – unless the Bluetooth link is just gone (the
+    /// keyboard sleeps or is out of range). Then the connection is dropped
+    /// and the next poll connects again with all checks.
+    fn fail(&mut self, check: &str, e: &anyhow::Error) {
+        if self.is_bluetooth() && e.downcast_ref::<LinkLost>().is_some() {
+            self.active = None;
+            self.state = DeviceState::NotConnected;
+            self.event(
+                EventLevel::Info,
+                format!("Bluetooth connection lost (keyboard asleep?): {e:#}"),
+            );
+        } else {
+            self.lock(format!("{check}: {e:#}"));
+        }
+    }
+
     /// Detects plug/unplug and connects. Returns `true` if the state changed.
     pub fn poll(&mut self) -> bool {
         let before = self.state.clone();
-        let interfaces = match self.backend.enumerate() {
+        let all = match self.backend.enumerate() {
             Ok(list) => list,
             Err(e) => {
                 self.event(EventLevel::Error, format!("HID enumeration failed: {e:#}"));
                 return false;
             }
         };
+        // Over Bluetooth the keyboard shows the same IDs as over USB (with
+        // report ID 2), so the two are kept apart: the USB connection only
+        // looks at USB interfaces, the Bluetooth one only at Bluetooth ones.
+        let (bluetooth, interfaces): (Vec<_>, Vec<_>) =
+            all.into_iter().partition(HidInterfaceInfo::is_bluetooth);
 
-        let found = self.models.iter().position(|m| {
+        let found_usb = self.models.iter().position(|m| {
             m.interfaces().iter().any(|spec| {
                 interfaces
                     .iter()
                     .any(|i| i.vid == spec.vid && i.pid == spec.pid)
             })
         });
+        let usb_complete = found_usb.is_some_and(|m| self.all_interfaces_present(m, &interfaces));
+        let found_bluetooth = self
+            .models
+            .iter()
+            .position(|m| Self::bluetooth_keyboard(m.as_ref(), &bluetooth).is_some());
+
+        // the cable wins; a partial USB device (e.g. only the screen on a
+        // charging cable) does not block Bluetooth
+        if let DeviceState::Ready(d) = &self.state {
+            let stay = match d.connection {
+                Connection::Usb => found_usb.is_some(),
+                Connection::Bluetooth => found_bluetooth.is_some() && !usb_complete,
+            };
+            if !stay {
+                self.active = None;
+                self.state = DeviceState::NotConnected;
+                self.event(EventLevel::Info, "Keyboard disconnected");
+            }
+        }
+        // a lock ends when its connection goes away: unplugged, or
+        // Bluetooth replaced by the cable – all checks run again
+        if matches!(self.state, DeviceState::Locked { .. }) {
+            let gone = match self.locked_over {
+                Some(Connection::Usb) => found_usb.is_none(),
+                Some(Connection::Bluetooth) => found_bluetooth.is_none() || usb_complete,
+                None => false,
+            };
+            if gone {
+                self.locked_over = None;
+                self.state = DeviceState::NotConnected;
+                self.event(EventLevel::Info, "Keyboard re-connected – checking again");
+            }
+        }
+        if matches!(self.state, DeviceState::NotConnected) && !usb_complete {
+            if let Some(model) = found_bluetooth {
+                self.connect_bluetooth(model, &bluetooth);
+                return self.state != before;
+            }
+        }
+        let found = found_usb.or(found_bluetooth);
 
         match (found, &self.state) {
             (None, DeviceState::NotConnected) => {}
@@ -187,6 +353,7 @@ impl DeviceManager {
             }
             // A lock only ends with re-plug or re-check.
             (Some(_), DeviceState::Locked { .. }) => {}
+            (Some(_), DeviceState::Ready(d)) if d.connection == Connection::Bluetooth => {}
             (Some(model), DeviceState::Ready(_)) => {
                 if !self.all_interfaces_present(model, &interfaces) {
                     self.active = None;
@@ -194,7 +361,10 @@ impl DeviceManager {
                     self.event(EventLevel::Info, "Keyboard disconnected");
                 }
             }
-            (Some(model), DeviceState::NotConnected) => self.connect(model, &interfaces),
+            (Some(model), DeviceState::NotConnected) if found_usb == Some(model) => {
+                self.connect(model, &interfaces)
+            }
+            (Some(_), DeviceState::NotConnected) => {}
         }
         self.state != before
     }
@@ -202,6 +372,7 @@ impl DeviceManager {
     /// Forgets a lock and runs all checks again.
     pub fn recheck(&mut self) -> bool {
         self.active = None;
+        self.waiting_for_usb = false;
         self.state = DeviceState::NotConnected;
         self.event(EventLevel::Info, "Re-checking keyboard");
         self.poll();
@@ -220,6 +391,7 @@ impl DeviceManager {
         let name = self.models[model_idx].display_name();
         self.active = Some(Active {
             model: model_idx,
+            connection: Connection::Usb,
             channels: HashMap::new(),
         });
 
@@ -282,6 +454,7 @@ impl DeviceManager {
         };
         let screen_variant = model.screen_variant(&firmware);
         let device = ConnectedDevice {
+            connection: Connection::Usb,
             model_id: model.id(),
             model_name: model.display_name(),
             firmware: firmware.clone(),
@@ -293,6 +466,7 @@ impl DeviceManager {
             .map(|f| format!("{} {}", f.role, f.raw))
             .collect();
         self.state = DeviceState::Ready(device);
+        self.remember_screen(&firmware);
         match trust {
             Trust::Verified => self.event(
                 EventLevel::Info,
@@ -308,6 +482,130 @@ impl DeviceManager {
         }
     }
 
+    /// The keyboard's command channel among the Bluetooth interfaces.
+    fn bluetooth_keyboard<'a>(
+        model: &dyn KeyboardModel,
+        bluetooth: &'a [HidInterfaceInfo],
+    ) -> Option<(&'static crate::model::InterfaceSpec, &'a HidInterfaceInfo)> {
+        let spec = model
+            .interfaces()
+            .iter()
+            .find(|s| s.role == Role::Keyboard)?;
+        Some((spec, find_interface(bluetooth, spec)?))
+    }
+
+    /// Connects over Bluetooth: keyboard only. Its firmware is read and
+    /// checked like over USB; the screen cannot be asked, so its firmware
+    /// must have been verified over USB before.
+    fn connect_bluetooth(&mut self, model_idx: usize, bluetooth: &[HidInterfaceInfo]) {
+        let model = &self.models[model_idx];
+        let name = model.display_name();
+        let Some((spec, info)) = Self::bluetooth_keyboard(model.as_ref(), bluetooth) else {
+            return;
+        };
+        let report_len = spec.report_len;
+        let channel = match self.backend.open(info) {
+            Ok(c) => c,
+            // the Bluetooth link may just be rebuilding: try again next poll
+            Err(e) => {
+                tracing::debug!("cannot open {name} over Bluetooth yet: {e:#}");
+                return;
+            }
+        };
+        let mut channels = HashMap::new();
+        channels.insert(Role::Keyboard, (channel, report_len));
+        self.active = Some(Active {
+            model: model_idx,
+            connection: Connection::Bluetooth,
+            channels,
+        });
+
+        // P3: keyboard firmware, read now
+        let queries: Vec<Packet> = self.models[model_idx]
+            .firmware_queries()
+            .into_iter()
+            .filter(|q| q.role == Role::Keyboard)
+            .collect();
+        let mut firmware = Vec::new();
+        for query in queries {
+            match self.query_firmware(&query) {
+                Ok(info) => firmware.push(info),
+                // only a wrong answer locks; no answer or a failed write means
+                // asleep or the link is still rebuilding: try again next poll
+                Err(e) if e.downcast_ref::<WrongAnswer>().is_none() => {
+                    tracing::debug!("{name} over Bluetooth: {e:#}");
+                    self.active = None;
+                    return;
+                }
+                Err(e) => {
+                    self.lock(format!("P3 (Bluetooth): {e:#}"));
+                    return;
+                }
+            }
+        }
+        // the screen as last verified over USB
+        let model = &self.models[model_idx];
+        let Some(screen) = self.known_screen.clone().filter(|s| {
+            model
+                .verified_firmware()
+                .iter()
+                .any(|v| v.role == Role::Screen && v.version == s.version)
+        }) else {
+            // not a protocol problem: wait (not connected) until the cable
+            // was connected once
+            self.active = None;
+            if !self.waiting_for_usb {
+                self.waiting_for_usb = true;
+                self.event(
+                    EventLevel::Warning,
+                    "Bluetooth: the screen firmware cannot be checked over Bluetooth – \
+                     connect the keyboard once with the USB cable, then Bluetooth works",
+                );
+            }
+            return;
+        };
+        self.waiting_for_usb = false;
+        firmware.push(screen);
+        let verified = firmware.iter().all(|f| {
+            model
+                .verified_firmware()
+                .iter()
+                .any(|v| v.role == f.role && v.version == f.version)
+        });
+        let trust = if verified {
+            Trust::Verified
+        } else {
+            Trust::Compatible
+        };
+        let device = ConnectedDevice {
+            connection: Connection::Bluetooth,
+            model_id: model.id(),
+            model_name: model.display_name(),
+            firmware: firmware.clone(),
+            trust,
+            screen_variant: model.screen_variant(&firmware),
+        };
+        self.state = DeviceState::Ready(device);
+        let keyboard = firmware
+            .iter()
+            .find(|f| f.role == Role::Keyboard)
+            .map_or("?", |f| f.raw.as_str());
+        self.event(
+            EventLevel::Info,
+            format!(
+                "{name} connected via Bluetooth (keyboard {keyboard}{}; screen as last verified by cable)",
+                if trust == Trust::Verified { ", verified" } else { ", unverified" }
+            ),
+        );
+    }
+
+    /// Connected over Bluetooth right now?
+    pub fn is_bluetooth(&self) -> bool {
+        self.active
+            .as_ref()
+            .is_some_and(|a| a.connection == Connection::Bluetooth)
+    }
+
     fn query_firmware(&mut self, query: &Packet) -> Result<FirmwareInfo> {
         for attempt in 1..=FIRMWARE_RETRIES {
             self.write(query)?;
@@ -315,13 +613,13 @@ impl DeviceManager {
             while let Some(report) = self.read_until(query.role, deadline)? {
                 match self.classify(query.role, &report) {
                     ReportClass::Firmware(info) if info.role == query.role => return Ok(info),
-                    ReportClass::Malformed(why) => return Err(anyhow!(why)),
+                    ReportClass::Malformed(why) => return Err(WrongAnswer(why).into()),
                     other => self.note_unsolicited(other),
                 }
             }
             tracing::debug!("no {} version answer (attempt {attempt})", query.role);
         }
-        Err(anyhow!("{} did not answer the version query", query.role))
+        Err(NoAnswer(format!("{} did not answer the version query", query.role)).into())
     }
 
     /// Sends a time/weather packet and checks the acknowledgement (P4, P5).
@@ -329,19 +627,30 @@ impl DeviceManager {
         if !matches!(self.state, DeviceState::Ready(_)) {
             return Err(anyhow!("keyboard not ready"));
         }
+        // the screen controller is not reachable over Bluetooth: not a
+        // protocol problem, so no lock
+        if packet.role != Role::Keyboard && self.is_bluetooth() {
+            return Err(anyhow!("this needs the USB cable"));
+        }
         // Stale input first: anything damaged locks, the rest is logged.
         if let Err(e) = self.drain(packet.role) {
-            self.lock(format!("P5: {e:#}"));
+            self.fail("P5", &e);
             return Err(e);
         }
         if let Err(e) = self.write(packet) {
-            self.lock(format!("P4: {e:#}"));
+            self.fail("P4", &e);
             return Err(e);
         }
         match self.await_ack(packet) {
             Ok(()) => Ok(()),
+            // over Bluetooth a sleeping keyboard does not answer: try again
+            // later. A wrong answer still locks.
+            Err(e) if self.is_bluetooth() && e.downcast_ref::<NoAnswer>().is_some() => {
+                tracing::info!("no answer over Bluetooth (keyboard asleep?): {e:#}");
+                Err(e)
+            }
             Err(e) => {
-                self.lock(format!("P5: {e:#}"));
+                self.fail("P5", &e);
                 Err(e)
             }
         }
@@ -365,10 +674,11 @@ impl DeviceManager {
                 other => self.note_unsolicited(other),
             }
         }
-        Err(anyhow!(
+        Err(NoAnswer(format!(
             "no acknowledgement for command 0x{:02X}",
             packet.command
         ))
+        .into())
     }
 
     fn model(&self) -> Result<&dyn KeyboardModel> {
@@ -388,11 +698,11 @@ impl DeviceManager {
         pick: impl Fn(&ReportClass) -> Option<T>,
     ) -> Result<Option<T>> {
         if let Err(e) = self.drain(packet.role) {
-            self.lock(format!("P5: {e:#}"));
+            self.fail("P5", &e);
             return Err(e);
         }
         if let Err(e) = self.write(packet) {
-            self.lock(format!("P4: {e:#}"));
+            self.fail("P4", &e);
             return Err(e);
         }
         let deadline = Instant::now() + timeout;
@@ -407,7 +717,7 @@ impl DeviceManager {
                     ))
                 }
                 Err(e) => {
-                    self.lock(format!("P4: {e:#}"));
+                    self.fail("P4", &e);
                     return Err(e);
                 }
             };
@@ -734,6 +1044,11 @@ impl DeviceManager {
         progress: &mut dyn FnMut(f32),
     ) -> Result<()> {
         self.model()?;
+        if self.is_bluetooth() {
+            return Err(anyhow!(
+                "sending a picture needs the USB cable (the screen is not reachable over Bluetooth)"
+            ));
+        }
         let role = transfer.role;
         let ack = |c: &ReportClass| match c {
             ReportClass::Transfer(a) => Some(*a),
@@ -875,7 +1190,9 @@ impl DeviceManager {
         }
         let mut report = packet.bytes.clone();
         report.resize(*len, 0);
-        channel.write(&report)
+        channel
+            .write(&report)
+            .map_err(|e| LinkLost(format!("HID write failed: {e:#}")).into())
     }
 
     fn read_until(&mut self, role: Role, deadline: Instant) -> Result<Option<Vec<u8>>> {
@@ -885,7 +1202,9 @@ impl DeviceManager {
             .and_then(|a| a.channels.get_mut(&role))
             .ok_or_else(|| anyhow!("{role} interface not open"))?;
         let remaining = deadline.saturating_duration_since(Instant::now());
-        channel.read(remaining)
+        channel
+            .read(remaining)
+            .map_err(|e| LinkLost(format!("HID read failed: {e:#}")).into())
     }
 }
 
@@ -955,7 +1274,13 @@ impl DeviceHandle {
             .name("nd104-device".into())
             .spawn(move || {
                 let mut manager = match backend() {
-                    Ok(b) => DeviceManager::new(b, models),
+                    Ok(b) => {
+                        let manager = DeviceManager::new(b, models);
+                        match crate::config::local_data_dir() {
+                            Ok(dir) => manager.with_screen_memory(dir.join("screen-firmware.json")),
+                            Err(_) => manager,
+                        }
+                    }
                     Err(e) => {
                         tracing::error!("HID backend unavailable: {e:#}");
                         return;
@@ -1160,6 +1485,12 @@ mod tests {
     }
 
     struct Shared {
+        /// Keyboard on Bluetooth, screen on a (charging) USB cable.
+        bluetooth: bool,
+        /// With `bluetooth`: the keyboard is on the USB cable as well.
+        cable_too: bool,
+        /// Reads and writes fail like a dropped Bluetooth link (os error 1167).
+        link_down: bool,
         present: bool,
         keyboard_fw: &'static str,
         behaviour: Behaviour,
@@ -1203,7 +1534,17 @@ mod tests {
     impl HidBackend for MockBackend {
         fn enumerate(&mut self) -> Result<Vec<HidInterfaceInfo>> {
             let s = self.0.lock().unwrap();
-            Ok(if s.present {
+            Ok(if s.bluetooth {
+                let mut keyboard = iface(0x6D67, 0x016C, -1);
+                keyboard.path =
+                    r"\\?\HID#{00001812-0000-1000-8000-00805f9b34fb}_Dev_VID&016d67_PID&016c&Col02"
+                        .into();
+                let mut list = vec![keyboard, iface(0x5542, 0x0001, 0)];
+                if s.cable_too {
+                    list.push(iface(0x6D67, 0x016C, 1));
+                }
+                list
+            } else if s.present {
                 vec![iface(0x6D67, 0x016C, 1), iface(0x5542, 0x0001, 0)]
             } else {
                 vec![]
@@ -1248,6 +1589,9 @@ mod tests {
     impl HidChannel for MockChannel {
         fn write(&mut self, report: &[u8]) -> Result<()> {
             let mut s = self.0.lock().unwrap();
+            if s.link_down {
+                return Err(anyhow!("the device is not connected (os error 1167)"));
+            }
             if s.behaviour == Behaviour::WriteFails && report[0] == 0x1C {
                 return Err(anyhow!("device rejected write"));
             }
@@ -1287,10 +1631,10 @@ mod tests {
                     a[0] = 0xFF;
                     answers.push(a);
                 }
-                // keyboard settings: sleep is written as 0B, read as 06
+                // keyboard settings (like V3.0.14: sleep lives under 0B,
+                // reading 06 answers 0)
                 (Role::Keyboard, 0x07) if report[1] == 0 => {
-                    let id = if report[3] == 0x0B { 6 } else { report[3] };
-                    s.settings.insert(id, report[4]);
+                    s.settings.insert(report[3], report[4]);
                     answers.push(report.to_vec());
                 }
                 (Role::Keyboard, 0x08) if report[1] == 0 => {
@@ -1397,13 +1741,16 @@ mod tests {
         keyboard_fw: &'static str,
     ) -> (DeviceManager, Arc<Mutex<Shared>>) {
         let shared = Arc::new(Mutex::new(Shared {
+            bluetooth: false,
+            cable_too: false,
+            link_down: false,
             present: true,
             keyboard_fw,
             behaviour,
             written: Vec::new(),
             queues: HashMap::new(),
             lighting: HashMap::new(),
-            settings: HashMap::from([(1, 5), (2, 1), (6, 10), (7, 30)]),
+            settings: HashMap::from([(1, 5), (2, 1), (0x0B, 10), (7, 30)]),
             page_left: 0,
             picture_left: 0,
             resent: false,
@@ -1469,6 +1816,135 @@ mod tests {
             )
             .is_err());
         assert!(matches!(m.state(), DeviceState::Ready(_)));
+    }
+
+    fn connection(m: &DeviceManager) -> Option<Connection> {
+        match m.state() {
+            DeviceState::Ready(d) => Some(d.connection),
+            _ => None,
+        }
+    }
+
+    /// Connects over USB once (remembers the screen), then switches to
+    /// Bluetooth (keyboard on Bluetooth, screen on a charging cable).
+    fn over_bluetooth(behaviour: Behaviour) -> (DeviceManager, Arc<Mutex<Shared>>) {
+        let (mut m, shared) = manager(behaviour, "3.0.14");
+        m.poll();
+        assert_eq!(connection(&m), Some(Connection::Usb));
+        shared.lock().unwrap().bluetooth = true;
+        m.poll(); // the USB keyboard is gone
+        m.poll(); // Bluetooth
+        assert_eq!(connection(&m), Some(Connection::Bluetooth));
+        (m, shared)
+    }
+
+    #[test]
+    fn bluetooth_waits_for_one_usb_connection_without_locking() {
+        let (mut m, shared) = manager(Behaviour::Normal, "3.0.14");
+        shared.lock().unwrap().bluetooth = true;
+        m.poll();
+        // not a lock (no red state, no notification), just waiting
+        assert_eq!(*m.state(), DeviceState::NotConnected);
+        let events = m.take_events();
+        assert!(events.iter().any(|e| e.message.contains("USB cable")));
+        m.poll();
+        assert!(m.take_events().is_empty(), "the hint is said once");
+        // nothing but the keyboard version query was sent
+        let written = shared.lock().unwrap().written.clone();
+        assert!(written
+            .iter()
+            .all(|(r, b)| *r == Role::Keyboard && b[0] == 0x11));
+        // the cable plugged in while Bluetooth stays connected
+        shared.lock().unwrap().cable_too = true;
+        m.poll();
+        assert_eq!(connection(&m), Some(Connection::Usb));
+    }
+
+    #[test]
+    fn a_bluetooth_lock_ends_when_the_cable_is_plugged_in() {
+        let (mut m, shared) = over_bluetooth(Behaviour::BadStatus);
+        assert!(m.send(&time_packet()).is_err());
+        assert!(matches!(m.state(), DeviceState::Locked { .. }));
+        m.poll();
+        assert!(
+            matches!(m.state(), DeviceState::Locked { .. }),
+            "Bluetooth alone keeps it"
+        );
+        {
+            let mut s = shared.lock().unwrap();
+            s.behaviour = Behaviour::Normal;
+            s.cable_too = true;
+        }
+        m.poll(); // re-connected by cable: all checks again
+        assert_eq!(connection(&m), Some(Connection::Usb));
+    }
+
+    #[test]
+    fn bluetooth_syncs_time_and_reads_the_keyboard_only() {
+        let (mut m, _shared) = over_bluetooth(Behaviour::Normal);
+        let DeviceState::Ready(d) = m.state() else {
+            unreachable!()
+        };
+        // keyboard read now, screen as remembered from USB
+        assert!(d.firmware.iter().any(|f| f.role == Role::Screen));
+        assert_eq!(d.trust, Trust::Verified);
+        m.send(&time_packet()).unwrap();
+        assert_eq!(connection(&m), Some(Connection::Bluetooth));
+    }
+
+    #[test]
+    fn bluetooth_refuses_the_picture_without_locking() {
+        let (mut m, _shared) = over_bluetooth(Behaviour::Normal);
+        let err = m.upload_picture(&picture(9000), &mut |_| {}).unwrap_err();
+        assert!(format!("{err:#}").contains("USB cable"));
+        assert_eq!(connection(&m), Some(Connection::Bluetooth));
+    }
+
+    #[test]
+    fn bluetooth_without_answer_does_not_lock() {
+        let (mut m, _shared) = over_bluetooth(Behaviour::NoAck);
+        assert!(m.send(&time_packet()).is_err());
+        // a sleeping keyboard: still connected, nothing locked
+        assert_eq!(connection(&m), Some(Connection::Bluetooth));
+    }
+
+    #[test]
+    fn bluetooth_wrong_answer_still_locks() {
+        let (mut m, _shared) = over_bluetooth(Behaviour::BadStatus);
+        assert!(m.send(&time_packet()).is_err());
+        assert!(matches!(m.state(), DeviceState::Locked { .. }));
+    }
+
+    #[test]
+    fn a_sleeping_keyboard_over_bluetooth_reconnects_without_lock() {
+        let (mut m, shared) = over_bluetooth(Behaviour::Normal);
+        shared.lock().unwrap().link_down = true;
+        assert!(m.send(&time_packet()).is_err());
+        assert_eq!(*m.state(), DeviceState::NotConnected, "dropped, not locked");
+        m.poll(); // still asleep: stays not connected
+        assert_eq!(*m.state(), DeviceState::NotConnected);
+        shared.lock().unwrap().link_down = false;
+        m.poll(); // awake: connected again with all checks
+        assert_eq!(connection(&m), Some(Connection::Bluetooth));
+        m.send(&time_packet()).unwrap();
+    }
+
+    #[test]
+    fn a_failed_usb_write_still_locks() {
+        let (mut m, shared) = manager(Behaviour::Normal, "3.0.14");
+        m.poll();
+        shared.lock().unwrap().link_down = true;
+        assert!(m.send(&time_packet()).is_err());
+        assert!(matches!(m.state(), DeviceState::Locked { .. }));
+    }
+
+    #[test]
+    fn the_cable_wins_over_bluetooth() {
+        let (mut m, shared) = over_bluetooth(Behaviour::Normal);
+        shared.lock().unwrap().bluetooth = false;
+        m.poll(); // leaves Bluetooth
+        m.poll(); // USB
+        assert_eq!(connection(&m), Some(Connection::Usb));
     }
 
     #[test]

@@ -1,6 +1,8 @@
 # ND104 Firmware Sources
 
-> Last checked: 2026-10-31. Wired USB connection only.
+> Last checked: 2026-10-31. Versions read over the USB cable (the screen
+> version can only be read there, see
+> [Connection modes](../apps/nd104-studio/README.md#connection-modes)).
 > This repository never contains vendor firmware binaries.
 
 ## TL;DR

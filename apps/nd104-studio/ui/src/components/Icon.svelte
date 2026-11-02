@@ -75,6 +75,7 @@
       ["path", "M12 16v-4M12 8h.01"],
     ],
     minus: [["path", "M5 12h14"]],
+    bluetooth: [["path", "m7 7 10 10-5 5V2l5 5L7 17"]],
     sidebar: [
       ["rect", 3, 3, 18, 18, 2],
       ["path", "M9 3v18"],

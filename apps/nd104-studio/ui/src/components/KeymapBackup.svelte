@@ -6,6 +6,7 @@
   import { t } from "../lib/i18n.svelte";
   import { dateTime } from "../lib/format";
   import Icon from "./Icon.svelte";
+  import UsbRequired from "./UsbRequired.svelte";
 
   let { status, onrestored }: { status: Status; onrestored?: () => void } = $props();
 
@@ -83,7 +84,7 @@
   <p class="muted small">{t("ui.keymap.intro")}</p>
 
   {#if !ready}
-    <div class="notice warn"><Icon name="plug" />{t("ui.light.not_connected")}</div>
+    <UsbRequired feature="backup" />
   {/if}
 
   <div class="row">

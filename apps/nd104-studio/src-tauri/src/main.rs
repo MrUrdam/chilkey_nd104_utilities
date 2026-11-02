@@ -6,6 +6,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod bluetooth;
 mod commands;
 mod hardware;
 mod i18n;
@@ -134,6 +135,7 @@ fn main() {
             commands::install_update,
             hardware::light_read,
             hardware::light_apply,
+            bluetooth::bluetooth_status,
             hardware::keyboard_settings_read,
             hardware::keyboard_settings_write,
             hardware::picture_pick,

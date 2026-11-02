@@ -1,9 +1,12 @@
-# What the ND104 can do over USB – capability list
+# What the ND104 can do – capability list
 
 > Status 2026-10-31. Sources: static analysis of the official web driver
 > ([nd104.chilkey.com](https://nd104.chilkey.com/), bundle `index-BpBkeHgw.js`),
 > the [community notes](https://gist.github.com/borrougagnou/a21613093f323a05167a92212ab1ff7b)
-> and our own hardware tests ([protocol.md](protocol.md)). **Wired USB only.**
+> and our own hardware tests ([protocol.md](protocol.md)). Everything sent to the
+> keyboard uses the same commands over the USB cable and Bluetooth
+> ([protocol.md § 5.5](protocol.md#55-over-bluetooth-analysis-2026-11-02)). Which
+> feature works on which connection: [Connection modes](../apps/nd104-studio/README.md#connection-modes).
 
 Legend: ✅ in ND104 Studio · 🧪 verified on hardware, not in the app yet ·
 📄 documented (web driver), not verified · ❌ not available / not planned
@@ -43,7 +46,7 @@ Legend: ✅ in ND104 Studio · 🧪 verified on hardware, not in the app yet ·
 | Function | Status | Notes |
 |---|---|---|
 | Battery level over the wired USB interfaces | ❌ **not available** | The web driver has no battery query; no command or report for it was found on either USB interface. When the keyboard is plugged in by cable, it is charging anyway. |
-| Battery level over **Bluetooth** (standard BLE Battery Service) | possible, out of scope | Windows shows it under *Settings → Bluetooth & devices* while the keyboard is connected via Bluetooth. Reading it in ND104 Studio would need the Windows BLE API and contradicts the *wired USB only* rule (R1) – would need a decision. |
+| Battery level over **Bluetooth** (standard BLE Battery Service) | ✅ | Read from Windows' device properties (the value of *Settings → Bluetooth & devices*); nothing is sent to the keyboard. Shown with the Bluetooth connection on the Dashboard and in the live preview. Over the cable the keyboard does not report it. |
 | Battery over the 2.4 GHz dongle | unknown | the dongle was not analysed (wireless is out of scope) |
 
 ## Candidates for future milestones

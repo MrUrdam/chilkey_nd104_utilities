@@ -18,7 +18,8 @@
   let progress = $state(0);
   let error = $state("");
   let showDetails = $state(false);
-  let keyboard = $state<boolean | null>(null);
+  // undefined: not checked yet; null: no keyboard found
+  let keyboard = $state<"usb" | "bluetooth" | null | undefined>(undefined);
   let now = $state(new Date());
 
   const win = getCurrentWindow();
@@ -84,11 +85,22 @@
       await api.runInstall(autostart, desktop, style);
       progress = 1;
       phase = "done";
-      if (info?.mode !== "update") keyboard = await api.keyboardConnected();
+      if (info?.mode !== "update") watchKeyboard();
     } catch (e) {
       error = String(e);
       phase = "error";
     }
+  }
+
+  // the last page follows the connection: plugged in, unplugged, switched
+  // between USB and Bluetooth
+  function watchKeyboard() {
+    const check = async () => {
+      if (phase !== "done") return;
+      keyboard = await api.keyboardConnected();
+      setTimeout(check, 2000);
+    };
+    check();
   }
 
   async function uninstall() {
@@ -212,9 +224,11 @@
         {:else}
           <h3 class="result"><span class="led ok"></span>{tr("done.installed")}</h3>
           <p class="muted">{tr("done.tray")}</p>
-          {#if keyboard === true}
+          {#if keyboard === "usb"}
             <div class="notice"><span class="led ok"></span>{tr("hint.keyboard_found")}</div>
-          {:else if keyboard === false}
+          {:else if keyboard === "bluetooth"}
+            <div class="notice"><span class="led ok"></span>{tr("hint.keyboard_bluetooth")}</div>
+          {:else if keyboard === null}
             <div class="notice">
               <svg class="plug" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                 <path

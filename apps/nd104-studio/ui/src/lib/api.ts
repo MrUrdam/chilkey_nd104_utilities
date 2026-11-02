@@ -66,6 +66,8 @@ export type DeviceState =
   | { kind: "not_connected" }
   | {
       kind: "ready";
+      /** USB cable (everything) or Bluetooth (no own picture). */
+      connection: "usb" | "bluetooth";
       model_id: string;
       model_name: string;
       firmware: FirmwareInfo[];
@@ -273,6 +275,7 @@ export const api = {
   keymapRestoreCancel: () => invoke<void>("keymap_restore_cancel"),
   keymapRead: () => invoke<Keymap>("keymap_read"),
   keyboardSettingsRead: () => invoke<KeyboardSettings>("keyboard_settings_read"),
+  bluetoothStatus: () => invoke<BluetoothKeyboard | null>("bluetooth_status"),
   keyboardSettingsWrite: (setting: KeyboardSetting, value: number) =>
     invoke<KeyboardSettings>("keyboard_settings_write", { setting, value }),
   keymapWrite: (target: Keymap) => invoke<number>("keymap_write", { target }),
@@ -291,6 +294,13 @@ export const api = {
 export interface Keymap {
   layers: number[][];
   knob: number[][];
+}
+
+/** The keyboard connected over Bluetooth (as Windows reports it). */
+export interface BluetoothKeyboard {
+  name: string;
+  slot: number | null;
+  battery: number | null;
 }
 
 export type KeyboardSetting = "debounce_mode" | "debounce_time" | "sleep_time" | "deep_sleep_time";

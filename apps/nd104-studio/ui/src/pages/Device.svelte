@@ -4,6 +4,7 @@
   import { dateTime } from "../lib/format";
   import Icon from "../components/Icon.svelte";
   import KeyboardSettingsCard from "../components/KeyboardSettingsCard.svelte";
+  import ConnectionModes from "../components/ConnectionModes.svelte";
 
   let {
     status,
@@ -52,8 +53,6 @@
 <div class="stack">
   <h1>{t("ui.nav.device")}</h1>
 
-  <div class="notice"><Icon name="plug" />{t("ui.device.wired_notice")}</div>
-
   <div class="card stack">
     <div class="head">
       <h2>{t("ui.dash.keyboard")}</h2>
@@ -75,8 +74,8 @@
         <dd>{t(`ui.variant.${status.device.screen_variant}`)}</dd>
       </dl>
     {:else if status.device.kind === "locked"}
-      <div class="state"><span class="led warn"></span><strong>{t("ui.device.locked")}</strong></div>
-      <div class="notice warn selectable">{status.device.reason}</div>
+      <div class="state"><span class="led err"></span><strong>{t("ui.device.locked")}</strong></div>
+      <div class="notice err selectable">{status.device.reason}</div>
       <p class="muted">{t("ui.device.locked_text")}</p>
     {:else}
       <div class="state"><span class="led"></span><strong>{t("status.not_connected")}</strong></div>
@@ -165,6 +164,8 @@
   </div>
 
   <KeyboardSettingsCard {status} />
+
+  <ConnectionModes {status} />
 
   <div class="card stack">
     <h2>{t("ui.device.advanced")}</h2>

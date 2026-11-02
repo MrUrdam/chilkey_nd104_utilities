@@ -10,6 +10,7 @@
   import { BUILTIN_PRESETS, layout, resolveLegends, type CustomLegendPreset, type PhysicalKey, type Shape } from "../lib/keyboard";
   import { KC_NO, KC_TRNS, describe, setLayerLabel } from "../lib/keycodes";
   import Icon from "../components/Icon.svelte";
+  import UsbRequired from "../components/UsbRequired.svelte";
   import KeyboardView, { type KeyFace } from "../components/KeyboardView.svelte";
   import KeyPicker from "../components/KeyPicker.svelte";
   import KeyFunctionsOverview from "../components/KeyFunctionsOverview.svelte";
@@ -605,7 +606,7 @@
   <p class="muted intro">{t("ui.km.intro")}</p>
 
   {#if !ready}
-    <div class="notice warn"><Icon name="plug" />{t("ui.light.not_connected")}</div>
+    <UsbRequired feature="keymap" />
   {/if}
 
   <div class="card stack">
@@ -769,7 +770,7 @@
         {/if}
       {:else if !edit}
         <h2>{t("ui.km.assign_title")}</h2>
-        <p class="muted small">{ready ? t("ui.keymap.reading") : t("ui.light.not_connected")}</p>
+        {#if ready}<p class="muted small">{t("ui.keymap.reading")}</p>{/if}
       {:else if selected === "knob" && knobCodes}
         <h2>{t("ui.km.knob")} · {layerName(layer)}</h2>
         <div class="segmented" role="group">

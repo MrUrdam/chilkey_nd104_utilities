@@ -163,25 +163,36 @@ pub fn launch_app() -> CmdResult<()> {
         .map_err(|e| format!("{e:#}"))
 }
 
-/// Is a supported keyboard plugged in (by USB IDs)? Only for the hint on
-/// the last page – nothing is sent to the keyboard.
+/// Is a supported keyboard connected, and how ("usb" or "bluetooth")? Only
+/// for the hint on the last page, asked again every 2 s – nothing is sent
+/// to the keyboard.
 #[tauri::command]
-pub async fn keyboard_connected() -> bool {
+pub async fn keyboard_connected() -> Option<&'static str> {
     tauri::async_runtime::spawn_blocking(|| {
-        let Ok(mut backend) = HidapiBackend::new() else {
-            return false;
-        };
-        let Ok(found) = backend.enumerate() else {
-            return false;
-        };
-        model::registry().iter().any(|m| {
-            m.interfaces()
-                .iter()
-                .any(|spec| found.iter().any(|f| f.vid == spec.vid && f.pid == spec.pid))
-        })
+        let mut backend = HidapiBackend::new().ok()?;
+        let found = backend.enumerate().ok()?;
+        let ours: Vec<_> = found
+            .iter()
+            .filter(|f| {
+                model::registry().iter().any(|m| {
+                    m.interfaces()
+                        .iter()
+                        .any(|spec| f.vid == spec.vid && f.pid == spec.pid)
+                })
+            })
+            .collect();
+        // over Bluetooth the keyboard reports the same IDs
+        if ours.iter().any(|f| !f.is_bluetooth()) {
+            Some("usb")
+        } else if !ours.is_empty() {
+            Some("bluetooth")
+        } else {
+            None
+        }
     })
     .await
-    .unwrap_or(false)
+    .ok()
+    .flatten()
 }
 
 /// Opens one of the fixed project links in the browser.

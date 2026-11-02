@@ -37,8 +37,8 @@
   "done.uninstalled": "ND104 Studio wurde entfernt.",
   "done.uninstalled_kept": "Deine Einstellungen bleiben für eine spätere Installation erhalten.",
   "done.tray": "ND104 Studio läuft im Infobereich neben der Uhr.",
-  "hint.keyboard": "Schließe deine Tastatur per USB-Kabel an – ND104 Studio erreicht sie nur über das Kabel, nicht über 2,4 GHz oder Bluetooth.",
-  "hint.keyboard_found": "Tastatur gefunden – per Kabel verbunden.",
+  "hint.keyboard": "Keine Tastatur verbunden – verbinde sie per USB-Kabel oder Bluetooth.",
+  "hint.keyboard_found": "Tastatur per USB verbunden.",
   "error.title": "Etwas ist schiefgelaufen",
   "error.install": "ND104 Studio konnte nicht installiert werden. Deine bisherige Installation wurde nicht verändert.",
   "error.uninstall": "ND104 Studio konnte nicht vollständig entfernt werden. Beende ND104 Studio und versuche es erneut.",
@@ -48,5 +48,6 @@
   "webview2.failed": "Die WebView2 Runtime konnte nicht installiert werden. Bitte installiere sie von microsoft.com und starte das Setup erneut.",
   "option.style": "Stil",
   "option.style_calm": "Ruhig",
-  "option.style_gamer": "Gamer"
+  "option.style_gamer": "Gamer",
+  "hint.keyboard_bluetooth": "Tastatur per Bluetooth verbunden."
 }

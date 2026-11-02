@@ -5,6 +5,7 @@
   import { api, type KeyboardSetting, type KeyboardSettings, type Status } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
   import Icon from "./Icon.svelte";
+  import UsbRequired from "./UsbRequired.svelte";
 
   let { status }: { status: Status } = $props();
 
@@ -87,7 +88,7 @@
   <p class="muted small">{t("ui.kbs.intro")}</p>
 
   {#if !ready}
-    <div class="notice warn"><Icon name="plug" />{t("ui.light.not_connected")}</div>
+    <UsbRequired feature="settings" />
   {/if}
 
   <div class="grid-2">

@@ -9,6 +9,7 @@ rust-version.workspace = true
 
 [dependencies]
 nd104-protocol.workspace = true
+nd104-core.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 hidapi.workspace = true

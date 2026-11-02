@@ -1,4 +1,4 @@
-# ND104 USB HID Protocol Notes
+# ND104 HID Protocol Notes (USB and Bluetooth)
 
 > **Status:** Collected from public sources and static analysis of the official
 > web driver. Parts marked ✅ have been verified on real hardware (wired USB,
@@ -10,7 +10,9 @@
 >   (WebHID, Chromium only), bundle `assets/index-BpBkeHgw.js`, analysed 2026-10-31
 > - [ND104 Reverse Engineering](https://gist.github.com/borrougagnou/a21613093f323a05167a92212ab1ff7b) by borrougagnou
 >
-> Scope: **wired USB connection only.**
+> Scope: **USB cable** (§ 1–5) and **Bluetooth** (§ 5.5); the 2.4 GHz
+> receiver has not been analysed. What ND104 Studio supports on each:
+> [Connection modes](../apps/nd104-studio/README.md#connection-modes).
 
 ---
 
@@ -410,7 +412,7 @@ answer carries the value in byte 4.
 | `02` | debounce mode | 0 none, 1 "send to debounce", 2 "debounce to send" |
 | `04` | **keyboard colour** | 0 red, 1 pink, 2 yellow, 3 green, 4 blue, 5 black, 6 white |
 | `05` | **online RGB** | 1 enable (default), 0 disable |
-| `06` / `07` | sleep / deep-sleep time | minutes (the driver writes sleep time with id `0B`) |
+| `06` / `07` | sleep / deep-sleep time | minutes (the driver writes sleep time with id `0B`; `06` always reads 0 on V3.0.14) |
 
 The driver reads only ids `00`–`02` on connect; keyboard colour and online RGB
 come from the browser's storage (defaults 0 and 1), not from the keyboard.
@@ -422,8 +424,12 @@ Firmware page):
 |---|---|---|---|
 | Debounce mode | id `02` | id `02` | 0, 1, 2 |
 | Debounce time | id `01` (0 while the mode is 0) | id `01` | 1–20, 25–50 (step 5), 60–100 (step 10), 200 ms |
-| Sleep time | id **`0B`** | id `06` | 1–20, 25–50 (step 5), 60 min |
+| Sleep time | id **`0B`** | id **`0B`** ¹ | 1–20, 25–50 (step 5), 60 min |
 | Deep-sleep time | id `07` | id `07` | same as sleep |
+
+¹ The driver reads id `06`, which always answers 0 on V3.0.14; id `0B` reads
+back the written value (checked 2026-11-02: write 5 → read 5, write 1 → read 1).
+ND104 Studio reads `0B`.
 
 Each write is followed by `09 00` (store). The polling-rate row exists in the
 driver but is hidden; keyboard colour and online RGB are not used. No
@@ -466,6 +472,62 @@ logged, ignored, no lock.
 | `0x01` | protocol/layout version |
 
 ---
+
+## 5.5 Over Bluetooth (analysis, 2026-11-02)
+
+> Used by ND104 Studio since 2.1.0 – see [Connection modes](../apps/nd104-studio/README.md#connection-modes).
+
+**In short:** Bluetooth is not "USB over the air". The keyboard is a
+Bluetooth LE HID device (HID over GATT) that offers the same HID collections
+as its USB keyboard interface – including the vendor command channel
+`FF60:0061`. Windows turns it into a normal HID device, so the same 32-byte
+commands work; only one report ID byte (`02`) is added. The screen controller
+is a separate USB device inside the keyboard (`5542:0001`): over Bluetooth it
+is not exposed, but the keyboard still forwards time and weather (`1C`
+packets) to it, as over the cable. Battery level comes from the standard BLE
+Battery Service, which Windows reads by itself.
+
+Connected over Bluetooth LE, the keyboard shows up once per slot ("ND104 BT1"
+… "BT3") with the **same IDs** (`6D67:016C`, release `0x0130`) through the
+HID-over-GATT service (`{00001812-…}` in the device path). Windows exposes:
+
+- keyboard, consumer control, system control and mouse collections;
+- the **vendor collection `FF60:0061`** – the same command channel as over
+  USB, but with **report ID 2** (descriptor `85 02`, 32-byte input and output
+  reports). Writes therefore start with `02` instead of `00`; answers arrive
+  with `02` in front (hidapi on Windows), the 32 bytes after it are identical
+  to USB;
+- the standard **battery service** (`180F`); Windows keeps the level as a
+  device property (`{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2`, byte, percent);
+- **not** the screen controller `5542:0001` – it is reachable by cable only.
+
+Verified (read-only, `nd104-probe version` / `query`):
+
+| Command | Result over Bluetooth |
+|---|---|
+| `11 02 …` keyboard version | `V3.0.14 20260710_123331`, identical to USB |
+| `08 03 01/02/04`, `08 02 02/04` lighting | brightness, effect, colour answered |
+| `08 00 04 01/02/07` debounce, deep sleep | answered (5 ms, mode 2, 10 min) |
+| `08 00 04 06` sleep | `00` – always 0 (also over USB); `08 00 04 0B` reads the real sleep time |
+| `14 00 00 dir` knob | answered (Vol− / Vol+) |
+| `12 …` keymap buffer | answered, same data as over USB |
+
+Verified writes (`nd104-probe time` / `weather`, one packet each, checked on
+the display):
+
+| Packet | Answers over Bluetooth | Display |
+|---|---|---|
+| Time `1C 03 … A5 38 …` (also a date in 2030) | `1C 01` receipt, then `A5 38 00 02 FE 00` (OK) | ✅ shows the sent time |
+| Weather `1C 02 … A5 FE …` (snow, −7.5 °C) | `1C 01` receipt, then `A5 FE 00 02 FE 00` (OK) | ✅ shows the sent weather |
+| Lighting `07 03 01 40` (brightness), `07 03 04 00 ff` (colour), not stored | echo, read back the new value | ✅ backlight darker / red |
+| Setting `07 00 04 01 0a` (debounce 10 ms), not stored | echo, read back 10 | – (restored to 5) |
+| Key `05 03 03 01 00 29` (layer 3) | echo, read back `0x0029` | – (restored to `0x0001`) |
+
+So the keyboard relays `1C` packets to the screen over Bluetooth exactly as
+over USB, and its own commands (lighting, settings, keymap) behave the same.
+Only the screen controller is missing: the screen version cannot be read and
+pictures cannot be uploaded over Bluetooth, so the firmware guard can only
+check the keyboard there.
 
 ## 6. Open points for M0 (hardware verification)
 

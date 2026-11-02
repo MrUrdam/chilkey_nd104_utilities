@@ -68,6 +68,12 @@ pub fn status_line(i18n: &I18n, status: &Status) -> String {
         DeviceState::Locked { reason, .. } => i18n.tf("status.locked", &[("reason", reason)]),
         DeviceState::Ready(d) => {
             let model = d.model_name.trim_start_matches("Chilkey ");
+            // "ND104 (Bluetooth)" when not on the cable
+            let model = match d.connection {
+                nd104_core::device::Connection::Usb => model.to_string(),
+                nd104_core::device::Connection::Bluetooth => format!("{model} (Bluetooth)"),
+            };
+            let model = model.as_str();
             match &status.weather {
                 Some(w) => {
                     let weather = format!(
@@ -177,13 +183,14 @@ pub fn build_menu(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nd104_core::device::ConnectedDevice;
+    use nd104_core::device::{ConnectedDevice, Connection};
     use nd104_core::model::ScreenVariant;
     use nd104_core::weather::WeatherReport;
 
     fn ready(trust: Trust) -> Status {
         Status {
             device: DeviceState::Ready(ConnectedDevice {
+                connection: Connection::Usb,
                 model_id: "chilkey-nd104",
                 model_name: "Chilkey ND104",
                 firmware: vec![],
@@ -216,7 +223,7 @@ mod tests {
         );
         assert_eq!(
             status_line(&en, &Status::default()),
-            "Not connected – USB cable required"
+            "Not connected via USB"
         );
         let mut paused = ready(Trust::Verified);
         paused.paused = true;

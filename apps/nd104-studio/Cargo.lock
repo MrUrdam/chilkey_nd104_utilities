@@ -2386,7 +2386,7 @@ dependencies = [
 
 [[package]]
 name = "nd104-cli"
-version = "2.0.2"
+version = "2.1.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2399,7 +2399,7 @@ dependencies = [
 
 [[package]]
 name = "nd104-core"
-version = "2.0.2"
+version = "2.1.0"
 dependencies = [
  "anyhow",
  "directories",
@@ -2418,22 +2418,23 @@ dependencies = [
 
 [[package]]
 name = "nd104-probe"
-version = "2.0.2"
+version = "2.1.0"
 dependencies = [
  "anyhow",
  "clap",
  "hidapi",
  "jiff",
+ "nd104-core",
  "nd104-protocol",
 ]
 
 [[package]]
 name = "nd104-protocol"
-version = "2.0.2"
+version = "2.1.0"
 
 [[package]]
 name = "nd104-studio"
-version = "2.0.2"
+version = "2.1.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -2455,11 +2456,12 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "windows",
 ]
 
 [[package]]
 name = "nd104-studio-setup"
-version = "2.0.2"
+version = "2.1.0"
 dependencies = [
  "anyhow",
  "nd104-core",

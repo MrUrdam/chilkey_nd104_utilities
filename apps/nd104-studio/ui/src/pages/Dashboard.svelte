@@ -5,6 +5,9 @@
   import { condition, dateTime, temperature, time } from "../lib/format";
   import DisplayPreview from "../components/DisplayPreview.svelte";
   import Icon from "../components/Icon.svelte";
+  import { bluetooth } from "../lib/bluetooth.svelte";
+
+  const bt = bluetooth();
 
   let { status, config }: { status: Status; config: Config } = $props();
   let unit = $derived(config.weather.ui_unit);
@@ -40,7 +43,11 @@
       <DisplayPreview {status} />
       <figcaption>
         <span>{t("ui.preview.caption")}</span>
-        <span class="faint">{t("ui.preview.battery_hint")}</span>
+        {#if bt.keyboard?.battery != null}
+          <span class="faint">{t("ui.preview.battery_bt", { n: bt.keyboard.battery })}</span>
+        {:else}
+          <span class="faint">{t("ui.preview.battery_hint")}</span>
+        {/if}
       </figcaption>
     </figure>
 
@@ -49,12 +56,23 @@
         <span class="label">{t("ui.dash.keyboard")}</span>
         {#if status.device.kind === "ready"}
           <span class="value"><span class="led ok"></span>{status.device.model_name}</span>
+          {#if status.device.connection === "bluetooth"}
+            <span class="faint small">
+              {t("ui.bt.connected")}{#if bt.keyboard?.battery != null}{` · ${t("ui.bt.battery", { n: bt.keyboard.battery })}`}{/if}
+            </span>
+          {:else if bt.keyboard?.battery != null}
+            <span class="faint small">{t("ui.bt.usb_with_battery", { n: bt.keyboard.battery })}</span>
+          {/if}
           <span class="badge {status.device.trust === 'verified' ? 'ok' : 'warn'}">
             {t(status.device.trust === "verified" ? "status.verified" : "status.compatible")}
           </span>
         {:else if status.device.kind === "locked"}
-          <span class="value"><span class="led warn"></span>{t("ui.device.locked")}</span>
+          <span class="value"><span class="led err"></span>{t("ui.device.locked")}</span>
           <button class="key" disabled={busy} onclick={() => run("recheck")}>{t("menu.recheck")}</button>
+        {:else if bt.keyboard}
+          <span class="value"><span class="led warn"></span>{t("ui.bt.connected")}</span>
+          {#if bt.keyboard.battery !== null}<span class="badge">{t("ui.bt.battery", { n: bt.keyboard.battery })}</span>{/if}
+          <span class="faint small">{t("ui.bt.cable_hint")}</span>
         {:else}
           <span class="value"><span class="led"></span>{t("status.not_connected")}</span>
           <span class="faint small">{t("ui.dash.connect_hint")}</span>

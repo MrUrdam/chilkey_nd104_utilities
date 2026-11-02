@@ -18,7 +18,7 @@ use crate::lighting::{LightChange, LightField, LightZone};
 use crate::weather::WeatherReport;
 
 /// What a USB interface is used for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Role {
     Keyboard,
@@ -66,7 +66,7 @@ pub enum ScreenVariant {
 }
 
 /// Firmware of one device as read with the version query.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, serde::Deserialize)]
 pub struct FirmwareInfo {
     pub role: Role,
     /// Full text from the device, e.g. `V3.0.14 20260710_123331`.

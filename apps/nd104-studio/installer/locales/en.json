@@ -37,8 +37,8 @@
   "done.uninstalled": "ND104 Studio has been removed.",
   "done.uninstalled_kept": "Your settings were kept for a later installation.",
   "done.tray": "ND104 Studio runs in the system tray, next to the clock.",
-  "hint.keyboard": "Connect your keyboard with the USB cable – ND104 Studio only reaches it over the cable, not over 2.4 GHz or Bluetooth.",
-  "hint.keyboard_found": "Keyboard found – connected by cable.",
+  "hint.keyboard": "No keyboard connected – connect it with the USB cable or via Bluetooth.",
+  "hint.keyboard_found": "Keyboard connected via USB.",
   "error.title": "Something went wrong",
   "error.install": "ND104 Studio could not be installed. Your previous installation was left unchanged.",
   "error.uninstall": "ND104 Studio could not be removed completely. Close ND104 Studio and try again.",
@@ -48,5 +48,6 @@
   "webview2.failed": "The WebView2 Runtime could not be installed. Please install it from microsoft.com and run the setup again.",
   "option.style": "Style",
   "option.style_calm": "Calm",
-  "option.style_gamer": "Gamer"
+  "option.style_gamer": "Gamer",
+  "hint.keyboard_bluetooth": "Keyboard connected via Bluetooth."
 }

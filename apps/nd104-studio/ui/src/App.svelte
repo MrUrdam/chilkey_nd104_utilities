@@ -4,6 +4,7 @@
   import { setTexts, t } from "./lib/i18n.svelte";
   import { setLocale } from "./lib/format";
   import { validate } from "./lib/validate";
+  import { bluetooth, watchBluetooth } from "./lib/bluetooth.svelte";
   import Dashboard from "./pages/Dashboard.svelte";
   import Weather from "./pages/Weather.svelte";
   import Clock from "./pages/Clock.svelte";
@@ -126,15 +127,37 @@
     );
   });
   onDestroy(() => unlisten.forEach((u) => u()));
+  onDestroy(watchBluetooth());
+  const bt = bluetooth();
+
+  /** How the keyboard is connected right now (bottom of the sidebar). */
+  let connection = $derived.by(() => {
+    if (status?.device.kind === "ready" && status.device.connection === "bluetooth") {
+      const title = t("ui.conn.bt_ready_title", { slot: bt.keyboard?.slot ?? "?" });
+      return { kind: "usb", icon: "bluetooth" as const, text: t("ui.bt.badge"), title };
+    }
+    if (status?.device.kind === "ready") {
+      return { kind: "usb", icon: "plug" as const, text: t("ui.conn.usb"), title: t("ui.conn.usb_title") };
+    }
+    if (status?.device.kind === "locked") {
+      return { kind: "locked", icon: "lock" as const, text: t("ui.device.locked"), title: status.device.reason };
+    }
+    if (bt.keyboard) {
+      const title = t("ui.conn.bt_title", { slot: bt.keyboard.slot ?? "?" });
+      return { kind: "bt", icon: "bluetooth" as const, text: t("ui.bt.badge"), title };
+    }
+    return { kind: "none", icon: "plug" as const, text: t("ui.conn.none"), title: t("ui.conn.none_title") };
+  });
 
   let deviceLed = $derived.by(() => {
     switch (status?.device.kind) {
       case "ready":
-        return status.weather_stale ? "err" : "ok";
+        return "ok";
       case "locked":
-        return "warn";
+        return "err";
       default:
-        return "";
+        // Bluetooth works, but only for status and battery
+        return bt.keyboard ? "warn" : "";
     }
   });
 </script>
@@ -160,16 +183,17 @@
         </button>
       {/each}
       <div class="spacer"></div>
-      <div class="wired" title={collapsed ? t("ui.wired_only") : undefined}>
-        <Icon name="plug" /><span class="wired-text">{t("ui.wired_only")}</span>
+      <div class="wired {connection.kind}" title={connection.title}>
+        <Icon name={connection.icon} /><span class="wired-text">{connection.text}</span>
       </div>
       <button
         class="nav-item collapse"
         aria-expanded={!collapsed}
         aria-label={t(collapsed ? "ui.nav.expand" : "ui.nav.collapse")}
+        title={t(collapsed ? "ui.nav.expand" : "ui.nav.collapse")}
         onclick={toggleCollapsed}
       >
-        <Icon name="sidebar" size={18} /><span class="label">{t(collapsed ? "ui.nav.expand" : "ui.nav.collapse")}</span>
+        <Icon name="sidebar" size={18} /><span class="label">{t("ui.nav.collapse_short")}</span>
       </button>
     </nav>
 
@@ -198,8 +222,16 @@
         <span class="muted">ND104 Studio {info.version}</span>
         {#if status.device.kind === "ready"}
           <span class="muted">· {status.device.model_name}</span>
+          {#if status.device.connection === "bluetooth"}
+            <span class="badge ok">{t("ui.bt.badge")}</span>
+          {/if}
+          <!-- also on the cable, while Bluetooth stays linked -->
+          {#if bt.keyboard?.battery != null}<span class="muted">· {t("ui.bt.battery", { n: bt.keyboard.battery })}</span>{/if}
         {:else if status.device.kind === "locked"}
-          <span class="badge warn">{t("ui.device.locked")}</span>
+          <span class="badge err">{t("ui.device.locked")}</span>
+        {:else if bt.keyboard}
+          <span class="badge">{t("ui.bt.badge")}</span>
+          {#if bt.keyboard.battery !== null}<span class="muted">· {t("ui.bt.battery", { n: bt.keyboard.battery })}</span>{/if}
         {:else}
           <span class="badge">{t("status.not_connected")}</span>
         {/if}
@@ -423,6 +455,25 @@
     font-size: 12px;
     color: var(--faint);
     padding: 0 10px;
+  }
+
+  /* the symbol takes the colour of the connection: full, limited, none */
+  .wired.usb :global(svg) {
+    color: var(--ok);
+  }
+
+  .wired.bt :global(svg) {
+    color: var(--warn);
+  }
+
+  .wired.locked :global(svg) {
+    color: var(--err);
+  }
+
+  .wired.usb,
+  .wired.bt,
+  .wired.locked {
+    color: var(--muted);
   }
 
   main {

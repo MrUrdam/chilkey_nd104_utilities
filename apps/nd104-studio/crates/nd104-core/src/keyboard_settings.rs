@@ -28,23 +28,21 @@ impl KeyboardSetting {
         KeyboardSetting::DeepSleepTime,
     ];
 
-    /// Id the value is read with.
+    /// Id the value is read with. The sleep time is read with `0B`, the id
+    /// it is written with: the web driver reads `06`, but the keyboard
+    /// always answers 0 there (V3.0.14, checked 2026-11-02).
     pub const fn read_id(self) -> u8 {
         match self {
             KeyboardSetting::DebounceMode => 0x02,
             KeyboardSetting::DebounceTime => 0x01,
-            KeyboardSetting::SleepTime => 0x06,
+            KeyboardSetting::SleepTime => 0x0B,
             KeyboardSetting::DeepSleepTime => 0x07,
         }
     }
 
-    /// Id the value is written with. The web driver writes the sleep time
-    /// with `0B` but reads it back as `06`; we do the same.
+    /// Id the value is written with (the web driver's ids).
     pub const fn write_id(self) -> u8 {
-        match self {
-            KeyboardSetting::SleepTime => 0x0B,
-            other => other.read_id(),
-        }
+        self.read_id()
     }
 
     /// Values the web driver offers.
@@ -121,8 +119,8 @@ mod tests {
     }
 
     #[test]
-    fn sleep_is_written_with_its_own_id() {
-        assert_eq!(KeyboardSetting::SleepTime.read_id(), 0x06);
+    fn sleep_is_written_and_read_with_its_own_id() {
+        assert_eq!(KeyboardSetting::SleepTime.read_id(), 0x0B);
         assert_eq!(KeyboardSetting::SleepTime.write_id(), 0x0B);
         assert_eq!(KeyboardSetting::DeepSleepTime.write_id(), 0x07);
     }

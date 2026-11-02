@@ -108,6 +108,8 @@ const firmwareReport: FirmwareReport = {
 const status: Status = {
   device: {
     kind: "ready",
+    // ?conn=bluetooth: connected over Bluetooth instead of the cable
+    connection: params.get("conn") === "bluetooth" ? "bluetooth" : "usb",
     model_id: "chilkey-nd104",
     model_name: "Chilkey ND104",
     firmware: [
@@ -324,7 +326,8 @@ export function installDemo(version: string) {
       case "texts":
         return texts;
       case "get_status":
-        return status;
+        // ?usb=0: no cable (e.g. together with ?bt=1)
+        return params.get("usb") === "0" ? { ...status, device: { kind: "not_connected" } } : status;
       case "get_config":
         return structuredClone(config);
       case "save_config":
@@ -377,6 +380,11 @@ export function installDemo(version: string) {
         demoKeys = structuredClone(target);
         return new Promise((resolve) => setTimeout(() => resolve(n), 700));
       }
+      case "bluetooth_status":
+        // ?bt=1: keyboard connected over Bluetooth instead of the cable
+        return params.get("bt") === "1" || params.get("conn") === "bluetooth"
+          ? { name: "ND104 BT2", slot: 2, battery: 87 }
+          : null;
       case "keyboard_settings_read":
         return { ...demoKeyboardSettings };
       case "keyboard_settings_write":

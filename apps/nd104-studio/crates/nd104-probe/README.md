@@ -1,9 +1,10 @@
 # nd104-probe
 
 Diagnostic command-line tool for **milestone M0**. It checks the Chilkey ND104
-USB protocol on real hardware before the ND104 Studio app is built.
+protocol on real hardware before the ND104 Studio app is built.
 
-> 🔌 **Wired USB only.** Connect the keyboard with a cable.
+> 🔌 **USB cable or Bluetooth** – the same as ND104 Studio, see
+> [Connection modes](../../README.md#connection-modes) (`picture` and the screen version: cable only).
 > 🪟 Tested target: Windows 10/11.
 > ⚠️ Close the official web driver (nd104.chilkey.com) first. It holds the
 > same HID interfaces open.
@@ -18,9 +19,23 @@ USB protocol on real hardware before the ND104 Studio app is built.
 | `time` | Send the current (or a given) local time | yes |
 | `weather` | Send icon + current/max/min temperature | yes |
 | `icons` | Cycle icons 0–9 (current temperature = icon index) | yes |
+| `descriptor` | Print the HID report descriptor of the vendor collection (shows the report ID used over Bluetooth) | no |
+| `query 08 03 01` | Send one **read** command (`08`, `12` or `14` only) and print the answers | no |
+| `light --zone backlight\|bottom` | Read effect, brightness, speed and colour; `--effect/--brightness/--speed/--color h,s` change them, `--store` keeps them | only with values (stored only with `--store`) |
+| `setting --name debounce-mode\|debounce-time\|sleep\|deep-sleep [value]` | Read a keyboard setting; a value changes it (only the values Chilkey's driver offers), `--store` keeps it | only with a value |
+| `key --layer L --row R --col C [--code XXXX]` | Read one key; `--code` changes it, reads it back and prints the command to undo it | only with `--code` (**stored immediately**) |
+| `knob --layer L --dir left\|right [--code XXXX]` | The same for the knob (layers 0–3) | only with `--code` (**stored immediately**) |
+| `keymap --layer L` | Print one layer of the keymap as an 8 × 16 table | no |
+| `picture --file F [--fit fill\|contain] [--dry-run]` | Check and convert a picture/GIF like the app, then upload it to the screen (USB only) | yes (`--dry-run`: no) |
 
-What it does **not** do: flash firmware, change keyboard settings (keymap, RGB,
-macros), upload images, or work over 2.4 GHz or Bluetooth.
+All keyboard commands work over the USB cable **and over Bluetooth**: the tool
+reads the report ID from the descriptor (over Bluetooth the vendor collection
+uses report ID 2) and adds/removes it automatically. The screen controller –
+needed for `picture` and the screen version – is reachable by cable only.
+
+What it does **not** do: flash firmware, change macros, or work over 2.4 GHz.
+Keymap, lighting and settings change only with an explicit value (see the
+table).
 
 ## Firmware safety
 

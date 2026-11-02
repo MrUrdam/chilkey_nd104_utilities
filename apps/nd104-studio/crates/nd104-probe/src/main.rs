@@ -3,6 +3,7 @@
 //! Verifies the Chilkey ND104 USB HID protocol on real hardware before the
 //! actual nd104-studio app is built. Wired USB connection only.
 
+mod extra;
 mod hid;
 
 use std::thread;
@@ -42,6 +43,86 @@ enum Command {
         /// How long to wait for answers per device
         #[arg(long, default_value_t = 1000)]
         timeout_ms: u64,
+    },
+    /// Send one READ command to the keyboard and print the answers. Only read
+    /// commands are accepted: 08 (lighting/settings value), 12 (keymap
+    /// buffer), 14 (knob action). Example: query 08 03 01
+    Query {
+        /// Command bytes in hex, e.g. 08 03 01
+        #[arg(required = true, num_args = 1..)]
+        bytes: Vec<String>,
+        #[arg(long, default_value_t = 1500)]
+        timeout_ms: u64,
+    },
+    /// Read a lighting zone; with values, change it (stored only with --store)
+    Light {
+        #[arg(long, value_enum, default_value_t = ZoneArg::Backlight)]
+        zone: ZoneArg,
+        /// Effect index (0 = off, 1 = solid colour)
+        #[arg(long)]
+        effect: Option<u8>,
+        /// 0–255
+        #[arg(long)]
+        brightness: Option<u8>,
+        /// 0–255
+        #[arg(long)]
+        speed: Option<u8>,
+        /// Hue,saturation (0–255 each), e.g. 170,255
+        #[arg(long, value_parser = parse_pair)]
+        color: Option<(u8, u8)>,
+        /// Store the changes in the keyboard (otherwise they last until a restart)
+        #[arg(long)]
+        store: bool,
+    },
+    /// Read a keyboard setting; with a value, change it (only the driver's values)
+    Setting {
+        #[arg(long, value_enum)]
+        name: SettingArg,
+        value: Option<u8>,
+        /// Store the change in the keyboard
+        #[arg(long)]
+        store: bool,
+    },
+    /// Read one key of the keymap; with --code, change it (stored immediately!)
+    Key {
+        #[arg(long)]
+        layer: u8,
+        #[arg(long)]
+        row: u8,
+        #[arg(long)]
+        col: u8,
+        /// New key code in hex, e.g. 0029
+        #[arg(long, value_parser = parse_code)]
+        code: Option<u16>,
+    },
+    /// Read one knob action; with --code, change it (stored immediately!)
+    Knob {
+        #[arg(long)]
+        layer: u8,
+        #[arg(long, value_enum)]
+        dir: DirArg,
+        /// New key code in hex, e.g. 00a9
+        #[arg(long, value_parser = parse_code)]
+        code: Option<u16>,
+    },
+    /// Print one layer of the keymap as a table (read-only)
+    Keymap {
+        #[arg(long, default_value_t = 0)]
+        layer: u8,
+    },
+    /// Upload a picture or GIF to the screen (USB only); --dry-run only checks it
+    Picture {
+        #[arg(long)]
+        file: String,
+        #[arg(long, value_enum, default_value_t = FitArg::Fill)]
+        fit: FitArg,
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Print the HID report descriptor of a device (read-only)
+    Descriptor {
+        #[arg(long, value_enum, default_value_t = TargetArg::Keyboard)]
+        device: TargetArg,
     },
     /// Print every input report a device sends
     Listen {
@@ -116,6 +197,46 @@ struct WriteOpts {
 }
 
 #[derive(Clone, Copy, ValueEnum)]
+enum SettingArg {
+    DebounceMode,
+    DebounceTime,
+    Sleep,
+    DeepSleep,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum DirArg {
+    Left,
+    Right,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum FitArg {
+    Fill,
+    Contain,
+}
+
+fn parse_code(text: &str) -> Result<u16, String> {
+    u16::from_str_radix(text.trim_start_matches("0x"), 16).map_err(|e| e.to_string())
+}
+
+fn parse_pair(text: &str) -> Result<(u8, u8), String> {
+    let (a, b) = text.split_once(',').ok_or("expected hue,saturation")?;
+    Ok((
+        a.trim().parse().map_err(|e| format!("{e}"))?,
+        b.trim().parse().map_err(|e| format!("{e}"))?,
+    ))
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum ZoneArg {
+    /// Under the keys (VIA channel 3)
+    Backlight,
+    /// Around the keyboard and the light bar (VIA channel 2)
+    Bottom,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
 enum TargetArg {
     Keyboard,
     Screen,
@@ -152,6 +273,73 @@ fn main() -> Result<()> {
                     .as_ref()
                     .map_or("unknown", |v| v.raw.as_str())
             );
+            Ok(())
+        }
+        Command::Descriptor { device } => Probe::new()?.descriptor(device.into()),
+        Command::Light {
+            zone,
+            effect,
+            brightness,
+            speed,
+            color,
+            store,
+        } => extra::light(
+            match zone {
+                ZoneArg::Backlight => 3,
+                ZoneArg::Bottom => 2,
+            },
+            extra::LightChange {
+                effect,
+                brightness,
+                speed,
+                color,
+                store,
+            },
+        ),
+        Command::Setting { name, value, store } => {
+            use nd104_core::keyboard_settings::KeyboardSetting as S;
+            let setting = match name {
+                SettingArg::DebounceMode => S::DebounceMode,
+                SettingArg::DebounceTime => S::DebounceTime,
+                SettingArg::Sleep => S::SleepTime,
+                SettingArg::DeepSleep => S::DeepSleepTime,
+            };
+            extra::setting(setting, value, store)
+        }
+        Command::Key {
+            layer,
+            row,
+            col,
+            code,
+        } => extra::key(layer, row, col, code),
+        Command::Knob { layer, dir, code } => {
+            extra::knob(layer, matches!(dir, DirArg::Right), code)
+        }
+        Command::Keymap { layer } => extra::keymap(layer),
+        Command::Picture { file, fit, dry_run } => extra::picture(
+            &file,
+            match fit {
+                FitArg::Fill => nd104_core::picture::Fit::Fill,
+                FitArg::Contain => nd104_core::picture::Fit::Contain,
+            },
+            dry_run,
+        ),
+        Command::Query { bytes, timeout_ms } => {
+            let packet = bytes
+                .iter()
+                .map(|b| u8::from_str_radix(b.trim_start_matches("0x"), 16))
+                .collect::<Result<Vec<u8>, _>>()
+                .context("bytes must be hex, e.g. 08 03 01")?;
+            // read commands only – nothing that changes the keyboard
+            const READS: [u8; 3] = [0x08, 0x12, 0x14];
+            if !packet.first().is_some_and(|c| READS.contains(c)) {
+                bail!("only read commands are allowed: 08, 12, 14");
+            }
+            let device = Probe::new()?.open(Target::Keyboard)?;
+            println!("→ keyboard");
+            print!("{}", hex_dump(&packet));
+            device.send(&packet, 32)?;
+            device.drain_answers(Duration::from_millis(timeout_ms));
             Ok(())
         }
         Command::Listen { device, seconds } => {

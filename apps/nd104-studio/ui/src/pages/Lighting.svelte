@@ -7,6 +7,7 @@
   import { EFFECTS, EFFECT_OFF, EFFECT_SOLID, effect as effectInfo } from "../lib/effects";
   import { t } from "../lib/i18n.svelte";
   import Icon from "../components/Icon.svelte";
+  import UsbRequired from "../components/UsbRequired.svelte";
 
   let { status }: { status: Status } = $props();
 
@@ -198,7 +199,7 @@
   <p class="muted intro">{t("ui.light.intro")}</p>
 
   {#if !ready}
-    <div class="notice warn"><Icon name="plug" />{t("ui.light.not_connected")}</div>
+    <UsbRequired feature="lighting" />
   {/if}
 
   {#each zones as zone (zone)}

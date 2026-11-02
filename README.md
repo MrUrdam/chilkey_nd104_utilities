@@ -4,7 +4,7 @@
 [![Firmware watch](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/firmware-watch.yml/badge.svg)](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/firmware-watch.yml)
 [![License: MIT](https://img.shields.io/github/license/MrUrdam/chilkey_nd104_utilities)](LICENSE)
 ![Unofficial](https://img.shields.io/badge/Chilkey-unofficial%20%C2%B7%20not%20affiliated-lightgrey)
-![USB cable only](https://img.shields.io/badge/connection-USB%20cable%20only-orange)
+[![Connection modes: USB, Bluetooth, 2.4 GHz](https://img.shields.io/badge/connection%20modes-matrix-blue)](apps/nd104-studio/README.md#connection-modes)
 
 Tools for the **Chilkey ND104** keyboard and its built-in 1.47" display, without
 the vendor software: show the current time and weather or your own picture on
@@ -69,7 +69,7 @@ The [Chilkey ND104](https://chilkey.com/products/nd104-keyboard) is a full-size
 keyboard (104 keys) with an aluminium case, hot-swap sockets, a rotary knob and
 a 1.47" colour display.
 
-- Connection: USB-C, 2.4 GHz, Bluetooth 5.4 (this repo: **USB cable only**)
+- Connection: USB-C, 2.4 GHz, Bluetooth 5.4 – what ND104 Studio supports on each: [Connection modes](apps/nd104-studio/README.md#connection-modes)
 - Display: 320×172 TFT, shows time, weather and images/GIFs
 - Official software: [Chilkey web driver](https://nd104.chilkey.com/)
   (WebHID, Chromium-based browsers only) and the
@@ -121,9 +121,9 @@ but the screen version is often wrong there, see
 
 | Document | Content |
 |---|---|
-| [docs/protocol.md](docs/protocol.md) | USB HID protocol: devices, checksums, version queries, time and weather packets |
+| [docs/protocol.md](docs/protocol.md) | HID protocol over USB and Bluetooth: devices, checksums, version queries, time and weather packets |
 | [docs/firmware.md](docs/firmware.md) | Where the latest firmware really comes from, screen variants (°C / °F) |
-| [docs/keyboard-api.md](docs/keyboard-api.md) | What the ND104 can do over USB, and what ND104 Studio uses |
+| [docs/keyboard-api.md](docs/keyboard-api.md) | What the ND104 can do, and what ND104 Studio uses |
 | [nd104-probe](apps/nd104-studio/crates/nd104-probe/README.md) | Diagnostic CLI: read firmware versions, test time/weather packets |
 | [apps/nd104-studio/README.md](apps/nd104-studio/README.md) | ND104 Studio features, installation, usage, building |
 
@@ -146,7 +146,7 @@ hardware, loss of data or any other harm caused by using it.
 
 **Limited scope.** The tools are only tested with:
 - the Chilkey ND104,
-- connected with a **USB cable** (no 2.4 GHz dongle, no Bluetooth),
+- the connections and features marked ✅ in [Connection modes](apps/nd104-studio/README.md#connection-modes),
 - the firmware versions marked ✅ in [Firmware](#firmware),
 - the platforms named in each tool's README (ND104 Studio: Windows 10/11).
 
