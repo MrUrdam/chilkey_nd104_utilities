@@ -50,3 +50,6 @@ jobs:
 
       - name: Test
         run: cargo test --workspace --locked
+
+      - name: Third-party notices up to date
+        run: python scripts/third_party_notices.py --check

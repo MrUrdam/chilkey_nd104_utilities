@@ -2,6 +2,7 @@
   "name": "nd104-studio-ui",
   "private": true,
   "version": "0.0.0",
+  "license": "MIT",
   "description": "Settings window of ND104 Studio (Svelte + TypeScript, built with Vite)",
   "type": "module",
   "scripts": {

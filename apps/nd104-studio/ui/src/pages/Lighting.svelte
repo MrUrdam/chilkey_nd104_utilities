@@ -8,6 +8,7 @@
   import { t } from "../lib/i18n.svelte";
   import Icon from "../components/Icon.svelte";
   import UsbRequired from "../components/UsbRequired.svelte";
+  import PcLightingCard from "../components/PcLightingCard.svelte";
 
   let { status }: { status: Status } = $props();
 
@@ -310,6 +311,8 @@
   {/each}
 
   <p class="muted small">{t("ui.light.effects_hint")}</p>
+
+  <PcLightingCard {status} />
 </div>
 
 <style>

@@ -79,9 +79,10 @@ jobs:
           NAME="nd104-studio-${VERSION}-windows-x64"
           mkdir -p "dist/$NAME"
           cp target/release/nd104-studio.exe target/release/nd104-cli.exe target/release/nd104-probe.exe \
-             README.md CHANGELOG.md ../../LICENSE "dist/$NAME/"
+             README.md CHANGELOG.md THIRD-PARTY-NOTICES.txt ../../LICENSE "dist/$NAME/"
           (cd dist && 7z a -tzip "$NAME.zip" "$NAME" > /dev/null)
           cp target/release/nd104-studio-setup.exe "dist/nd104-studio_${VERSION}_x64-setup.exe"
+          cp THIRD-PARTY-NOTICES.txt dist/
           # the MSI is named after the product name ("ND104 Studio"); no spaces in assets
           for msi in target/release/bundle/msi/*.msi; do
             [ -e "$msi" ] && cp "$msi" "dist/nd104-studio_${VERSION}_x64_en-US.msi"
@@ -107,10 +108,11 @@ jobs:
           cat >> dist/notes.md <<EOF
 
           ---
-          **Downloads** (Windows 10/11, x64, wired USB connection only):
+          **Downloads** (Windows 10/11, x64 – USB cable, Bluetooth or 2.4 GHz, see [Connection modes](https://github.com/${GITHUB_REPOSITORY}/blob/main/apps/nd104-studio/README.md#connection-modes)):
           - \`nd104-studio_${VERSION}_x64-setup.exe\` – **recommended**: setup for install, update and uninstall, per user, no admin rights
           - \`nd104-studio_${VERSION}_x64_en-US.msi\` – MSI for managed/per-machine installs (admin rights)
           - \`${PACKAGE}.zip\` – portable: tray app \`nd104-studio.exe\`, console runner \`nd104-cli.exe\`, diagnostic tool \`nd104-probe.exe\`
+          - \`THIRD-PARTY-NOTICES.txt\` – licences of the open-source software included (also in the app: General → About → Open-source licences)
 
           The installers are not code-signed yet; Windows SmartScreen may ask for confirmation
           ("More info" → "Run anyway"). Verify downloads with \`SHA256SUMS.txt\`.
@@ -128,5 +130,5 @@ jobs:
           esac
           shopt -s nullglob
           gh release create "$GITHUB_REF_NAME" \
-            dist/*.zip dist/*.exe dist/*.msi dist/SHA256SUMS.txt \
+            dist/*.zip dist/*.exe dist/*.msi dist/SHA256SUMS.txt dist/THIRD-PARTY-NOTICES.txt \
             --title "$TITLE" --notes-file dist/notes.md $FLAGS

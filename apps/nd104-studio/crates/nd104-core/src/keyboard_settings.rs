@@ -1,8 +1,9 @@
 //! Keyboard settings: debounce and sleep times (docs/protocol.md § 5.2).
 //!
-//! Only what Chilkey's web driver shows, with exactly its values. The driver
-//! hides the USB polling rate, and "keyboard colour" / "online RGB" have no
-//! documented effect, so those are left out.
+//! What Chilkey's web driver shows, with exactly its values, plus whether PC
+//! lighting software may take over the LEDs (the driver's "online RGB",
+//! docs/protocol.md § 5.2.1). The driver hides the USB polling rate, and
+//! "keyboard colour" has no effect, so those are left out.
 
 use serde::{Deserialize, Serialize};
 
@@ -18,14 +19,23 @@ pub enum KeyboardSetting {
     SleepTime,
     /// Minutes without a key press until the keyboard sleeps deeply.
     DeepSleepTime,
+    /// May PC lighting software (OpenRGB, SignalRGB) take over the LEDs?
+    /// In the app 1 = allowed, 0 = blocked; see [`Self::to_raw`].
+    PcLighting,
 }
 
+/// The keyboard's value for "PC lighting software allowed". V3.0.14 stores
+/// it inverted: the driver's "online RGB" 1 ("enable") *blocks* PC software
+/// (docs/protocol.md § 5.2.1). Should a firmware swap it, change it here.
+const PC_LIGHTING_ALLOWED_RAW: u8 = 0;
+
 impl KeyboardSetting {
-    pub const ALL: [KeyboardSetting; 4] = [
+    pub const ALL: [KeyboardSetting; 5] = [
         KeyboardSetting::DebounceMode,
         KeyboardSetting::DebounceTime,
         KeyboardSetting::SleepTime,
         KeyboardSetting::DeepSleepTime,
+        KeyboardSetting::PcLighting,
     ];
 
     /// Id the value is read with. The sleep time is read with `0B`, the id
@@ -37,12 +47,35 @@ impl KeyboardSetting {
             KeyboardSetting::DebounceTime => 0x01,
             KeyboardSetting::SleepTime => 0x0B,
             KeyboardSetting::DeepSleepTime => 0x07,
+            KeyboardSetting::PcLighting => 0x05,
         }
     }
 
     /// Id the value is written with (the web driver's ids).
     pub const fn write_id(self) -> u8 {
         self.read_id()
+    }
+
+    /// The app's value as the keyboard stores it.
+    pub const fn to_raw(self, value: u8) -> u8 {
+        match self {
+            KeyboardSetting::PcLighting => {
+                if value == 1 {
+                    PC_LIGHTING_ALLOWED_RAW
+                } else {
+                    1 - PC_LIGHTING_ALLOWED_RAW
+                }
+            }
+            _ => value,
+        }
+    }
+
+    /// The keyboard's stored value as the app shows it.
+    pub const fn from_raw(self, raw: u8) -> u8 {
+        match self {
+            KeyboardSetting::PcLighting => (raw == PC_LIGHTING_ALLOWED_RAW) as u8,
+            _ => raw,
+        }
     }
 
     /// Values the web driver offers.
@@ -62,6 +95,7 @@ impl KeyboardSetting {
                 v.push(60);
                 v
             }
+            KeyboardSetting::PcLighting => vec![0, 1],
         }
     }
 
@@ -79,6 +113,8 @@ pub struct KeyboardSettings {
     pub debounce_time: Option<u8>,
     pub sleep_time: Option<u8>,
     pub deep_sleep_time: Option<u8>,
+    /// 1: PC lighting software may take over the LEDs, 0: blocked.
+    pub pc_lighting: Option<u8>,
 }
 
 impl KeyboardSettings {
@@ -88,6 +124,7 @@ impl KeyboardSettings {
             KeyboardSetting::DebounceTime => self.debounce_time = value,
             KeyboardSetting::SleepTime => self.sleep_time = value,
             KeyboardSetting::DeepSleepTime => self.deep_sleep_time = value,
+            KeyboardSetting::PcLighting => self.pc_lighting = value,
         }
     }
 }
@@ -116,6 +153,18 @@ mod tests {
         assert!(!KeyboardSetting::SleepTime.allows(0));
         assert!(!KeyboardSetting::SleepTime.allows(61));
         assert!(!KeyboardSetting::DebounceMode.allows(3));
+    }
+
+    #[test]
+    fn pc_lighting_is_stored_inverted() {
+        let s = KeyboardSetting::PcLighting;
+        assert_eq!(s.write_id(), 0x05);
+        // allowed (1 in the app) is 0 in the keyboard, and back
+        assert_eq!(s.to_raw(1), 0);
+        assert_eq!(s.to_raw(0), 1);
+        assert_eq!(s.from_raw(0), 1);
+        assert_eq!(s.from_raw(1), 0);
+        assert_eq!(KeyboardSetting::SleepTime.to_raw(15), 15);
     }
 
     #[test]

@@ -324,3 +324,212 @@ fn hex(bytes: &[u8]) -> String {
         .collect::<Vec<_>>()
         .join(" ")
 }
+
+// --- all collections --------------------------------------------------------
+
+/// Every collection of the keyboard, screen and receiver with its report IDs
+/// and report descriptor. Uses the app's fast device list (hidapi's own scan
+/// opens every HID device of the PC). Nothing is written.
+pub fn descriptors() -> Result<()> {
+    use nd104_core::hid::{HidBackend, HidapiBackend};
+    let mut list = HidapiBackend::new()?.enumerate()?;
+    list.sort_by(|a, b| {
+        (a.vid, a.pid, a.interface_number, a.usage_page).cmp(&(
+            b.vid,
+            b.pid,
+            b.interface_number,
+            b.usage_page,
+        ))
+    });
+    #[allow(deprecated)]
+    let api = hidapi::HidApi::new_without_enumerate()?;
+    for info in list {
+        println!(
+            "{:04x}:{:04x} if {:>2} usage {:04x}:{:04x}{}",
+            info.vid,
+            info.pid,
+            info.interface_number,
+            info.usage_page,
+            info.usage,
+            if info.is_bluetooth() {
+                " (Bluetooth)"
+            } else {
+                ""
+            }
+        );
+        let Ok(path) = std::ffi::CString::new(info.path.clone()) else {
+            continue;
+        };
+        let device = match api.open_path(&path) {
+            Ok(d) => d,
+            Err(e) => {
+                println!("  cannot open: {e}");
+                continue;
+            }
+        };
+        let mut desc = [0u8; 4096];
+        match device.get_report_descriptor(&mut desc) {
+            Ok(len) => {
+                let ids: Vec<String> = desc[..len]
+                    .windows(2)
+                    .filter(|w| w[0] == 0x85)
+                    .map(|w| format!("{:02x}", w[1]))
+                    .collect();
+                println!(
+                    "  report IDs: {}",
+                    if ids.is_empty() {
+                        "none".into()
+                    } else {
+                        ids.join(" ")
+                    }
+                );
+                println!("  {}", hex(&desc[..len]));
+            }
+            Err(e) => println!("  no descriptor: {e}"),
+        }
+    }
+    Ok(())
+}
+
+/// Reads one feature report (GET_FEATURE – nothing is changed).
+pub fn feature(usage: &str, id: &str) -> Result<()> {
+    use nd104_core::hid::{HidBackend, HidapiBackend};
+    let hex16 = |s: &str| u16::from_str_radix(s.trim_start_matches("0x"), 16);
+    let (page, use_) = usage
+        .split_once(':')
+        .ok_or_else(|| anyhow!("usage as page:usage, e.g. 0059:0001"))?;
+    let (page, use_) = (hex16(page)?, hex16(use_)?);
+    let id = u8::from_str_radix(id.trim_start_matches("0x"), 16)?;
+    let info = HidapiBackend::new()?
+        .enumerate()?
+        .into_iter()
+        .find(|i| i.vid == 0x6D67 && !i.is_bluetooth() && i.usage_page == page && i.usage == use_)
+        .ok_or_else(|| anyhow!("collection {page:04x}:{use_:04x} not found (USB cable?)"))?;
+    #[allow(deprecated)]
+    let api = hidapi::HidApi::new_without_enumerate()?;
+    let device = api.open_path(&std::ffi::CString::new(info.path)?)?;
+    let mut buf = [0u8; 256];
+    buf[0] = id;
+    let len = device
+        .get_feature_report(&mut buf)
+        .with_context(|| format!("feature report {id:02x}"))?;
+    println!("feature report {id:02x} ({len} bytes):");
+    print!("{}", hex_dump(&buf[..len]));
+    Ok(())
+}
+
+/// Read commands of the PC lighting protocols on interface 4 (report ID 05):
+/// SignalRGB 21 QMK version, 22 protocol version, 23 unique id, 27 LED
+/// count, 28 firmware type; OpenRGB 01 protocol version, 02 QMK version,
+/// 03 device info, 05 LED info.
+const RGB_READS: [u8; 9] = [0x21, 0x22, 0x23, 0x27, 0x28, 0x01, 0x02, 0x03, 0x05];
+
+/// The lighting channel: interface 4, FF59:0060, report ID 05.
+fn lighting_channel() -> Result<hidapi::HidDevice> {
+    use nd104_core::hid::{HidBackend, HidapiBackend};
+    let info = HidapiBackend::new()?
+        .enumerate()?
+        .into_iter()
+        .find(|i| {
+            i.vid == 0x6D67
+                && !i.is_bluetooth()
+                && i.usage_page == 0xFF59
+                && i.interface_number == 4
+        })
+        .ok_or_else(|| {
+            anyhow!("lighting channel (interface 4, FF59:0060) not found – USB cable?")
+        })?;
+    #[allow(deprecated)]
+    let api = hidapi::HidApi::new_without_enumerate()?;
+    Ok(api.open_path(&std::ffi::CString::new(info.path)?)?)
+}
+
+/// SignalRGB stream test (see `RgbTest`). Answers are printed as they come.
+pub fn rgb_test(color: &str, seconds: u64, per_packet: u8) -> Result<()> {
+    let rgb = u32::from_str_radix(color.trim_start_matches('#'), 16)
+        .context("colour as hex, e.g. ff0000")?;
+    let [_, r, g, b] = rgb.to_be_bytes();
+    if per_packet == 0 || 4 + 3 * per_packet as usize > 64 {
+        bail!("1–20 LEDs per packet");
+    }
+    let device = lighting_channel()?;
+    let send = |payload: &[u8]| -> Result<()> {
+        let mut report = vec![0x05];
+        report.extend(payload);
+        report.resize(64, 0);
+        device.write(&report).context("write failed")?;
+        let mut buf = [0u8; 64];
+        if let Ok(n) = device.read_timeout(&mut buf, 20) {
+            if n > 0 && buf[1] != 0x24 {
+                println!("← {}", hex(&buf[..n.min(8)]));
+            }
+        }
+        Ok(())
+    };
+    println!("switching to PC colours (25)");
+    send(&[0x25])?;
+    let leds = 130u8;
+    let until = Instant::now() + Duration::from_secs(seconds);
+    let mut frames = 0;
+    while Instant::now() < until {
+        let mut start = 0u8;
+        while start < leds {
+            let count = per_packet.min(leds - start);
+            let mut p = vec![0x24, start, count];
+            for _ in 0..count {
+                p.extend([r, g, b]);
+            }
+            send(&p)?;
+            start += count;
+        }
+        frames += 1;
+        thread::sleep(Duration::from_millis(50));
+    }
+    println!("{frames} frames sent; giving the lighting back (26)");
+    send(&[0x26])?;
+    Ok(())
+}
+
+pub fn rgb(bytes: &[String]) -> Result<()> {
+    use nd104_core::hid::{HidBackend, HidapiBackend};
+    let packet = bytes
+        .iter()
+        .map(|b| u8::from_str_radix(b.trim_start_matches("0x"), 16))
+        .collect::<Result<Vec<u8>, _>>()
+        .context("bytes must be hex, e.g. 27")?;
+    if !packet.first().is_some_and(|c| RGB_READS.contains(c)) {
+        bail!("only read commands: 21 22 23 27 28 (SignalRGB), 01 02 03 05 (OpenRGB)");
+    }
+    let info = HidapiBackend::new()?
+        .enumerate()?
+        .into_iter()
+        .find(|i| {
+            i.vid == 0x6D67
+                && !i.is_bluetooth()
+                && i.usage_page == 0xFF59
+                && i.interface_number == 4
+        })
+        .ok_or_else(|| {
+            anyhow!("lighting channel (interface 4, FF59:0060) not found – USB cable?")
+        })?;
+    #[allow(deprecated)]
+    let api = hidapi::HidApi::new_without_enumerate()?;
+    let device = api.open_path(&std::ffi::CString::new(info.path)?)?;
+    // report ID 05 + 63 bytes
+    let mut report = vec![0x05];
+    report.extend(&packet);
+    report.resize(64, 0);
+    println!("→ lighting channel");
+    print!("{}", hex_dump(&report));
+    device.write(&report).context("write failed")?;
+    let deadline = Instant::now() + ANSWER;
+    let mut buf = [0u8; 64];
+    while Instant::now() < deadline {
+        let n = device.read_timeout(&mut buf, 100)?;
+        if n > 0 {
+            println!("← answer ({n} bytes)");
+            print!("{}", hex_dump(&buf[..n]));
+        }
+    }
+    Ok(())
+}

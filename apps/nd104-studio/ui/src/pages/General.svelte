@@ -2,6 +2,9 @@
   import { api, type AppInfo, type Config, type Status } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
   import { dateTime } from "../lib/format";
+  import { WEATHER_CREDITS, PLACE_CREDIT } from "../lib/credits";
+  import CreditLine from "../components/CreditLine.svelte";
+  import LicensesDialog from "../components/LicensesDialog.svelte";
 
   let {
     draft = $bindable(),
@@ -9,6 +12,8 @@
     status,
     errors,
   }: { draft: Config; info: AppInfo; status: Status; errors: Record<string, string> } = $props();
+
+  let showLicenses = $state(false);
 
   let checking = $state(false);
   const themes = ["auto", "dark", "light"] as const;
@@ -138,6 +143,7 @@
           <button type="button" class="link" onclick={() => api.open(info.project_url)}>{t("ui.general.project")}</button>
           <button type="button" class="link" onclick={() => api.open(info.changelog_url)}>{t("ui.general.changelog")}</button>
           <button type="button" class="link" onclick={() => api.open(info.releases_url)}>{t("ui.general.releases")}</button>
+          <button type="button" class="link" onclick={() => (showLicenses = true)}>{t("ui.lic.open")}</button>
         </div>
       </div>
     </div>
@@ -147,11 +153,24 @@
       <dt>{t("ui.general.logs")}</dt>
       <dd class="mono">{info.log_dir} <button type="button" class="link" onclick={() => api.open("logs")}>{t("ui.open")}</button></dd>
     </dl>
+    <div class="credits">
+      <span class="label">{t("ui.lic.data_sources")}</span>
+      {#each Object.values(WEATHER_CREDITS) as c (c.url)}<CreditLine credit={c} />{/each}
+      <CreditLine credit={PLACE_CREDIT} />
+    </div>
     <p class="muted small">{t("ui.general.disclaimer")}</p>
   </div>
 </div>
 
+{#if showLicenses}<LicensesDialog onclose={() => (showLicenses = false)} />{/if}
+
 <style>
+  .credits {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
   .label {
     font-size: 13px;
     color: var(--muted);

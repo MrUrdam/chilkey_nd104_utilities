@@ -178,6 +178,7 @@ export const KEYS: KeyDef[] = [
   d(0x7e07, "Keyboard sleep", "special", { de: "Tastatur-Ruhezustand", short: "Sleep" }),
   d(0x7013, "N-key rollover on/off", "special", { de: "N-Key-Rollover an/aus", short: "NKRO" }),
   d(0x7e14, "Charging indicator on/off", "special", { de: "Ladeanzeige an/aus", short: "ChgLED" }),
+  d(0x7e23, "PC lighting software on/off", "special", { de: "PC-Lichtsoftware an/aus", short: "PC RGB" }),
   // QMK's own Win lock; the ND104 uses 0x7E0C instead
   d(0x700b, "Lock Win key (alternative)", "special", { de: "Win-Taste sperren (Alternative)", short: "WinLk2" }),
   d(0x7e04, "Windows mode", "special", { de: "Windows-Modus", short: "Win" }),
@@ -190,9 +191,7 @@ export const KEYS: KeyDef[] = [
 const BY_CODE = new Map(KEYS.map((k) => [k.code, k]));
 
 /** Codes found on the keyboard that are not offered (no known function). */
-const EXTRA: Record<number, { en: string; de: string; short: string }> = {
-  0x7e23: { en: "Undocumented function", de: "Undokumentierte Funktion", short: "Undoc." },
-};
+const EXTRA: Record<number, { en: string; de: string; short: string }> = {};
 
 const MOD_NAMES = ["Ctrl", "Shift", "Alt", "Win"];
 
@@ -230,6 +229,10 @@ const HINTS: Record<number, [string, string]> = {
     "Kurz: zum 2,4-GHz-Empfänger wechseln. Lang halten: Empfänger koppeln.",
   ],
   0x7e0c: ["E.g. so it cannot open the Start menu in games.", "Z. B. damit sie im Spiel nicht das Startmenü öffnet."],
+  0x7e23: [
+    "Allows or blocks OpenRGB, SignalRGB etc. – like the switch on the Lighting page.",
+    "Erlaubt oder sperrt OpenRGB, SignalRGB usw. – wie der Schalter auf der Seite Beleuchtung.",
+  ],
   0x700b: ["Not used by the ND104 – use \"Lock Win key\".", "Von der ND104 nicht genutzt – nimm „Win-Taste sperren“."],
   0x7013: ["On: any number of keys at once. Off: works with every PC.", "An: beliebig viele Tasten gleichzeitig. Aus: läuft an jedem PC."],
   0x7e06: ["Hold 3 s; any other key ends the test.", "3 s halten; jede andere Taste beendet den Test."],

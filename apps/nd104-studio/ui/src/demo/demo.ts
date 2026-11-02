@@ -313,7 +313,13 @@ const demoProfiles: KeymapProfile[] = [
   { id: "p2", name: "Photo editing", app: "Lightroom", created: "2026-10-21T08:05:00Z" },
 ];
 let demoPage: unknown = null;
-const demoKeyboardSettings = { debounce_mode: 1, debounce_time: 5, sleep_time: 10, deep_sleep_time: 30 };
+let demoSignalRgb = {
+  signalrgb_found: true,
+  installed: false,
+  current: false,
+  folder: String.raw`C:\Users\Demo\Documents\WhirlwindFX\Plugins`,
+};
+const demoKeyboardSettings = { debounce_mode: 1, debounce_time: 5, sleep_time: 10, deep_sleep_time: 30, pc_lighting: 1 };
 
 export function installDemo(version: string) {
   const texts: Record<string, string> = { ...en, ...(language === "de" ? de : {}) };
@@ -321,6 +327,8 @@ export function installDemo(version: string) {
   mockIPC((cmd, args) => {
     const a = (args ?? {}) as Record<string, unknown>;
     switch (cmd) {
+      case "third_party_notices":
+        return "ND104 Studio – third-party notices\n\nRust crates\n-----------\nserde 1.0 – MIT OR Apache-2.0 – https://crates.io/crates/serde\n\nLicence texts\n-------------\n(demo)";
       case "app_info":
         return appInfo(version);
       case "texts":
@@ -380,6 +388,14 @@ export function installDemo(version: string) {
         demoKeys = structuredClone(target);
         return new Promise((resolve) => setTimeout(() => resolve(n), 700));
       }
+      case "signalrgb_status":
+        return { ...demoSignalRgb };
+      case "signalrgb_install":
+        demoSignalRgb = { ...demoSignalRgb, installed: true, current: true };
+        return new Promise((resolve) => setTimeout(() => resolve({ ...demoSignalRgb }), 300));
+      case "signalrgb_remove":
+        demoSignalRgb = { ...demoSignalRgb, installed: false, current: false };
+        return { ...demoSignalRgb };
       case "bluetooth_status":
         // ?bt=1: keyboard connected over Bluetooth instead of the cable
         return params.get("bt") === "1" || params.get("conn") === "bluetooth"

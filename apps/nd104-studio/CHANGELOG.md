@@ -13,6 +13,67 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.3.0] – 2026-11-02
+
+**SignalRGB** can now colour every LED of the ND104, a new switch decides
+whether PC lighting programs may take over, and the keyboard is found again
+in an instant on PCs with many USB devices. ND104 Studio now also lists the
+licences of the open-source software it contains and credits its data
+sources. Update with **Settings → General → Install update**.
+
+### Added
+- **SignalRGB support:** a SignalRGB plugin for the ND104, installed with
+  one button (Lighting → PC lighting software → Install plugin). SignalRGB
+  then colours all 130 LEDs individually – keys, light bar and edge glow –
+  over the USB cable; when SignalRGB closes, the keyboard's own lighting
+  returns. Checked on the keyboard. The plugin is also in the repository
+  (`apps/nd104-studio/signalrgb/`).
+- **PC lighting software** switch on the Lighting page: allows or blocks
+  programs like SignalRGB taking over the keyboard lighting. Read from and
+  stored in the keyboard; explained in the app. This is the "Online RGB"
+  option of Chilkey's web driver, whose labels are the wrong way round
+  ("enable" blocks PC software) – ND104 Studio handles that. OpenRGB and
+  Windows Dynamic Lighting cannot use the ND104 (see docs/protocol.md § 5.4).
+- The keymap drawing says whether PC lighting software is allowed (with
+  "Show lighting").
+- Key function **Fn + Shift + L** is named: "PC lighting software on/off"
+  (was "Undocumented function").
+- `nd104-probe query` also allows `01` and `02` (reads in VIA and the
+  OpenRGB protocol alike); `nd104-probe descriptors` lists every collection
+  with its report IDs, `feature` reads a feature report, `rgb` sends a read
+  command on the lighting channel and `rgb-test` shows one colour on all
+  LEDs for a few seconds.
+- **Open-source licences:** General → About → "Open-source licences" shows
+  the licences of all third-party software ND104 Studio contains (Rust
+  crates, Svelte, the Rajdhani font, Lucide icon shapes). The same list
+  ships as `THIRD-PARTY-NOTICES.txt` with every release.
+- **Data credits:** the Weather page names the source of the selected
+  provider (e.g. "Weather data by Open-Meteo.com", CC BY 4.0) and of the
+  city search (GeoNames); General → About lists all data sources.
+
+### Changed
+- **Copyright and credits:** General → About says that ND104 Studio is an
+  unofficial project, not affiliated with or endorsed by Chilkey, and that
+  "Chilkey" and "ND104" are names of their respective owners (the README
+  credits say the same). `package.json` declares the MIT licence, and the
+  root README points to the third-party notices.
+- Release notes no longer say "wired USB connection only"; they point to the
+  connection modes matrix.
+- The connection modes matrix has a row for per-key colours from SignalRGB
+  (USB cable only).
+
+### Fixed
+- **Keyboard not found (or only after minutes):** to look for the keyboard,
+  ND104 Studio opened every HID device of the PC – about a second each, so
+  with many devices (mouse, receiver, touchscreen …) one search took over
+  two minutes and the keyboard seemed not to connect. It now takes the
+  device list from Windows and opens only the keyboard, screen and
+  receiver interfaces, without access rights: one search takes about a
+  millisecond. Bluetooth entries of a keyboard that is not connected right
+  now are left out (opening them would block).
+- The connection symbol in the collapsed sidebar has the same size and
+  position as the menu icons.
+
 ## [2.2.0] – 2026-11-02
 
 ND104 Studio now also works **over the 2.4 GHz receiver**: time, weather,
@@ -722,7 +783,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.2.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.0...HEAD
+[2.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.2.0...nd104-studio-v2.3.0
 [2.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.1.0...nd104-studio-v2.2.0
 [2.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.2...nd104-studio-v2.1.0
 [2.0.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.1...nd104-studio-v2.0.2

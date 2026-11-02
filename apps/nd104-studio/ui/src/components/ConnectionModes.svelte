@@ -12,6 +12,7 @@
     ["time_weather", "yes", "yes", "yes"],
     ["picture", "yes", "no", "no"],
     ["lighting", "yes", "yes", "yes"],
+    ["pc_lighting", "yes", "no", "no"],
     ["keymap", "yes", "yes", "yes"],
     ["settings", "yes", "yes", "yes"],
     ["keyboard_fw", "yes", "yes", "last_usb"],

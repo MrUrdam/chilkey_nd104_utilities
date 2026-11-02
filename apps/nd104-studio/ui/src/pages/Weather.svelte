@@ -5,6 +5,8 @@
   import WeatherIcon from "../components/WeatherIcon.svelte";
   import ApiKeyField from "../components/ApiKeyField.svelte";
   import Icon from "../components/Icon.svelte";
+  import CreditLine from "../components/CreditLine.svelte";
+  import { WEATHER_CREDITS, PLACE_CREDIT } from "../lib/credits";
   import { onMount } from "svelte";
 
   let { draft = $bindable(), info, errors }: { draft: Config; info: AppInfo; errors: Record<string, string> } =
@@ -144,6 +146,7 @@
           </ul>
         {/if}
       {/if}
+      <CreditLine credit={PLACE_CREDIT} />
     {:else}
       <div class="grid-3">
         <label class="field"
@@ -183,6 +186,7 @@
         {#if primary && primary.coverage !== "none"}
           <span class="muted small">{t(`ui.coverage.${primary.coverage}`)}</span>
         {/if}
+        {#if WEATHER_CREDITS[w.provider]}<CreditLine credit={WEATHER_CREDITS[w.provider]} />{/if}
       </label>
       <label class="field"
         >{t("ui.weather.fallback")}

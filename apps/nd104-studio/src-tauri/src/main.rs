@@ -14,6 +14,7 @@ mod keymap_backup;
 mod keymap_page;
 mod logging;
 mod self_update;
+mod signalrgb;
 mod tray;
 
 use std::path::{Path, PathBuf};
@@ -118,6 +119,7 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::app_info,
+            commands::third_party_notices,
             commands::texts,
             commands::get_status,
             commands::get_config,
@@ -136,6 +138,9 @@ fn main() {
             hardware::light_read,
             hardware::light_apply,
             bluetooth::bluetooth_status,
+            signalrgb::signalrgb_status,
+            signalrgb::signalrgb_install,
+            signalrgb::signalrgb_remove,
             hardware::keyboard_settings_read,
             hardware::keyboard_settings_write,
             hardware::picture_pick,

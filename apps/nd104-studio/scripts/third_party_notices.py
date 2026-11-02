@@ -1,0 +1,175 @@
+"""Writes THIRD-PARTY-NOTICES.txt: licences of everything ND104 Studio ships.
+
+- Rust crates: every crate of the Windows build (from `cargo metadata`),
+  with the licence files from the crate itself.
+- JavaScript and font: the packages that end up in the built UI.
+- Lucide: the icon shapes in ui/src/components/Icon.svelte.
+
+Usage (in apps/nd104-studio, after `npm ci` and with the crates fetched):
+    python scripts/third_party_notices.py          # write the file
+    python scripts/third_party_notices.py --check  # exit 1 if it is outdated
+Standard library only.
+"""
+
+import argparse
+import hashlib
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+APP = Path(__file__).resolve().parent.parent
+OUT = APP / "THIRD-PARTY-NOTICES.txt"
+TARGET = "x86_64-pc-windows-msvc"
+
+# packages whose code is in the built UI (ui/ and installer-ui/): the Svelte
+# runtime with its runtime imports, the Tauri API and the font
+NPM_SHIPPED = ["svelte", "clsx", "esm-env", "@tauri-apps/api", "@fontsource/rajdhani"]
+
+LICENSE_FILE = re.compile(r"^(licen[cs]e|copying|notice|unlicense|copyright)([-_. ].*)?$", re.I)
+
+LUCIDE = """ISC License
+
+Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE."""
+
+
+def license_texts(folder: Path, extra: str | None = None) -> list[str]:
+    files = [f for f in sorted(folder.iterdir()) if f.is_file() and LICENSE_FILE.match(f.name)]
+    if extra:
+        f = (folder / extra).resolve()
+        if f.is_file() and f not in files:
+            files.append(f)
+    texts = []
+    for f in files:
+        try:
+            text = f.read_text(encoding="utf-8", errors="replace").strip()
+        except OSError:
+            continue
+        if text:
+            texts.append(text.replace("\r\n", "\n"))
+    return texts
+
+
+def rust_crates() -> list[dict]:
+    meta = json.loads(
+        subprocess.run(
+            ["cargo", "metadata", "--format-version", "1", "--locked", "--filter-platform", TARGET],
+            cwd=APP, capture_output=True, text=True, encoding="utf-8", check=True,
+        ).stdout
+    )
+    used = {n["id"] for n in meta["resolve"]["nodes"]}
+    own = set(meta["workspace_members"])
+    crates = []
+    for p in meta["packages"]:
+        if p["id"] not in used or p["id"] in own:
+            continue
+        folder = Path(p["manifest_path"]).parent
+        crates.append({
+            "name": p["name"],
+            "version": p["version"],
+            "license": p.get("license") or "see licence file",
+            "url": f"https://crates.io/crates/{p['name']}",
+            "texts": license_texts(folder, p.get("license_file")),
+        })
+    return sorted(crates, key=lambda c: (c["name"], c["version"]))
+
+
+def npm_packages() -> list[dict]:
+    found = []
+    for name in NPM_SHIPPED:
+        folder = APP / "node_modules" / name
+        meta = json.loads((folder / "package.json").read_text(encoding="utf-8"))
+        lic = meta.get("license")
+        if isinstance(lic, dict):
+            lic = lic.get("type")
+        found.append({
+            "name": name,
+            "version": meta.get("version", "?"),
+            "license": lic or "see licence file",
+            "url": f"https://www.npmjs.com/package/{name}",
+            "texts": license_texts(folder),
+        })
+    found.append({
+        "name": "lucide (icon shapes)",
+        "version": "",
+        "license": "ISC",
+        "url": "https://lucide.dev",
+        "texts": [LUCIDE],
+    })
+    return found
+
+
+def render() -> str:
+    groups = [("Rust crates", rust_crates()), ("JavaScript, font and icons", npm_packages())]
+    # one copy of every distinct licence text, with the packages that use it
+    texts: dict[str, tuple[str, list[str]]] = {}
+    missing = []
+    out = [
+        "ND104 Studio – third-party notices",
+        "=" * 34,
+        "",
+        "ND104 Studio is MIT licensed (see LICENSE). It contains the following",
+        "third-party software, each under its own licence. The licence texts",
+        "follow the list; packages offered under several licences are used",
+        "under any of them. MPL-2.0 packages are used unchanged; their source",
+        "is available at the given address.",
+        "Generated by scripts/third_party_notices.py – do not edit by hand.",
+        "",
+    ]
+    for title, packages in groups:
+        out += [title, "-" * len(title)]
+        for p in packages:
+            name = f"{p['name']} {p['version']}".strip()
+            out.append(f"{name} – {p['license']} – {p['url']}")
+            if not p["texts"]:
+                missing.append(name)
+            for text in p["texts"]:
+                # the same text with other line breaks counts once
+                key = hashlib.sha256(" ".join(text.split()).encode()).hexdigest()
+                texts.setdefault(key, (text, []))[1].append(name)
+        out.append("")
+    out += ["Licence texts", "-" * 13, ""]
+    for text, users in texts.values():
+        out += ["~" * 72, "Used by: " + ", ".join(users), "~" * 72, "", text, ""]
+    if missing:
+        out += [
+            "Packages without a licence file of their own (licence as named in",
+            "the list above, text as published by its project):",
+            ", ".join(missing),
+            "",
+        ]
+    return "\n".join(out)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--check", action="store_true", help="fail if the file is outdated")
+    args = parser.parse_args()
+    text = render()
+    if args.check:
+        current = OUT.read_text(encoding="utf-8") if OUT.exists() else ""
+        if current.replace("\r\n", "\n") != text:
+            print(f"{OUT.name} is outdated – run: python scripts/third_party_notices.py")
+            return 1
+        print(f"{OUT.name} is up to date")
+        return 0
+    OUT.write_text(text, encoding="utf-8", newline="\n")
+    print(f"wrote {OUT} ({len(text) // 1024} KB)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

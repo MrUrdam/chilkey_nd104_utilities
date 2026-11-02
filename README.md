@@ -165,7 +165,12 @@ answers. For problems with the keyboard itself, please contact
 - [ND104 Firmware Upgrade Guide](https://gist.github.com/borrougagnou/ab98c68cb6812d76fc0357e57f8541d9) by borrougagnou
 - Official [Chilkey web driver](https://nd104.chilkey.com/), analysed for the version queries
 - [zoom-sync](https://github.com/ozboar/zoom-sync), a model for weather and time sync
+- Weather and place data: Open-Meteo, Deutscher Wetterdienst (via Bright Sky),
+  OpenWeather, WeatherAPI.com and GeoNames – licences and required credits in
+  [ND104 Studio → Weather providers](apps/nd104-studio/README.md#weather-providers)
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE). ND104 Studio contains third-party open-source
+software under its own licences, listed in
+[THIRD-PARTY-NOTICES.txt](apps/nd104-studio/THIRD-PARTY-NOTICES.txt).

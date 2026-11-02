@@ -1069,7 +1069,7 @@ impl DeviceManager {
                 } if *command == packet.command && *i == id => Some(*value),
                 _ => None,
             })?;
-            settings.set(setting, value.flatten());
+            settings.set(setting, value.flatten().map(|raw| setting.from_raw(raw)));
         }
         tracing::info!("keyboard settings read: {settings:?}");
         Ok(settings)
@@ -1082,16 +1082,17 @@ impl DeviceManager {
             return Err(anyhow!("{value} is not a valid value for {setting:?}"));
         }
         let id = setting.write_id();
+        let raw = setting.to_raw(value);
         let packet = self
             .model()?
-            .setting_write(id, value)
+            .setting_write(id, raw)
             .ok_or_else(|| anyhow!("this keyboard has no settings"))?;
         let echoed = self.exchange(&packet, ANSWER_TIMEOUT, |c| match c {
             ReportClass::Setting {
                 command,
                 id: Some(i),
                 value: v,
-            } if *command == packet.command && *i == id && *v == Some(value) => Some(()),
+            } if *command == packet.command && *i == id && *v == Some(raw) => Some(()),
             _ => None,
         })?;
         if echoed.is_none() {
@@ -2308,6 +2309,19 @@ mod tests {
         assert!(m.settings_write(KeyboardSetting::SleepTime, 61).is_err());
         assert!(m.settings_write(KeyboardSetting::DebounceMode, 3).is_err());
         assert!(matches!(m.state(), DeviceState::Ready(_)));
+    }
+
+    #[test]
+    fn pc_lighting_is_written_inverted() {
+        use crate::keyboard_settings::KeyboardSetting;
+        let (mut m, shared) = manager(Behaviour::Normal, "3.0.14");
+        m.poll();
+        // the keyboard's 0 (after an EEPROM reset) means allowed
+        assert_eq!(m.settings_read().unwrap().pc_lighting, Some(1));
+        m.settings_write(KeyboardSetting::PcLighting, 0).unwrap();
+        assert_eq!(m.settings_read().unwrap().pc_lighting, Some(0));
+        assert_eq!(shared.lock().unwrap().settings.get(&0x05), Some(&1));
+        assert!(m.settings_write(KeyboardSetting::PcLighting, 2).is_err());
     }
 
     #[test]

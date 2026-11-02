@@ -231,6 +231,8 @@
   // --- lighting: the drawing glows like the keyboard ----------------------
   let keyLight = $state<Glow | null>(null);
   let underLight = $state<Glow | null>(null);
+  /** PC lighting software allowed (1) or blocked (0), as read from the keyboard. */
+  let pcLighting = $state<number | null>(null);
   let lightRead = false;
 
   async function readLighting() {
@@ -239,6 +241,7 @@
     const [keys, bottom] = await Promise.allSettled([api.lightRead("per_key"), api.lightRead("bottom")]);
     keyLight = keys.status === "fulfilled" ? glowOf("per_key", keys.value) : null;
     underLight = bottom.status === "fulfilled" ? glowOf("bottom", bottom.value) : null;
+    pcLighting = await api.keyboardSettingsRead().then((s) => s.pc_lighting, () => null);
   }
 
   /** Only single-colour lighting is drawn; animated effects switch it off. */
@@ -251,6 +254,7 @@
       lightRead = false;
       keyLight = null;
       underLight = null;
+      pcLighting = null;
     }
   });
 
@@ -707,6 +711,9 @@
     </div>
     {#if settings.showLighting && lightingAnimated}
       <p class="muted small">{t("ui.km.lighting_animated")}</p>
+    {/if}
+    {#if settings.showLighting && pcLighting !== null}
+      <p class="muted small">{t(pcLighting === 1 ? "ui.km.pc_lighting_on" : "ui.km.pc_lighting_off")}</p>
     {/if}
 
     {#if loading}

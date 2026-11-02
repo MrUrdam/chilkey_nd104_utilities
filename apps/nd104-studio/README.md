@@ -28,7 +28,7 @@ knob and the round button** on all layers. Set it up once, then forget it.
 <table>
   <tr>
     <td align="center"><img src="../../docs/images/nd104-studio/keymap.png" width="370" alt="Keymap page"><br><sub>Keymap: layers, ISO/ANSI, labels, keys, knob and round button</sub></td>
-    <td align="center"><img src="../../docs/images/nd104-studio/lighting.png" width="370" alt="Lighting page"><br><sub>Lighting: on/off, effect, brightness, speed, colour</sub></td>
+    <td align="center"><img src="../../docs/images/nd104-studio/lighting.png" width="370" alt="Lighting page"><br><sub>Lighting: on/off, effect, brightness, speed, colour, PC lighting software</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="../../docs/images/nd104-studio/weather.png" width="370" alt="Weather page"><br><sub>Weather: provider, location search, test</sub></td>
@@ -140,6 +140,7 @@ the rest of the documentation, the app and the setup point here.
 | Time and weather on the display | ✅ | ✅ | ✅ |
 | Own picture or GIF on the screen | ✅ | ❌ | ❌ |
 | Lighting | ✅ | ✅ | ✅ |
+| Per-key colours from SignalRGB ([PC lighting software](#pc-lighting-software-signalrgb)) | ✅ | ❌ | ❌ |
 | Keymap (remap, backup, profiles, pressed keys in the drawing) | ✅ | ✅ | ✅ |
 | Keyboard settings (debounce, sleep times) | ✅ | ✅ | ✅ |
 | Keyboard firmware version and firmware update check | ✅ | ✅ | ☑️ ¹ |
@@ -177,6 +178,39 @@ shown as long as the keyboard is also connected via Bluetooth.
   and [§ 5.6](../../docs/protocol.md#56-over-the-24-ghz-receiver-analysis-2026-11-02).
 
 The same overview is in the app: **Device → Connection modes**.
+
+## PC lighting software (SignalRGB)
+
+Besides its own effects, the ND104 can let a lighting program on the PC
+colour every LED individually: 130 LEDs – the keys, the light bar under
+Del / End / Page Down and the edge glow.
+
+| Program | Works with the ND104 |
+|---|---|
+| **SignalRGB** | ✅ with the plugin from ND104 Studio |
+| OpenRGB | ❌ talks only to the keyboard's VIA channel, not to its lighting channel |
+| Windows Dynamic Lighting | ❌ the keyboard does not answer Windows' lighting request (firmware V3.0.14) |
+
+Setup:
+1. **Lighting → PC lighting software:** set the switch to *Allowed*
+   (Fn + Shift + L does the same on the keyboard).
+2. **Install plugin** in the same card. It goes to
+   `Documents\WhirlwindFX\Plugins\Chilkey_ND104.js`, where SignalRGB keeps
+   it across updates.
+3. Restart SignalRGB (or reload its plugins). The ND104 appears under
+   *Devices*; place it on the canvas.
+
+Good to know:
+- USB cable only – the lighting channel is not available over Bluetooth or
+  2.4 GHz.
+- The colours are not stored in the keyboard. When SignalRGB closes, the
+  keyboard's own lighting returns; any change on the Lighting page also ends
+  SignalRGB's control.
+- The plugin is also in the repository:
+  [`signalrgb/Chilkey_ND104.js`](signalrgb/Chilkey_ND104.js), generated from
+  the LED table the keyboard reports ([`signalrgb/leds.json`](signalrgb/leds.json),
+  [`make_plugin.py`](signalrgb/make_plugin.py)).
+- Technical details: [protocol.md § 5.4](../../docs/protocol.md#54-other-keyboard-commands-not-used).
 
 ## What it does NOT do
 
@@ -315,6 +349,20 @@ automatically*, or `[updates] firmware_check = false`).
 | [OpenWeatherMap](https://openweathermap.org/) | [free key](https://home.openweathermap.org/users/sign_up) | worldwide | ✅ available |
 | [WeatherAPI.com](https://www.weatherapi.com/) | [free key](https://www.weatherapi.com/signup.aspx) | worldwide | ✅ available |
 | Manual / Test | – | – | ✅ available |
+
+**Data credits and licences:**
+
+| Data | Source and licence | Credit shown in the app |
+|---|---|---|
+| Weather (default) | [Open-Meteo](https://open-meteo.com/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); the free API is for non-commercial use | "Weather data by Open-Meteo.com" |
+| Weather (Germany) | [Deutscher Wetterdienst](https://www.dwd.de/) open data via [Bright Sky](https://brightsky.dev/), CC BY 4.0 | "Source: Deutscher Wetterdienst, via Bright Sky" |
+| Weather (with key) | [OpenWeather](https://openweathermap.org/), [ODbL](https://opendatacommons.org/licenses/odbl/) | "Weather data © OpenWeather" |
+| Weather (with key) | [WeatherAPI.com](https://www.weatherapi.com/) | "Powered by WeatherAPI.com" |
+| City search | [GeoNames](https://www.geonames.org/) via Open-Meteo geocoding, CC BY 4.0 | "Place names: GeoNames, via Open-Meteo" |
+
+The app shows the credit of the selected provider on the Weather page, the
+city search credit below the search, and all of them under **General →
+About → Data sources**. Using a provider means accepting its terms.
 
 **Default location:** Berlin, until you pick your own (city search in the
 settings, or `nd104-cli geocode "<city>" --set 1`). Your location is stored only
@@ -784,5 +832,20 @@ by borrougagnou and on an analysis of the official
 [docs/protocol.md](../../docs/protocol.md). Inspired by
 [zoom-sync](https://github.com/ozboar/zoom-sync).
 
-Unofficial project, not affiliated with Chilkey. Use at your own risk, see the
+**Third-party software:** ND104 Studio is built with open-source packages –
+Rust crates (Tauri, hidapi, serde, reqwest …), Svelte, the
+[Rajdhani](https://fonts.google.com/specimen/Rajdhani) font (SIL Open Font
+License 1.1) and icon shapes from [Lucide](https://lucide.dev) (ISC). Their
+licences are listed in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt),
+which ships with every release and is shown in the app under **General →
+About → Open-source licences**. It is generated by
+[`scripts/third_party_notices.py`](scripts/third_party_notices.py); CI checks
+that it is up to date (run the script after changing dependencies).
+
+**Data:** see [Weather providers](#weather-providers) for the data sources
+and the credits they require.
+
+Unofficial project, not affiliated with or endorsed by Chilkey. "Chilkey"
+and "ND104" are names of their respective owners and are used only to say
+which keyboard the app works with. Use at your own risk, see the
 [disclaimer](../../README.md#disclaimer). MIT licensed, see [LICENSE](../../LICENSE).

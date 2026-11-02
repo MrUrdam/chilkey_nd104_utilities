@@ -14,6 +14,7 @@ tauri-build = { version = "2", features = [] }
 nd104-core.workspace = true
 anyhow.workspace = true
 base64 = "0.22"
+directories.workspace = true
 jiff.workspace = true
 reqwest.workspace = true
 sha2 = "0.10"

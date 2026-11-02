@@ -533,8 +533,42 @@ failure) and the **SignalRGB** protocol (`0x2x` commands, `0x24` streams
 colours), plus a third streaming protocol not identified. OpenRGB's set mode
 with mode **42** is treated as the request for direct mode. Whether these
 programs may take over the LEDs depends on the online RGB setting (§ 5.2.1).
-How the keyboard tells OpenRGB's `01`–`09` apart from the VIA commands with the
-same first byte was not analysed.
+**How they are reached** (firmware analysis, transport checked on the keyboard
+2026-11-02 with `nd104-probe descriptors`): not on the VIA channel. A report
+starting with `01` on `FF60:0061` is always VIA (`01 00 0C`), which is why
+OpenRGB cannot find the keyboard. The PC lighting protocols use **interface 4,
+collection `FF59:0060`, report ID `05`** (63-byte input and output reports);
+the firmware tries the SignalRGB commands (`21`–`28`) first and passes
+everything else to the OpenRGB dispatcher (`01`–`09`). Stock OpenRGB does not
+send that, so it would need its own controller or plugin.
+
+**SignalRGB on this channel** (checked on the keyboard 2026-11-02, reads with
+`nd104-probe rgb`, the stream with `nd104-probe rgb-test`):
+
+| Report (after report ID `05`) | Answer / effect |
+|---|---|
+| `22` protocol version | `22 01 00 06` – SignalRGB protocol **1.0.6** |
+| `27` LED count | `27 82` – **130 LEDs** |
+| `03` (OpenRGB) device info | 130 LEDs, name "ND104", vendor "UBEST" |
+| `01` (OpenRGB) protocol version | `01 0C` |
+| `05 first count` (OpenRGB) LED info | 7 bytes per LED: x, y (QMK points), flags (`04` key light), `00 00 ff`, keycode of the key above |
+| `25` | switches to PC colours (direct mode) |
+| `24 first count r g b …` | sets `count` LEDs from `first` (9 per report used) – all 130 red: ✅ |
+| `26` | gives the lighting back; the stored effect returns ✅ |
+
+LEDs 0–114 are the keys (wide keys have two), 115–119 the light bar under
+Del / End / Page Down, 120–129 the edge glow. ND104 Studio ships a SignalRGB
+plugin built from this (`apps/nd104-studio/signalrgb/`).
+
+All vendor and lighting collections of the keyboard over USB:
+
+| Interface | Usage | Report IDs | What |
+|---|---|---|---|
+| 1 | `FF60:0061` | – | VIA / Chilkey commands (32 bytes) – used by ND104 Studio |
+| 2 | `FF59:0060` | – | 64-byte in/out, not analysed |
+| 3 | `0059:0001` | `01`–`06`, `07` | **HID Lighting and Illumination (LampArray)** – the standard that Windows 11 *Dynamic Lighting* uses for per-key colours; `07` is a 63-byte vendor feature report |
+| 4 | `FF59:0060` | `05` | PC lighting protocols (SignalRGB, OpenRGB), 63 bytes |
+| 5 | `FF31:0074` | – | 64-byte input, not analysed |
 
 ---
 
@@ -662,8 +696,17 @@ versions from the last USB/Bluetooth connection.
       sends no unknown commands.
 - [x] Effect of keyboard colour (`04`) and online RGB (`05`) found in the
       keyboard firmware (§ 5.2.1). *(2026-11-02)*
+- [x] Online RGB read back on a keyboard: `08 00 04 05` → `00` (PC control
+      allowed). ND104 Studio shows and changes it as "PC lighting software"
+      (allowed = 0), Lighting page. *(2026-11-02)*
 - [ ] Online RGB on a keyboard: with 1, OpenRGB's direct mode should leave the
       LEDs unchanged; with 0 it should take over.
+- [ ] How OpenRGB's commands reach their handler: over USB and the 2.4 GHz
+      receiver, `01` is answered as **VIA** (`01 00 0C`, protocol 12) and
+      `02` with `FF`. OpenRGB reads byte 1 of the `01` answer as its protocol
+      version and only accepts the version it knows (0x09 in the detector
+      looked at), so with this answer OpenRGB does not take the keyboard,
+      even when it is added by hand. *(2026-11-02)*
 
 **Result:** M0 passed for keyboard **V3.0.14** and screen **V1.2.4**
 (24 h / °C). These are the first verified firmware versions.

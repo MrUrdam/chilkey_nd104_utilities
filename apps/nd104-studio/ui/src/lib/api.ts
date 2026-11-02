@@ -245,6 +245,7 @@ export type OpenTarget = "config" | "logs" | string;
 
 export const api = {
   appInfo: () => invoke<AppInfo>("app_info"),
+  thirdPartyNotices: () => invoke<string>("third_party_notices"),
   installUpdate: () => invoke<void>("install_update"),
   texts: () => invoke<Record<string, string>>("texts"),
   status: () => invoke<Status>("get_status"),
@@ -276,6 +277,9 @@ export const api = {
   keymapRead: () => invoke<Keymap>("keymap_read"),
   keyboardSettingsRead: () => invoke<KeyboardSettings>("keyboard_settings_read"),
   bluetoothStatus: () => invoke<BluetoothKeyboard | null>("bluetooth_status"),
+  signalRgbStatus: () => invoke<SignalRgbStatus>("signalrgb_status"),
+  signalRgbInstall: () => invoke<SignalRgbStatus>("signalrgb_install"),
+  signalRgbRemove: () => invoke<SignalRgbStatus>("signalrgb_remove"),
   keyboardSettingsWrite: (setting: KeyboardSetting, value: number) =>
     invoke<KeyboardSettings>("keyboard_settings_write", { setting, value }),
   keymapWrite: (target: Keymap) => invoke<number>("keymap_write", { target }),
@@ -297,13 +301,21 @@ export interface Keymap {
 }
 
 /** The keyboard connected over Bluetooth (as Windows reports it). */
+/** The SignalRGB plugin of ND104 Studio in Documents\WhirlwindFX\Plugins. */
+export interface SignalRgbStatus {
+  signalrgb_found: boolean;
+  installed: boolean;
+  current: boolean;
+  folder: string;
+}
+
 export interface BluetoothKeyboard {
   name: string;
   slot: number | null;
   battery: number | null;
 }
 
-export type KeyboardSetting = "debounce_mode" | "debounce_time" | "sleep_time" | "deep_sleep_time";
+export type KeyboardSetting = "debounce_mode" | "debounce_time" | "sleep_time" | "deep_sleep_time" | "pc_lighting";
 
 /** Keyboard settings as read; `null`: not reported by this firmware. */
 export interface KeyboardSettings {
@@ -311,6 +323,8 @@ export interface KeyboardSettings {
   debounce_time: number | null;
   sleep_time: number | null;
   deep_sleep_time: number | null;
+  /** 1: PC lighting software (OpenRGB, SignalRGB) may take over the LEDs, 0: blocked. */
+  pc_lighting: number | null;
 }
 
 export interface KeymapProfile {

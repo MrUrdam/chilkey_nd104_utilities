@@ -187,7 +187,7 @@
       {/each}
       <div class="spacer"></div>
       <div class="wired {connection.kind}" title={connection.title}>
-        <Icon name={connection.icon} /><span class="wired-text">{connection.text}</span>
+        <Icon name={connection.icon} size={18} /><span class="wired-text">{connection.text}</span>
       </div>
       <button
         class="nav-item collapse"
@@ -321,6 +321,7 @@
   .collapsed .wired {
     justify-content: center;
     padding: 0;
+    gap: 0;
   }
 
   .collapsed .nav-item {
@@ -453,13 +454,16 @@
     flex: 1;
   }
 
+  /* same box as a menu item, so the symbol lines up with the menu icons */
   .wired {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    height: 36px;
     font-size: 12px;
     color: var(--faint);
     padding: 0 10px;
+    border: 1px solid transparent;
   }
 
   /* the symbol takes the colour of the connection: full, limited, none */

@@ -124,6 +124,40 @@ enum Command {
         #[arg(long, value_enum, default_value_t = TargetArg::Keyboard)]
         device: TargetArg,
     },
+    /// Print usage, report IDs and report descriptor of every collection of
+    /// the keyboard, screen and receiver (read-only)
+    Descriptors,
+    /// Send one read command on the PC lighting channel (interface 4,
+    /// FF59:0060, report ID 05): SignalRGB 21 22 23 27 28 or OpenRGB 01 02
+    /// 03 05 – nothing that changes the lighting
+    Rgb {
+        /// Command bytes in hex, e.g. 27
+        #[arg(required = true, num_args = 1..)]
+        bytes: Vec<String>,
+    },
+    /// Test the SignalRGB colour stream: switch to PC colours (25), show one
+    /// colour on all LEDs (24) for a few seconds, then give the lighting back
+    /// (26). Nothing is stored in the keyboard.
+    RgbTest {
+        /// Colour as hex, e.g. ff0000
+        #[arg(long, default_value = "ff0000")]
+        color: String,
+        #[arg(long, default_value_t = 5)]
+        seconds: u64,
+        /// LEDs per packet
+        #[arg(long, default_value_t = 9)]
+        per_packet: u8,
+    },
+    /// Read one feature report of a keyboard collection (read-only), e.g.
+    /// --usage 0059:0001 --id 1 (LampArray attributes)
+    Feature {
+        /// Collection as page:usage in hex
+        #[arg(long)]
+        usage: String,
+        /// Report ID in hex
+        #[arg(long)]
+        id: String,
+    },
     /// Print every input report a device sends
     Listen {
         #[arg(long, value_enum, default_value_t = TargetArg::Keyboard)]
@@ -276,6 +310,14 @@ fn main() -> Result<()> {
             Ok(())
         }
         Command::Descriptor { device } => Probe::new()?.descriptor(device.into()),
+        Command::Descriptors => extra::descriptors(),
+        Command::Feature { usage, id } => extra::feature(&usage, &id),
+        Command::Rgb { bytes } => extra::rgb(&bytes),
+        Command::RgbTest {
+            color,
+            seconds,
+            per_packet,
+        } => extra::rgb_test(&color, seconds, per_packet),
         Command::Light {
             zone,
             effect,
@@ -330,10 +372,11 @@ fn main() -> Result<()> {
                 .map(|b| u8::from_str_radix(b.trim_start_matches("0x"), 16))
                 .collect::<Result<Vec<u8>, _>>()
                 .context("bytes must be hex, e.g. 08 03 01")?;
-            // read commands only – nothing that changes the keyboard
-            const READS: [u8; 3] = [0x08, 0x12, 0x14];
+            // read commands only – nothing that changes the keyboard. 01/02
+            // read in VIA and in the OpenRGB protocol alike (03 and 05 do not)
+            const READS: [u8; 5] = [0x01, 0x02, 0x08, 0x12, 0x14];
             if !packet.first().is_some_and(|c| READS.contains(c)) {
-                bail!("only read commands are allowed: 08, 12, 14");
+                bail!("only read commands are allowed: 01, 02, 08, 12, 14");
             }
             let device = Probe::new()?.open(Target::Keyboard)?;
             println!("→ keyboard");
