@@ -66,8 +66,8 @@ export type DeviceState =
   | { kind: "not_connected" }
   | {
       kind: "ready";
-      /** USB cable (everything) or Bluetooth (no own picture). */
-      connection: "usb" | "bluetooth";
+      /** USB cable (everything), Bluetooth or the 2.4 GHz receiver (no own picture). */
+      connection: "usb" | "bluetooth" | "wireless";
       model_id: string;
       model_name: string;
       firmware: FirmwareInfo[];

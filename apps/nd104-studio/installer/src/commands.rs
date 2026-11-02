@@ -163,7 +163,8 @@ pub fn launch_app() -> CmdResult<()> {
         .map_err(|e| format!("{e:#}"))
 }
 
-/// Is a supported keyboard connected, and how ("usb" or "bluetooth")? Only
+/// Is a supported keyboard connected, and how ("usb", "bluetooth" or
+/// "wireless": the 2.4 GHz receiver is plugged in)? Only
 /// for the hint on the last page, asked again every 2 s – nothing is sent
 /// to the keyboard.
 #[tauri::command]
@@ -186,6 +187,13 @@ pub async fn keyboard_connected() -> Option<&'static str> {
             Some("usb")
         } else if !ours.is_empty() {
             Some("bluetooth")
+        } else if found.iter().any(|f| {
+            model::registry()
+                .iter()
+                .filter_map(|m| m.receiver())
+                .any(|spec| f.vid == spec.vid && f.pid == spec.pid)
+        }) {
+            Some("wireless")
         } else {
             None
         }

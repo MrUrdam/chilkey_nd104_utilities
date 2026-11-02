@@ -216,7 +216,7 @@
     <h2>{t("ui.pic.send_title")}</h2>
     <p class="muted small">{t("ui.pic.send_hint")}</p>
     {#if !ready}
-      <UsbRequired feature="picture" />
+      <UsbRequired feature="picture" via={status.device.kind === "ready" ? status.device.connection : null} />
     {/if}
     <div class="row">
       <button class="key primary" onclick={send} disabled={!usable || !ready || sending}>

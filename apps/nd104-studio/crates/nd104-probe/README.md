@@ -3,7 +3,7 @@
 Diagnostic command-line tool for **milestone M0**. It checks the Chilkey ND104
 protocol on real hardware before the ND104 Studio app is built.
 
-> 🔌 **USB cable or Bluetooth** – the same as ND104 Studio, see
+> 🔌 **USB cable, Bluetooth or 2.4 GHz** – the same as ND104 Studio, see
 > [Connection modes](../../README.md#connection-modes) (`picture` and the screen version: cable only).
 > 🪟 Tested target: Windows 10/11.
 > ⚠️ Close the official web driver (nd104.chilkey.com) first. It holds the
@@ -33,7 +33,12 @@ reads the report ID from the descriptor (over Bluetooth the vendor collection
 uses report ID 2) and adds/removes it automatically. The screen controller –
 needed for `picture` and the screen version – is reachable by cable only.
 
-What it does **not** do: flash firmware, change macros, or work over 2.4 GHz.
+Over **2.4 GHz** the keyboard commands go through the receiver
+(`6D66:8572`, same vendor collection): when the keyboard is not on USB, the
+probe falls back to it (`list` shows it as "receiver"). The version query is
+answered by the receiver itself, so writes need `--force` there.
+
+What it does **not** do: flash firmware or change macros.
 Keymap, lighting and settings change only with an explicit value (see the
 table).
 

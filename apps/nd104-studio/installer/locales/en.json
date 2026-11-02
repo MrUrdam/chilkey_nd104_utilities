@@ -37,7 +37,7 @@
   "done.uninstalled": "ND104 Studio has been removed.",
   "done.uninstalled_kept": "Your settings were kept for a later installation.",
   "done.tray": "ND104 Studio runs in the system tray, next to the clock.",
-  "hint.keyboard": "No keyboard connected – connect it with the USB cable or via Bluetooth.",
+  "hint.keyboard": "No keyboard connected – connect it with the USB cable, via Bluetooth or the 2.4 GHz receiver.",
   "hint.keyboard_found": "Keyboard connected via USB.",
   "error.title": "Something went wrong",
   "error.install": "ND104 Studio could not be installed. Your previous installation was left unchanged.",
@@ -49,5 +49,6 @@
   "option.style": "Style",
   "option.style_calm": "Calm",
   "option.style_gamer": "Gamer",
-  "hint.keyboard_bluetooth": "Keyboard connected via Bluetooth."
+  "hint.keyboard_bluetooth": "Keyboard connected via Bluetooth.",
+  "hint.keyboard_wireless": "Keyboard connected via 2.4 GHz."
 }

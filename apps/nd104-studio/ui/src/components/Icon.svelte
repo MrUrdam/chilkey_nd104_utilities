@@ -76,6 +76,11 @@
     ],
     minus: [["path", "M5 12h14"]],
     bluetooth: [["path", "m7 7 10 10-5 5V2l5 5L7 17"]],
+    // radio waves: the 2.4 GHz receiver
+    wireless: [
+      ["path", "M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"],
+      ["circle", 12, 19.5, 1],
+    ],
     sidebar: [
       ["rect", 3, 3, 18, 18, 2],
       ["path", "M9 3v18"],

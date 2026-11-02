@@ -136,6 +136,9 @@
       const title = t("ui.conn.bt_ready_title", { slot: bt.keyboard?.slot ?? "?" });
       return { kind: "usb", icon: "bluetooth" as const, text: t("ui.bt.badge"), title };
     }
+    if (status?.device.kind === "ready" && status.device.connection === "wireless") {
+      return { kind: "usb", icon: "wireless" as const, text: t("ui.conn.wireless"), title: t("ui.conn.wireless_title") };
+    }
     if (status?.device.kind === "ready") {
       return { kind: "usb", icon: "plug" as const, text: t("ui.conn.usb"), title: t("ui.conn.usb_title") };
     }
@@ -224,6 +227,8 @@
           <span class="muted">· {status.device.model_name}</span>
           {#if status.device.connection === "bluetooth"}
             <span class="badge ok">{t("ui.bt.badge")}</span>
+          {:else if status.device.connection === "wireless"}
+            <span class="badge ok">{t("ui.conn.wireless")}</span>
           {/if}
           <!-- also on the cable, while Bluetooth stays linked -->
           {#if bt.keyboard?.battery != null}<span class="muted">· {t("ui.bt.battery", { n: bt.keyboard.battery })}</span>{/if}

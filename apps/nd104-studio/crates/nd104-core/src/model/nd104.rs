@@ -8,8 +8,8 @@ use nd104_protocol::{
     picture_pages, picture_payload, picture_start, screen_version_query, setting_get, setting_set,
     settings_save, time_packet, weather_packet, ClockTime, LightAnswer, LightValue, PictureAck,
     PictureFrame, Target, Weather, WeatherIcon, KEYBOARD, LIGHT_GET, LIGHT_SAVE, LIGHT_SET,
-    LIGHT_UNHANDLED, PICTURE_HEIGHT, PICTURE_MAX_BYTES, PICTURE_MAX_FRAMES, PICTURE_WIDTH, SCREEN,
-    SETTINGS_CHANNEL, VENDOR_USAGE, VENDOR_USAGE_PAGE,
+    LIGHT_UNHANDLED, PICTURE_HEIGHT, PICTURE_MAX_BYTES, PICTURE_MAX_FRAMES, PICTURE_WIDTH,
+    RECEIVER, SCREEN, SETTINGS_CHANNEL, VENDOR_USAGE, VENDOR_USAGE_PAGE,
 };
 
 use super::KeymapReply;
@@ -43,6 +43,17 @@ static INTERFACES: [InterfaceSpec; 2] = [
         report_len: 64,
     },
 ];
+
+/// The 2.4 GHz receiver: same vendor collection, forwards keyboard commands
+/// (docs/protocol.md § 5.6).
+static RECEIVER_INTERFACE: InterfaceSpec = InterfaceSpec {
+    role: Role::Keyboard,
+    vid: RECEIVER.vid,
+    pid: RECEIVER.pid,
+    usage_page: VENDOR_USAGE_PAGE,
+    usage: VENDOR_USAGE,
+    report_len: 32,
+};
 
 static LIGHT_ZONES: [LightZone; 2] = [LightZone::PerKey, LightZone::Bottom];
 
@@ -247,6 +258,10 @@ impl KeyboardModel for Nd104 {
 
     fn interfaces(&self) -> &'static [InterfaceSpec] {
         &INTERFACES
+    }
+
+    fn receiver(&self) -> Option<&'static InterfaceSpec> {
+        Some(&RECEIVER_INTERFACE)
     }
 
     fn capabilities(&self) -> Capabilities {

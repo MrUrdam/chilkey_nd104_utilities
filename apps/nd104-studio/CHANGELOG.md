@@ -13,6 +13,34 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.2.0] – 2026-11-02
+
+ND104 Studio now also works **over the 2.4 GHz receiver**: time, weather,
+lighting, keymap and keyboard settings – everything except your own picture,
+as over Bluetooth. Update with **Settings → General → Install update**.
+
+### Added
+- **2.4 GHz mode:** with the keyboard on the receiver (Fn + V), ND104 Studio
+  sends its commands through the receiver, which forwards them over the air
+  (checked on the keyboard). The sidebar shows "2.4 GHz" in green, the tray
+  status line adds "(2.4 GHz)", the setup says "Keyboard connected via
+  2.4 GHz".
+- The keyboard firmware read over USB or Bluetooth is remembered as well:
+  over 2.4 GHz the version query reaches only the receiver, so the firmware
+  check uses the remembered keyboard and screen versions.
+- `nd104-probe` finds the receiver (`list`) and uses it when the keyboard is
+  not on USB or Bluetooth.
+
+### Changed
+- With several connections at once: cable first, then Bluetooth, then
+  2.4 GHz.
+- A keyboard that is switched off or asleep behind the receiver is shown as
+  "Not connected" (no lock); ND104 Studio looks for it again every 15
+  seconds.
+- Pages that need a connection no longer list the connections ("needs a
+  connection to the keyboard"); the overview is in one place: Device →
+  Connection modes, and the matrix in the README.
+
 ## [2.1.0] – 2026-11-02
 
 ND104 Studio now works **over Bluetooth**: time, weather, lighting, keymap
@@ -694,7 +722,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.1.0...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.2.0...HEAD
+[2.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.1.0...nd104-studio-v2.2.0
 [2.1.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.2...nd104-studio-v2.1.0
 [2.0.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.1...nd104-studio-v2.0.2
 [2.0.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.0.0...nd104-studio-v2.0.1

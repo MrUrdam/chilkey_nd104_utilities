@@ -108,8 +108,8 @@ const firmwareReport: FirmwareReport = {
 const status: Status = {
   device: {
     kind: "ready",
-    // ?conn=bluetooth: connected over Bluetooth instead of the cable
-    connection: params.get("conn") === "bluetooth" ? "bluetooth" : "usb",
+    // ?conn=bluetooth / ?conn=wireless: connected without the cable
+    connection: params.get("conn") === "bluetooth" ? "bluetooth" : params.get("conn") === "wireless" ? "wireless" : "usb",
     model_id: "chilkey-nd104",
     model_name: "Chilkey ND104",
     firmware: [

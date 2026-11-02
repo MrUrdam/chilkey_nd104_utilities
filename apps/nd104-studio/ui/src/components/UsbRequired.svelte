@@ -3,13 +3,14 @@
 </script>
 
 <script lang="ts">
-  // Shown where a feature needs the USB cable: names what needs it, and says
-  // so more precisely when the keyboard is connected over Bluetooth instead.
+  // Shown where a feature needs a connection (the picture: the USB cable):
+  // names what needs it, and how the keyboard is connected instead.
   import { bluetooth } from "../lib/bluetooth.svelte";
   import { t } from "../lib/i18n.svelte";
   import Icon from "./Icon.svelte";
 
-  let { feature }: { feature: UsbFeature } = $props();
+  let { feature, via = null }: { feature: UsbFeature; via?: "usb" | "bluetooth" | "wireless" | null } =
+    $props();
 
   const bt = bluetooth();
 
@@ -20,7 +21,9 @@
 <div class="notice warn">
   <Icon name="plug" />
   <span>
-    {#if feature === "picture" && bt.keyboard}
+    {#if feature === "picture" && via === "wireless"}
+      {t("ui.usb.via_wireless", { what: lower(t("ui.usb.picture")) })}
+    {:else if feature === "picture" && (via === "bluetooth" || bt.keyboard)}
       {t("ui.usb.via_bt", { what: lower(t("ui.usb.picture")) })}
     {:else}
       {t(`ui.usb.${feature}`)}

@@ -36,7 +36,7 @@ Legend: ✅ in ND104 Studio · 🧪 verified on hardware, not in the app yet ·
 | Read knob mapping | `14 …` | 📄 | |
 | RGB per-key lighting: brightness, effect, speed, colour | `07 03 01…04 …`, commit `09 03` | 📄 | "lighting" – stays with the Chilkey driver (scope) |
 | Second light zone (backlight) brightness/effect/speed/colour | `07 02 01…04 …`, commit `09 02` | 📄 | same |
-| Debounce, USB polling rate, sleep / deep-sleep time, "online RGB", keyboard colour | `07 04 …` / answers `08 00 04 …` | 📄 | settings – stays with the Chilkey driver |
+| Debounce, USB polling rate, sleep / deep-sleep time, "online RGB", keyboard colour | `07 00 04 …` / answers `08 00 04 …` | 📄 | settings – see [protocol.md § 5.2.1](protocol.md#521-what-the-firmware-does-with-each-id-v3014) for what each id does |
 | Macros | `0D`, `0F`, `10` | 📄 | incomplete in the notes |
 | Debug raw send | `58 …` | ❌ | no |
 | Keyboard DFU | `13 …` | ❌ | never |
@@ -47,7 +47,7 @@ Legend: ✅ in ND104 Studio · 🧪 verified on hardware, not in the app yet ·
 |---|---|---|
 | Battery level over the wired USB interfaces | ❌ **not available** | The web driver has no battery query; no command or report for it was found on either USB interface. When the keyboard is plugged in by cable, it is charging anyway. |
 | Battery level over **Bluetooth** (standard BLE Battery Service) | ✅ | Read from Windows' device properties (the value of *Settings → Bluetooth & devices*); nothing is sent to the keyboard. Shown with the Bluetooth connection on the Dashboard and in the live preview. Over the cable the keyboard does not report it. |
-| Battery over the 2.4 GHz dongle | unknown | the dongle was not analysed (wireless is out of scope) |
+| Battery over the 2.4 GHz dongle | ❌ not found | Windows has no battery property for the receiver, and no command for it is known ([protocol.md § 5.6](protocol.md#56-over-the-24-ghz-receiver-analysis-2026-11-02)) |
 
 ## Candidates for future milestones
 

@@ -208,6 +208,11 @@ pub trait KeyboardModel: Send + Sync {
     fn display_name(&self) -> &'static str;
     /// Interfaces that must all be present (wired USB).
     fn interfaces(&self) -> &'static [InterfaceSpec];
+    /// The 2.4 GHz receiver's command channel, which forwards keyboard
+    /// commands over the air (`None`: no receiver support).
+    fn receiver(&self) -> Option<&'static InterfaceSpec> {
+        None
+    }
     fn capabilities(&self) -> Capabilities;
     /// Firmware version queries, one per role.
     fn firmware_queries(&self) -> Vec<Packet>;

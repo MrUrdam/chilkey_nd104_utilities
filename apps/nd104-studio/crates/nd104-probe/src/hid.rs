@@ -5,7 +5,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use hidapi::{DeviceInfo, HidApi, HidDevice};
 use nd104_protocol::{
     keyboard_version_query, parse_version_response, screen_version_query, FirmwareVersion, Target,
-    KEYBOARD, SCREEN, SCREEN_DFU, VENDOR_USAGE, VENDOR_USAGE_PAGE,
+    KEYBOARD, RECEIVER, SCREEN, SCREEN_DFU, VENDOR_USAGE, VENDOR_USAGE_PAGE,
 };
 
 /// Firmware versions as reported by the devices; `None` = no valid answer.
@@ -34,7 +34,7 @@ impl Probe {
     fn nd104_interfaces(&self) -> impl Iterator<Item = &DeviceInfo> {
         self.api.device_list().filter(|d| {
             let id = (d.vendor_id(), d.product_id());
-            [KEYBOARD, SCREEN, SCREEN_DFU]
+            [KEYBOARD, SCREEN, SCREEN_DFU, RECEIVER]
                 .iter()
                 .any(|u| (u.vid, u.pid) == id)
         })
@@ -47,6 +47,7 @@ impl Probe {
             let role = match (d.vendor_id(), d.product_id()) {
                 (v, p) if (v, p) == (KEYBOARD.vid, KEYBOARD.pid) => "keyboard",
                 (v, p) if (v, p) == (SCREEN.vid, SCREEN.pid) => "screen",
+                (v, p) if (v, p) == (RECEIVER.vid, RECEIVER.pid) => "receiver",
                 _ => "screen DFU",
             };
             let vendor = d.usage_page() == VENDOR_USAGE_PAGE && d.usage() == VENDOR_USAGE;
@@ -92,15 +93,24 @@ impl Probe {
     /// Opens the vendor HID collection (usage page FF60, usage 61) of a device.
     pub fn open(&self, target: Target) -> Result<Device> {
         let id = target.usb_id();
-        let info = self
-            .api
-            .device_list()
-            .find(|d| {
-                d.vendor_id() == id.vid
-                    && d.product_id() == id.pid
+        let vendor = |vid: u16, pid: u16| {
+            self.api.device_list().find(move |d| {
+                d.vendor_id() == vid
+                    && d.product_id() == pid
                     && d.usage_page() == VENDOR_USAGE_PAGE
                     && d.usage() == VENDOR_USAGE
             })
+        };
+        // over 2.4 GHz the keyboard is reached through the receiver, which
+        // offers the same vendor collection
+        let via_receiver = || {
+            (target == Target::Keyboard)
+                .then(|| vendor(RECEIVER.vid, RECEIVER.pid))
+                .flatten()
+                .inspect(|_| println!("(keyboard via the 2.4 GHz receiver)"))
+        };
+        let info = vendor(id.vid, id.pid)
+            .or_else(via_receiver)
             .ok_or_else(|| {
                 anyhow!(
                     "{} ({:04x}:{:04x}, usage {:04x}:{:02x}) not found – USB cable connected? \

@@ -21,6 +21,12 @@ pub const SCREEN_DFU: UsbId = UsbId {
     pid: 0x1000,
 };
 
+/// 2.4 GHz USB receiver (dongle) shipped with the keyboard.
+pub const RECEIVER: UsbId = UsbId {
+    vid: 0x6D66,
+    pid: 0x8572,
+};
+
 /// Vendor HID collection used by the web driver on both devices.
 pub const VENDOR_USAGE_PAGE: u16 = 0xFF60;
 pub const VENDOR_USAGE: u16 = 0x61;

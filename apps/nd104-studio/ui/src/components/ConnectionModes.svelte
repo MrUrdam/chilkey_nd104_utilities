@@ -9,13 +9,13 @@
   // per feature: USB cable, Bluetooth, 2.4 GHz – keep in step with the matrix
   // in README → Connection modes (the one place the docs describe this)
   const FEATURES: [string, Support, Support, Support][] = [
-    ["time_weather", "yes", "yes", "no"],
+    ["time_weather", "yes", "yes", "yes"],
     ["picture", "yes", "no", "no"],
-    ["lighting", "yes", "yes", "no"],
-    ["keymap", "yes", "yes", "no"],
-    ["settings", "yes", "yes", "no"],
-    ["keyboard_fw", "yes", "yes", "no"],
-    ["screen_fw", "yes", "last_usb", "no"],
+    ["lighting", "yes", "yes", "yes"],
+    ["keymap", "yes", "yes", "yes"],
+    ["settings", "yes", "yes", "yes"],
+    ["keyboard_fw", "yes", "yes", "last_usb"],
+    ["screen_fw", "yes", "last_usb", "last_usb"],
     ["battery", "bt_too", "yes", "no"],
     ["app", "yes", "yes", "yes"],
   ];

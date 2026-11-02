@@ -10,8 +10,8 @@
 >   (WebHID, Chromium only), bundle `assets/index-BpBkeHgw.js`, analysed 2026-10-31
 > - [ND104 Reverse Engineering](https://gist.github.com/borrougagnou/a21613093f323a05167a92212ab1ff7b) by borrougagnou
 >
-> Scope: **USB cable** (§ 1–5) and **Bluetooth** (§ 5.5); the 2.4 GHz
-> receiver has not been analysed. What ND104 Studio supports on each:
+> Scope: **USB cable** (§ 1–5), **Bluetooth** (§ 5.5) and the **2.4 GHz
+> receiver** (§ 5.6). What ND104 Studio supports on each:
 > [Connection modes](../apps/nd104-studio/README.md#connection-modes).
 
 ---
@@ -410,8 +410,8 @@ answer carries the value in byte 4.
 | `00` | USB polling rate | 1–8 (kHz) |
 | `01` | debounce speed | ms |
 | `02` | debounce mode | 0 none, 1 "send to debounce", 2 "debounce to send" |
-| `04` | **keyboard colour** | 0 red, 1 pink, 2 yellow, 3 green, 4 blue, 5 black, 6 white |
-| `05` | **online RGB** | 1 enable (default), 0 disable |
+| `04` | **keyboard colour** | 0 red, 1 pink, 2 yellow, 3 green, 4 blue, 5 black, 6 white – stored only, see § 5.2.1 |
+| `05` | **online RGB** | 1 "enable", 0 "disable" – 1 *blocks* PC lighting software, see § 5.2.1 |
 | `06` / `07` | sleep / deep-sleep time | minutes (the driver writes sleep time with id `0B`; `06` always reads 0 on V3.0.14) |
 
 The driver reads only ids `00`–`02` on connect; keyboard colour and online RGB
@@ -432,9 +432,63 @@ back the written value (checked 2026-11-02: write 5 → read 5, write 1 → read
 ND104 Studio reads `0B`.
 
 Each write is followed by `09 00` (store). The polling-rate row exists in the
-driver but is hidden; keyboard colour and online RGB are not used. No
-text in the keyboard firmware names these two settings, so their effect is not
-documented yet.
+driver but is hidden; keyboard colour and online RGB are not used by
+ND104 Studio.
+
+#### 5.2.1 What the firmware does with each id (V3.0.14)
+
+Read from the keyboard firmware `VN001_314A108_1V0_RGB_TYPE1_20260710.bin`
+(disassembled, 2026-11-02; see [firmware.md](firmware.md#keyboard-firmware-analysis)).
+Not yet checked on a keyboard.
+
+| id | Write | Read (`08 00 04 id`) |
+|---|---|---|
+| `00` | polling rate, settings block byte 0 | ✅ |
+| `01` | debounce time, byte 1 | ✅ |
+| `02` | debounce mode, byte 2 | ✅ |
+| `03` | – (ignored) | byte 3 of the settings block |
+| `04` | keyboard colour (below) | ❌ echo only – byte 4 stays as sent |
+| `05` | online RGB: bit 26 of the keyboard config word (below) | ✅ |
+| `06` | sets/clears bit 23 of the config word, not analysed further | bit 23 |
+| `07` | deep-sleep time, capped at 60 | ✅ |
+| `08`, `0A` | – (ignored) | echo only |
+| `09` | bit 27 of the config word, purpose unknown | ✅ |
+| `0B` | sleep time, capped at 60 | ✅ |
+
+- The settings block (bytes 0–5) and the config word (EEPROM dword 4) are
+  **saved by every write**. `09 00` does nothing on channel `00`.
+- After an EEPROM reset the config word is `0x1400`, so bits 23, 26 and 27
+  are 0.
+
+**Keyboard colour (`04`) – stored, but not used.** The value goes into byte 2
+of a 16-byte "product" block (`55 AA` magic, sum checksum in byte 15) that the
+keyboard keeps twice in its data flash (offsets `0x6200` and `0x6300`).
+Nothing else in the firmware reads that byte: it changes no lighting, no
+display and no behaviour, and it cannot be read back. It is most likely only a
+label for the case colour, for a driver or the vendor's flashing tool. The web
+driver's code comes from Wuque's Zoom TKL driver (browser storage key
+`jsonBoardkeyObjZoomTkl`).
+
+**Online RGB (`05`) – whether PC lighting software may take over.** The
+firmware speaks three protocols for PC programs that stream LED colours (§ 5.4):
+**OpenRGB**, **SignalRGB** and a third one not identified. When such a program
+asks for its "direct" mode, the keyboard switches the per-key lighting to
+effect **50** and the bottom lighting to effect **43**; both just show the
+colours the program streams (up to 130 LEDs). Bit 26 is the gate:
+
+| Value | Meaning |
+|---|---|
+| **0** ("disable") | PC programs may take over. If one already asked, the switch happens at once. |
+| **1** ("enable") | Requests are noted but refused; the keyboard keeps its own effects. A program that is in control loses it and the stored lighting returns. |
+
+- The labels are the wrong way round from what users would expect: "enable"
+  blocks PC control.
+- The default after an EEPROM reset is **0** (PC control allowed); the web
+  driver's default of 1 comes only from the browser's storage.
+- The stock keymap has a key for it: **Fn + Shift + L** (keycode `0x7E23`,
+  layer 2, row 3, column 9) toggles bit 26.
+- Every VIA lighting write (`07 02 …`, `07 03 …`, from the web driver or
+  ND104 Studio) also ends PC control first.
 
 ### 5.3 Keymap – used by ND104 Studio (keymap page, backup and restore)
 
@@ -470,6 +524,17 @@ logged, ignored, no lock.
 | Byte 0 | Meaning |
 |---|---|
 | `0x01` | protocol/layout version |
+
+**PC lighting protocols** (found in V3.0.14, not tested): the firmware also
+contains the **OpenRGB QMK protocol** (commands `01`–`09`: protocol version,
+QMK version `0.19.2`, device/mode/LED info, enabled modes 1–50, `07` set mode,
+`08` set one LED, `09` set a block of LEDs; answers `0x32` success, `0x19`
+failure) and the **SignalRGB** protocol (`0x2x` commands, `0x24` streams
+colours), plus a third streaming protocol not identified. OpenRGB's set mode
+with mode **42** is treated as the request for direct mode. Whether these
+programs may take over the LEDs depends on the online RGB setting (§ 5.2.1).
+How the keyboard tells OpenRGB's `01`–`09` apart from the VIA commands with the
+same first byte was not analysed.
 
 ---
 
@@ -529,6 +594,46 @@ Only the screen controller is missing: the screen version cannot be read and
 pictures cannot be uploaded over Bluetooth, so the firmware guard can only
 check the keyboard there.
 
+## 5.6 Over the 2.4 GHz receiver (analysis, 2026-11-02)
+
+The receiver (dongle) shipped with the keyboard is its own USB device:
+**`6D66:8572`**, "UBEST / Keyboard 2.4G dongle", release `1.00`. It has six
+interfaces: keyboards, consumer/system control, mouse, gamepad, a vendor
+collection `FF31:0074` (interface 5, not analysed) and – on interface 1 – the
+**same vendor command channel `FF60:0061`** as the keyboard over USB (no
+report ID, 32-byte reports).
+
+The receiver forwards the keyboard commands over the air. Verified with
+`nd104-probe` (it falls back to the receiver when the keyboard is not on
+USB):
+
+| Command | Result over 2.4 GHz |
+|---|---|
+| `11 02 …` version | answered by the **receiver itself**: `V2.0.7 Apr  1 2026 12:32` – not the keyboard version |
+| `08 03 01/02/04`, `08 02 02` lighting | answered (keyboard values) |
+| `08 00 04 01/02/07/0B` debounce, sleep | answered (5 ms, mode 2, 10 min, sleep 5 min) |
+| `12 …` keymap buffer | answered, same keymap as over USB (`0029`, `003A` … = Esc, F1 …) |
+| `14 00 00 00/01` knob | answered (Vol− / Vol+) |
+| Time `1C 03 … A5 38` (2030-01-02 11:11) | `1C 01` receipt, then `A5 38 … FE` (OK) |
+| Weather `1C 02 … A5 FE` (snow, −7.5 °C) | `1C 01` receipt, then `A5 FE … FE` (OK) |
+| Lighting `07 03 01 40`, not stored | echoed, read back 63 (then restored to 254, read 253) |
+| Setting `07 00 04 01 0a`, not stored | echoed, read back 10 (restored to 5) |
+| Key `05 03 03 03 00 29` (layer 3) | echoed, read back `0x0029` (restored to `0x0001`) |
+
+Not available over 2.4 GHz:
+- the **keyboard firmware version** – the version query reaches only the
+  receiver, so a firmware check would have to rely on the version seen over
+  USB or Bluetooth;
+- the **screen controller** (own picture, screen version), as over Bluetooth;
+- the **battery level** – Windows has no battery property for the receiver;
+  no command for it is known.
+
+Used by ND104 Studio since 2.2.0 (see the connection matrix linked above):
+the version answer must be a valid version answer (it is logged as the
+receiver's version), a keyboard read (`08 00 04 01`) shows whether the
+keyboard is linked, and the firmware check uses the keyboard and screen
+versions from the last USB/Bluetooth connection.
+
 ## 6. Open points for M0 (hardware verification)
 
 - [x] Both devices enumerate with the vendor interface `FF60:0061` over USB
@@ -555,6 +660,10 @@ check the keyboard there.
 - [x] Theme command `0xFD` rejected by screen V1.2.4 (status `FC`). *(2026-10-31)*
 - [ ] *Not tested on purpose:* command `0x39` (menu navigation). ND104 Studio
       sends no unknown commands.
+- [x] Effect of keyboard colour (`04`) and online RGB (`05`) found in the
+      keyboard firmware (§ 5.2.1). *(2026-11-02)*
+- [ ] Online RGB on a keyboard: with 1, OpenRGB's direct mode should leave the
+      LEDs unchanged; with 0 it should take over.
 
 **Result:** M0 passed for keyboard **V3.0.14** and screen **V1.2.4**
 (24 h / °C). These are the first verified firmware versions.

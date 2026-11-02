@@ -37,7 +37,7 @@
   "done.uninstalled": "ND104 Studio wurde entfernt.",
   "done.uninstalled_kept": "Deine Einstellungen bleiben für eine spätere Installation erhalten.",
   "done.tray": "ND104 Studio läuft im Infobereich neben der Uhr.",
-  "hint.keyboard": "Keine Tastatur verbunden – verbinde sie per USB-Kabel oder Bluetooth.",
+  "hint.keyboard": "Keine Tastatur verbunden – verbinde sie per USB-Kabel, Bluetooth oder 2,4-GHz-Empfänger.",
   "hint.keyboard_found": "Tastatur per USB verbunden.",
   "error.title": "Etwas ist schiefgelaufen",
   "error.install": "ND104 Studio konnte nicht installiert werden. Deine bisherige Installation wurde nicht verändert.",
@@ -49,5 +49,6 @@
   "option.style": "Stil",
   "option.style_calm": "Ruhig",
   "option.style_gamer": "Gamer",
-  "hint.keyboard_bluetooth": "Tastatur per Bluetooth verbunden."
+  "hint.keyboard_bluetooth": "Tastatur per Bluetooth verbunden.",
+  "hint.keyboard_wireless": "Tastatur per 2,4 GHz verbunden."
 }

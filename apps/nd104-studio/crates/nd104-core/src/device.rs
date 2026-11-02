@@ -42,6 +42,9 @@ const PAGE_RETRIES: usize = 3;
 /// not wait for an answer either); a short wait catches a "send again".
 const LAST_PAGE_TIMEOUT: Duration = Duration::from_millis(1500);
 const FIRMWARE_RETRIES: usize = 3;
+/// How long to wait before looking for the keyboard behind the 2.4 GHz
+/// receiver again.
+const WIRELESS_RETRY: Duration = Duration::from_secs(15);
 
 /// How far the connected firmware is trusted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -111,6 +114,10 @@ pub enum Connection {
     /// keymap and settings; the screen controller (own picture, screen
     /// version) is cable-only.
     Bluetooth,
+    /// Keyboard over the 2.4 GHz receiver, which forwards its commands. Like
+    /// Bluetooth, but the version query reaches only the receiver, so the
+    /// keyboard firmware is taken from the last USB/Bluetooth connection.
+    Wireless,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -158,8 +165,15 @@ pub struct DeviceManager {
     /// Screen firmware last verified over USB. Over Bluetooth the screen
     /// cannot be asked, so this is what its check relies on.
     known_screen: Option<FirmwareInfo>,
-    /// Where `known_screen` is kept between runs (none in tests).
+    /// Where `known_screen` is kept between runs (none in tests); the
+    /// keyboard firmware is kept next to it.
     screen_memory: Option<std::path::PathBuf>,
+    /// Keyboard firmware last read over USB or Bluetooth. Over 2.4 GHz the
+    /// version query reaches only the receiver.
+    known_keyboard: Option<FirmwareInfo>,
+    /// When to look for the keyboard behind the receiver again (it may be
+    /// off or on another connection while the receiver is plugged in).
+    wireless_retry: Option<Instant>,
     /// The connection a lock happened on; the lock ends when that
     /// connection goes away (re-plug), e.g. by switching to the cable.
     locked_over: Option<Connection>,
@@ -178,18 +192,29 @@ impl DeviceManager {
             events: Vec::new(),
             known_screen: None,
             screen_memory: None,
+            known_keyboard: None,
+            wireless_retry: None,
             locked_over: None,
             waiting_for_usb: false,
         }
     }
 
-    /// Keeps the screen firmware seen over USB in `path`, for Bluetooth.
+    /// Keeps the screen firmware seen over USB in `path` (and the keyboard
+    /// firmware next to it), for Bluetooth and 2.4 GHz.
     pub fn with_screen_memory(mut self, path: std::path::PathBuf) -> Self {
-        self.known_screen = std::fs::read_to_string(&path)
-            .ok()
-            .and_then(|text| serde_json::from_str(&text).ok());
+        let load = |path: &std::path::Path| {
+            std::fs::read_to_string(path)
+                .ok()
+                .and_then(|text| serde_json::from_str(&text).ok())
+        };
+        self.known_screen = load(&path);
+        self.known_keyboard = load(&Self::keyboard_memory(&path));
         self.screen_memory = Some(path);
         self
+    }
+
+    fn keyboard_memory(screen_memory: &std::path::Path) -> std::path::PathBuf {
+        screen_memory.with_file_name("keyboard-firmware.json")
     }
 
     /// The screen firmware a Bluetooth connection relies on (tests).
@@ -197,25 +222,32 @@ impl DeviceManager {
         self.known_screen = firmware;
     }
 
-    fn remember_screen(&mut self, firmware: &[FirmwareInfo]) {
-        let Some(screen) = firmware.iter().find(|f| f.role == Role::Screen) else {
-            return;
-        };
-        if self.known_screen.as_ref() == Some(screen) {
-            return;
-        }
-        self.known_screen = Some(screen.clone());
-        if let Some(path) = &self.screen_memory {
-            let saved = serde_json::to_string(screen)
+    /// Remembers the firmware read now, for connections that cannot read it.
+    fn remember_firmware(&mut self, firmware: &[FirmwareInfo]) {
+        for f in firmware {
+            let known = match f.role {
+                Role::Keyboard => &mut self.known_keyboard,
+                Role::Screen => &mut self.known_screen,
+            };
+            if known.as_ref() == Some(f) {
+                continue;
+            }
+            *known = Some(f.clone());
+            let path = match (f.role, &self.screen_memory) {
+                (_, None) => continue,
+                (Role::Screen, Some(p)) => p.clone(),
+                (Role::Keyboard, Some(p)) => Self::keyboard_memory(p),
+            };
+            let saved = serde_json::to_string(f)
                 .map_err(anyhow::Error::from)
                 .and_then(|json| {
                     if let Some(dir) = path.parent() {
                         std::fs::create_dir_all(dir)?;
                     }
-                    Ok(std::fs::write(path, json)?)
+                    Ok(std::fs::write(&path, json)?)
                 });
             if let Err(e) = saved {
-                tracing::warn!("cannot remember the screen firmware: {e:#}");
+                tracing::warn!("cannot remember the {} firmware: {e:#}", f.role);
             }
         }
     }
@@ -264,16 +296,30 @@ impl DeviceManager {
         };
     }
 
-    /// A check failed: locks – unless the Bluetooth link is just gone (the
-    /// keyboard sleeps or is out of range). Then the connection is dropped
-    /// and the next poll connects again with all checks.
+    /// A check failed: locks – unless the wireless link is just gone (the
+    /// keyboard sleeps, is off or out of range). Then the connection is
+    /// dropped and the next poll connects again with all checks.
     fn fail(&mut self, check: &str, e: &anyhow::Error) {
-        if self.is_bluetooth() && e.downcast_ref::<LinkLost>().is_some() {
+        let lost = e.downcast_ref::<LinkLost>().is_some();
+        let silent = e.downcast_ref::<NoAnswer>().is_some();
+        let gone = match self.connection() {
+            Some(Connection::Bluetooth) => lost,
+            // the receiver stays; a keyboard that is off simply does not answer
+            Some(Connection::Wireless) => lost || silent,
+            _ => false,
+        };
+        if gone {
+            let how = if self.is_bluetooth() {
+                "Bluetooth"
+            } else {
+                "2.4 GHz"
+            };
             self.active = None;
             self.state = DeviceState::NotConnected;
+            self.retry_wireless_later();
             self.event(
                 EventLevel::Info,
-                format!("Bluetooth connection lost (keyboard asleep?): {e:#}"),
+                format!("{how} connection lost (keyboard asleep or off?): {e:#}"),
             );
         } else {
             self.lock(format!("{check}: {e:#}"));
@@ -308,6 +354,10 @@ impl DeviceManager {
             .models
             .iter()
             .position(|m| Self::bluetooth_keyboard(m.as_ref(), &bluetooth).is_some());
+        let found_wireless = self.models.iter().position(|m| {
+            m.receiver()
+                .is_some_and(|spec| find_interface(&interfaces, spec).is_some())
+        });
 
         // the cable wins; a partial USB device (e.g. only the screen on a
         // charging cable) does not block Bluetooth
@@ -315,6 +365,10 @@ impl DeviceManager {
             let stay = match d.connection {
                 Connection::Usb => found_usb.is_some(),
                 Connection::Bluetooth => found_bluetooth.is_some() && !usb_complete,
+                // cable and Bluetooth win over the receiver
+                Connection::Wireless => {
+                    found_wireless.is_some() && !usb_complete && found_bluetooth.is_none()
+                }
             };
             if !stay {
                 self.active = None;
@@ -328,6 +382,9 @@ impl DeviceManager {
             let gone = match self.locked_over {
                 Some(Connection::Usb) => found_usb.is_none(),
                 Some(Connection::Bluetooth) => found_bluetooth.is_none() || usb_complete,
+                Some(Connection::Wireless) => {
+                    found_wireless.is_none() || usb_complete || found_bluetooth.is_some()
+                }
                 None => false,
             };
             if gone {
@@ -341,8 +398,17 @@ impl DeviceManager {
                 self.connect_bluetooth(model, &bluetooth);
                 return self.state != before;
             }
+            if let Some(model) = found_wireless.filter(|_| found_usb.is_none()) {
+                if !self.wireless_retry.is_some_and(|at| Instant::now() < at) {
+                    self.connect_wireless(model, &interfaces);
+                }
+                return self.state != before;
+            }
         }
-        let found = found_usb.or(found_bluetooth);
+        if found_wireless.is_none() {
+            self.wireless_retry = None;
+        }
+        let found = found_usb.or(found_bluetooth).or(found_wireless);
 
         match (found, &self.state) {
             (None, DeviceState::NotConnected) => {}
@@ -353,7 +419,7 @@ impl DeviceManager {
             }
             // A lock only ends with re-plug or re-check.
             (Some(_), DeviceState::Locked { .. }) => {}
-            (Some(_), DeviceState::Ready(d)) if d.connection == Connection::Bluetooth => {}
+            (Some(_), DeviceState::Ready(d)) if d.connection != Connection::Usb => {}
             (Some(model), DeviceState::Ready(_)) => {
                 if !self.all_interfaces_present(model, &interfaces) {
                     self.active = None;
@@ -373,6 +439,7 @@ impl DeviceManager {
     pub fn recheck(&mut self) -> bool {
         self.active = None;
         self.waiting_for_usb = false;
+        self.wireless_retry = None;
         self.state = DeviceState::NotConnected;
         self.event(EventLevel::Info, "Re-checking keyboard");
         self.poll();
@@ -466,7 +533,7 @@ impl DeviceManager {
             .map(|f| format!("{} {}", f.role, f.raw))
             .collect();
         self.state = DeviceState::Ready(device);
-        self.remember_screen(&firmware);
+        self.remember_firmware(&firmware);
         match trust {
             Trust::Verified => self.event(
                 EventLevel::Info,
@@ -543,6 +610,8 @@ impl DeviceManager {
                 }
             }
         }
+        // the keyboard version read now is kept for 2.4 GHz
+        self.remember_firmware(&firmware);
         // the screen as last verified over USB
         let model = &self.models[model_idx];
         let Some(screen) = self.known_screen.clone().filter(|s| {
@@ -601,9 +670,160 @@ impl DeviceManager {
 
     /// Connected over Bluetooth right now?
     pub fn is_bluetooth(&self) -> bool {
-        self.active
-            .as_ref()
-            .is_some_and(|a| a.connection == Connection::Bluetooth)
+        self.connection() == Some(Connection::Bluetooth)
+    }
+
+    /// The current connection, if any.
+    pub fn connection(&self) -> Option<Connection> {
+        self.active.as_ref().map(|a| a.connection)
+    }
+
+    /// Without the cable: the screen controller is not reachable.
+    fn without_cable(&self) -> bool {
+        self.connection().is_some_and(|c| c != Connection::Usb)
+    }
+
+    /// The keyboard behind the receiver is off or elsewhere: look again later
+    /// instead of on every poll (each try waits for answers).
+    fn retry_wireless_later(&mut self) {
+        self.wireless_retry = Some(Instant::now() + WIRELESS_RETRY);
+    }
+
+    /// Connects through the 2.4 GHz receiver: keyboard commands only. The
+    /// receiver answers the version query itself (checked like any answer);
+    /// a keyboard read shows whether the keyboard is linked. Keyboard and
+    /// screen firmware are taken from the last USB/Bluetooth connection.
+    fn connect_wireless(&mut self, model_idx: usize, interfaces: &[HidInterfaceInfo]) {
+        let model = &self.models[model_idx];
+        let name = model.display_name();
+        let Some(spec) = model.receiver() else {
+            return;
+        };
+        let Some(info) = find_interface(interfaces, spec) else {
+            return;
+        };
+        let report_len = spec.report_len;
+        let presence = model.setting_read(KeyboardSetting::DebounceTime.read_id());
+        let query = model
+            .firmware_queries()
+            .into_iter()
+            .find(|q| q.role == Role::Keyboard);
+        let channel = match self.backend.open(info) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::debug!("cannot open the 2.4 GHz receiver: {e:#}");
+                self.retry_wireless_later();
+                return;
+            }
+        };
+        let mut channels = HashMap::new();
+        channels.insert(Role::Keyboard, (channel, report_len));
+        self.active = Some(Active {
+            model: model_idx,
+            connection: Connection::Wireless,
+            channels,
+        });
+
+        // P3: the receiver's own version answer must look right
+        let receiver = match query.map(|q| self.query_firmware(&q)) {
+            Some(Ok(info)) => info.raw,
+            Some(Err(e)) if e.downcast_ref::<WrongAnswer>().is_some() => {
+                self.lock(format!("P3 (2.4 GHz receiver): {e:#}"));
+                return;
+            }
+            Some(Err(e)) => {
+                tracing::debug!("2.4 GHz receiver: {e:#}");
+                self.active = None;
+                self.retry_wireless_later();
+                return;
+            }
+            None => String::from("?"),
+        };
+        // is the keyboard linked? It must answer a keyboard read
+        match presence.map(|p| self.keyboard_answers(&p)) {
+            Some(Ok(true)) => {}
+            Some(Err(e)) => {
+                self.lock(format!("P5 (2.4 GHz): {e:#}"));
+                return;
+            }
+            _ => {
+                tracing::debug!("2.4 GHz receiver {receiver}: no keyboard answers");
+                self.active = None;
+                self.retry_wireless_later();
+                return;
+            }
+        }
+
+        // keyboard and screen as last read by cable or Bluetooth
+        let model = &self.models[model_idx];
+        let screen = self.known_screen.clone().filter(|s| {
+            model
+                .verified_firmware()
+                .iter()
+                .any(|v| v.role == Role::Screen && v.version == s.version)
+        });
+        let (Some(keyboard), Some(screen)) = (self.known_keyboard.clone(), screen) else {
+            self.active = None;
+            self.retry_wireless_later();
+            if !self.waiting_for_usb {
+                self.waiting_for_usb = true;
+                self.event(
+                    EventLevel::Warning,
+                    "2.4 GHz: the firmware cannot be checked over the receiver – \
+                     connect the keyboard once with the USB cable, then 2.4 GHz works",
+                );
+            }
+            return;
+        };
+        self.waiting_for_usb = false;
+        self.wireless_retry = None;
+        let firmware = vec![keyboard, screen];
+        let verified = firmware.iter().all(|f| {
+            model
+                .verified_firmware()
+                .iter()
+                .any(|v| v.role == f.role && v.version == f.version)
+        });
+        let trust = if verified {
+            Trust::Verified
+        } else {
+            Trust::Compatible
+        };
+        let device = ConnectedDevice {
+            connection: Connection::Wireless,
+            model_id: model.id(),
+            model_name: model.display_name(),
+            firmware: firmware.clone(),
+            trust,
+            screen_variant: model.screen_variant(&firmware),
+        };
+        self.state = DeviceState::Ready(device);
+        self.event(
+            EventLevel::Info,
+            format!(
+                "{name} connected via 2.4 GHz (receiver {receiver}{}; keyboard and screen firmware as last read by cable or Bluetooth)",
+                if trust == Trust::Verified { ", verified" } else { ", unverified" }
+            ),
+        );
+    }
+
+    /// Sends a read to the keyboard: `Ok(true)` if it answers, `Ok(false)` if
+    /// nothing comes back, an error for a damaged answer.
+    fn keyboard_answers(&mut self, packet: &Packet) -> Result<bool> {
+        if self.write(packet).is_err() {
+            return Ok(false);
+        }
+        let deadline = Instant::now() + ANSWER_TIMEOUT;
+        while let Ok(Some(report)) = self.read_until(packet.role, deadline) {
+            match self.classify(packet.role, &report) {
+                ReportClass::Setting { command, .. } if command == packet.command => {
+                    return Ok(true)
+                }
+                ReportClass::Malformed(why) => return Err(WrongAnswer(why).into()),
+                other => self.note_unsolicited(other),
+            }
+        }
+        Ok(false)
     }
 
     fn query_firmware(&mut self, query: &Packet) -> Result<FirmwareInfo> {
@@ -629,7 +849,7 @@ impl DeviceManager {
         }
         // the screen controller is not reachable over Bluetooth: not a
         // protocol problem, so no lock
-        if packet.role != Role::Keyboard && self.is_bluetooth() {
+        if packet.role != Role::Keyboard && self.without_cable() {
             return Err(anyhow!("this needs the USB cable"));
         }
         // Stale input first: anything damaged locks, the rest is logged.
@@ -1044,9 +1264,9 @@ impl DeviceManager {
         progress: &mut dyn FnMut(f32),
     ) -> Result<()> {
         self.model()?;
-        if self.is_bluetooth() {
+        if self.without_cable() {
             return Err(anyhow!(
-                "sending a picture needs the USB cable (the screen is not reachable over Bluetooth)"
+                "sending a picture needs the USB cable (the screen is reachable by cable only)"
             ));
         }
         let role = transfer.role;
@@ -1491,6 +1711,11 @@ mod tests {
         cable_too: bool,
         /// Reads and writes fail like a dropped Bluetooth link (os error 1167).
         link_down: bool,
+        /// The 2.4 GHz receiver is plugged in.
+        receiver: bool,
+        /// The keyboard is linked to the receiver (otherwise only the
+        /// receiver answers its version query).
+        on_air: bool,
         present: bool,
         keyboard_fw: &'static str,
         behaviour: Behaviour,
@@ -1517,7 +1742,8 @@ mod tests {
     }
 
     struct MockBackend(Arc<Mutex<Shared>>);
-    struct MockChannel(Arc<Mutex<Shared>>, Role);
+    /// Shared state, role, opened through the 2.4 GHz receiver.
+    struct MockChannel(Arc<Mutex<Shared>>, Role, bool);
 
     fn iface(vid: u16, pid: u16, n: i32) -> HidInterfaceInfo {
         HidInterfaceInfo {
@@ -1534,7 +1760,7 @@ mod tests {
     impl HidBackend for MockBackend {
         fn enumerate(&mut self) -> Result<Vec<HidInterfaceInfo>> {
             let s = self.0.lock().unwrap();
-            Ok(if s.bluetooth {
+            let mut list = if s.bluetooth {
                 let mut keyboard = iface(0x6D67, 0x016C, -1);
                 keyboard.path =
                     r"\\?\HID#{00001812-0000-1000-8000-00805f9b34fb}_Dev_VID&016d67_PID&016c&Col02"
@@ -1548,15 +1774,20 @@ mod tests {
                 vec![iface(0x6D67, 0x016C, 1), iface(0x5542, 0x0001, 0)]
             } else {
                 vec![]
-            })
+            };
+            if s.receiver {
+                list.push(iface(0x6D66, 0x8572, 1));
+            }
+            Ok(list)
         }
         fn open(&mut self, info: &HidInterfaceInfo) -> Result<Box<dyn HidChannel>> {
-            let role = if info.vid == 0x6D67 {
+            let receiver = info.vid == 0x6D66;
+            let role = if info.vid == 0x6D67 || receiver {
                 Role::Keyboard
             } else {
                 Role::Screen
             };
-            Ok(Box::new(MockChannel(self.0.clone(), role)))
+            Ok(Box::new(MockChannel(self.0.clone(), role, receiver)))
         }
     }
 
@@ -1594,6 +1825,18 @@ mod tests {
             }
             if s.behaviour == Behaviour::WriteFails && report[0] == 0x1C {
                 return Err(anyhow!("device rejected write"));
+            }
+            if self.2 {
+                // the receiver answers the version query itself and forwards
+                // the rest only while the keyboard is linked
+                if report[0] == 0x11 {
+                    let answer = version_answer(32, "V2.0.7 Apr  1 2026 12:32");
+                    s.queues.entry(self.1).or_default().push_back(answer);
+                    return Ok(());
+                }
+                if !s.on_air {
+                    return Ok(());
+                }
             }
             s.written.push((self.1, report.to_vec()));
             let mut answers = Vec::new();
@@ -1744,6 +1987,8 @@ mod tests {
             bluetooth: false,
             cable_too: false,
             link_down: false,
+            receiver: false,
+            on_air: false,
             present: true,
             keyboard_fw,
             behaviour,
@@ -1936,6 +2181,92 @@ mod tests {
         shared.lock().unwrap().link_down = true;
         assert!(m.send(&time_packet()).is_err());
         assert!(matches!(m.state(), DeviceState::Locked { .. }));
+    }
+
+    /// Connects over USB once (firmware remembered), then switches to the
+    /// 2.4 GHz receiver.
+    fn over_the_air() -> (DeviceManager, Arc<Mutex<Shared>>) {
+        let (mut m, shared) = manager(Behaviour::Normal, "3.0.14");
+        m.poll();
+        assert_eq!(connection(&m), Some(Connection::Usb));
+        {
+            let mut s = shared.lock().unwrap();
+            s.present = false;
+            s.receiver = true;
+            s.on_air = true;
+        }
+        m.poll(); // the cable is gone
+        m.poll(); // 2.4 GHz
+        assert_eq!(connection(&m), Some(Connection::Wireless));
+        (m, shared)
+    }
+
+    #[test]
+    fn wireless_uses_the_firmware_from_the_last_usb_connection() {
+        let (mut m, _shared) = over_the_air();
+        let DeviceState::Ready(d) = m.state() else {
+            unreachable!()
+        };
+        // the keyboard version, not the receiver's
+        let keyboard = d
+            .firmware
+            .iter()
+            .find(|f| f.role == Role::Keyboard)
+            .unwrap();
+        assert_eq!(keyboard.version, "3.0.14");
+        assert!(d.firmware.iter().any(|f| f.role == Role::Screen));
+        assert_eq!(d.trust, Trust::Verified);
+        m.send(&time_packet()).unwrap();
+        assert!(m.upload_picture(&picture(9000), &mut |_| {}).is_err());
+        assert_eq!(connection(&m), Some(Connection::Wireless));
+    }
+
+    #[test]
+    fn wireless_waits_for_one_usb_connection_without_locking() {
+        let (mut m, shared) = manager(Behaviour::Normal, "3.0.14");
+        {
+            let mut s = shared.lock().unwrap();
+            s.present = false;
+            s.receiver = true;
+            s.on_air = true;
+        }
+        m.poll();
+        assert_eq!(*m.state(), DeviceState::NotConnected);
+        assert!(m
+            .take_events()
+            .iter()
+            .any(|e| e.message.contains("USB cable")));
+    }
+
+    #[test]
+    fn a_receiver_without_keyboard_is_not_a_connection() {
+        let (mut m, shared) = over_the_air();
+        shared.lock().unwrap().on_air = false;
+        // the keyboard was switched off: no answer, dropped without a lock
+        assert!(m.send(&time_packet()).is_err());
+        assert_eq!(*m.state(), DeviceState::NotConnected);
+        m.recheck();
+        assert_eq!(*m.state(), DeviceState::NotConnected, "receiver alone");
+        shared.lock().unwrap().on_air = true;
+        m.recheck();
+        assert_eq!(connection(&m), Some(Connection::Wireless));
+    }
+
+    #[test]
+    fn cable_and_bluetooth_win_over_the_receiver() {
+        let (mut m, shared) = over_the_air();
+        shared.lock().unwrap().bluetooth = true;
+        m.poll(); // leaves 2.4 GHz
+        m.poll(); // Bluetooth
+        assert_eq!(connection(&m), Some(Connection::Bluetooth));
+        {
+            let mut s = shared.lock().unwrap();
+            s.bluetooth = false;
+            s.present = true;
+        }
+        m.poll();
+        m.poll();
+        assert_eq!(connection(&m), Some(Connection::Usb));
     }
 
     #[test]

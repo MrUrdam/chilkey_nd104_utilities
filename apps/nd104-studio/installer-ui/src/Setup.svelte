@@ -19,7 +19,7 @@
   let error = $state("");
   let showDetails = $state(false);
   // undefined: not checked yet; null: no keyboard found
-  let keyboard = $state<"usb" | "bluetooth" | null | undefined>(undefined);
+  let keyboard = $state<"usb" | "bluetooth" | "wireless" | null | undefined>(undefined);
   let now = $state(new Date());
 
   const win = getCurrentWindow();
@@ -228,6 +228,8 @@
             <div class="notice"><span class="led ok"></span>{tr("hint.keyboard_found")}</div>
           {:else if keyboard === "bluetooth"}
             <div class="notice"><span class="led ok"></span>{tr("hint.keyboard_bluetooth")}</div>
+          {:else if keyboard === "wireless"}
+            <div class="notice"><span class="led ok"></span>{tr("hint.keyboard_wireless")}</div>
           {:else if keyboard === null}
             <div class="notice">
               <svg class="plug" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">

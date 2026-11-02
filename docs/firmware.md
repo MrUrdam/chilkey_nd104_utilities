@@ -92,6 +92,24 @@ What the firmware files show (both screen MCU images compared, read only):
 - So the only way to tell the variant over USB is the version answer
   (version + build date), matched against the files in the two Drive folders.
 
+## Keyboard firmware analysis
+
+`VN001_314A108_1V0_RGB_TYPE1_20260710.bin` (V3.0.14) was disassembled on
+2026-11-02 (read only, file not kept in the repository):
+
+- The chip is a **WCH CH585** (RISC-V, `CH585_BLE_LIB_V1.3`), QMK 0.19.2 based
+  with VIA/Vial.
+- The file is loaded at **`0x6000`** (a bootloader sits below). At start the
+  bytes from `0x63EC` are copied to RAM `0x20000000` and the code from
+  `0x65EC` to `0x12958` runs from RAM at `0x2000BC00`; `gp` = `0x20001410`.
+- The code uses WCH's own compressed byte load/store instructions (in the
+  places of `c.fld`/`c.fsd`) and Zba/Zbb/Zbs bit instructions; standard
+  disassemblers show these wrongly.
+- Results: the keyboard settings channel, including **keyboard colour** and
+  **online RGB**, and the PC lighting protocols (OpenRGB, SignalRGB) – see
+  [protocol.md § 5.2.1](protocol.md#521-what-the-firmware-does-with-each-id-v3014)
+  and § 5.4.
+
 ## Consequences for ND104 Studio
 
 - The firmware update check cannot rely on the version text on the support page.

@@ -72,6 +72,7 @@ pub fn status_line(i18n: &I18n, status: &Status) -> String {
             let model = match d.connection {
                 nd104_core::device::Connection::Usb => model.to_string(),
                 nd104_core::device::Connection::Bluetooth => format!("{model} (Bluetooth)"),
+                nd104_core::device::Connection::Wireless => format!("{model} (2.4 GHz)"),
             };
             let model = model.as_str();
             match &status.weather {

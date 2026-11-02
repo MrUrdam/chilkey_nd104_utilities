@@ -20,7 +20,9 @@ mod version;
 mod weather;
 
 pub use checksum::{checksum8, crc16};
-pub use device::{Target, UsbId, KEYBOARD, SCREEN, SCREEN_DFU, VENDOR_USAGE, VENDOR_USAGE_PAGE};
+pub use device::{
+    Target, UsbId, KEYBOARD, RECEIVER, SCREEN, SCREEN_DFU, VENDOR_USAGE, VENDOR_USAGE_PAGE,
+};
 pub use error::ProtocolError;
 pub use frame::{frame, FrameKind, FRAME_LEN};
 pub use keymap::{

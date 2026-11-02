@@ -60,6 +60,8 @@
             <span class="faint small">
               {t("ui.bt.connected")}{#if bt.keyboard?.battery != null}{` · ${t("ui.bt.battery", { n: bt.keyboard.battery })}`}{/if}
             </span>
+          {:else if status.device.connection === "wireless"}
+            <span class="faint small">{t("ui.conn.wireless_connected")}</span>
           {:else if bt.keyboard?.battery != null}
             <span class="faint small">{t("ui.bt.usb_with_battery", { n: bt.keyboard.battery })}</span>
           {/if}
