@@ -18,7 +18,12 @@
 > SDK client on 127.0.0.1:6743 colours the keyboard – after a fix: on Linux
 > one hidraw device holds all collections of a USB interface, so the report
 > ID is now taken from the opened collection (interface 4: ID 5, not the
-> first ID 3). Still to test: Bluetooth. Open: `nd104-probe descriptors`
+> first ID 3). **Bluetooth** (USB dongle in the VM): connected via BlueZ,
+> firmware verified, time, weather and configuration sent while typing –
+> after a fix: over Bluetooth one hidraw device carries the whole keyboard,
+> so key presses (ID 1) reached the command channel and locked it; the
+> channel now drops reports of other collections unlogged. BlueZ reports
+> the battery (`Battery1.Percentage`). Open: `nd104-probe descriptors`
 > stalls on Linux (diagnostic tool only).
 > Phases 3–5 open. Windows stays the reference platform; every step keeps
 > the Windows build, tests and releases unchanged.
@@ -235,8 +240,9 @@ extension), Kubuntu (KDE).
   nothing is ever flashed. hidraw report-ID behaviour must be verified on
   the keyboard before the first write (read-only checks first, as on
   Windows).
-- **Bluetooth over hidraw:** report ID 2 from the descriptor should work as
-  on Windows – to be checked with a dongle.
+- **Bluetooth over hidraw:** report ID 2 of the command channel works as on
+  Windows; reports of the other collections (key presses) on the same
+  hidraw device are dropped (tested with a dongle).
 - **WebKitGTK differences** (fonts, scrolling, `color-mix()`): the UI needs
   one review pass in the VM.
 - **Tray on vanilla GNOME** stays invisible without the extension – the
