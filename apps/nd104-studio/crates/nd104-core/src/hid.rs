@@ -77,8 +77,10 @@ pub trait HidBackend {
 /// How long opening one interface for its details may take. A paired
 /// Bluetooth keyboard that is not connected stays in Windows' device list,
 /// and opening it blocks for many seconds each time.
+#[cfg(windows)]
 const INFO_TIMEOUT: Duration = Duration::from_secs(3);
 /// When to try an interface again that could not be opened.
+#[cfg(windows)]
 const INFO_RETRY: Duration = Duration::from_secs(30);
 
 /// Real backend.
