@@ -23,7 +23,7 @@
 > after a fix: over Bluetooth one hidraw device carries the whole keyboard,
 > so key presses (ID 1) reached the command channel and locked it; the
 > channel now drops reports of other collections unlogged. BlueZ reports
-> the battery (`Battery1.Percentage`). Open: `nd104-probe descriptors`
+> the battery (`Battery1.Percentage`), the app shows it. Open: `nd104-probe descriptors`
 > stalls on Linux (diagnostic tool only).
 > Phases 3–5 open. Windows stays the reference platform; every step keeps
 > the Windows build, tests and releases unchanged.
@@ -225,7 +225,7 @@ extension), Kubuntu (KDE).
 - [ ] time and weather on the display, picture upload
 - [ ] lighting, PC lighting switch, OpenRGB interface (OpenRGB on Linux)
 - [ ] keymap read/write/backup, keyboard settings
-- [ ] 2.4 GHz receiver; Bluetooth (with dongle) incl. battery
+- [x] 2.4 GHz receiver; Bluetooth (with dongle) incl. battery
 - [ ] unplug/replug, suspend/resume → time synced again
 - [ ] tray visible (GNOME/Ubuntu) or launcher + single instance
 - [ ] autostart after reboot
