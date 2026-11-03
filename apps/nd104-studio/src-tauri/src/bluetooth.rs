@@ -25,7 +25,8 @@ pub fn bluetooth_status() -> Option<BluetoothKeyboard> {
     imp::find()
 }
 
-/// "ND104 BT2" → 2.
+/// "ND104 BT2" → 2. (Linux reads Bluetooth through BlueZ later – phase 2.)
+#[cfg(any(windows, test))]
 fn slot_of(name: &str) -> Option<u8> {
     let at = name.rfind("BT")?;
     let digit = name[at + 2..].trim().chars().next()?.to_digit(10)?;
