@@ -601,5 +601,6 @@
   "ui.os.note_access": "Keyboard access on Linux needs a udev rule (the packages install it); without it ND104 Studio shows \"Found – no access\".",
   "ui.os.note_updates": "Updates on Linux: the AppImage updates itself; packages (.deb, .rpm) are updated by the system's package manager (planned).",
   "ui.pcl.srgb_windows_only": "SignalRGB is available for Windows only – on Linux use the OpenRGB interface above.",
-  "ui.modes.f.pc_lighting@linux": "Per-key colours from OpenRGB, Artemis …"
+  "ui.modes.f.pc_lighting@linux": "Per-key colours from OpenRGB, Artemis …",
+  "menu.settings@linux": "Open ND104 Studio"
 }

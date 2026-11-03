@@ -122,7 +122,33 @@ pub fn tooltip(i18n: &I18n, status: &Status) -> String {
 #[derive(Clone)]
 pub struct TrayItems {
     pub status: MenuItem<Wry>,
+    /// Linux: the second status line (what the tooltip shows on Windows).
+    pub detail: Option<MenuItem<Wry>>,
     pub pause: MenuItem<Wry>,
+}
+
+/// Linux tray icons (StatusNotifierItem) have no tooltip and a click only
+/// opens the menu: the menu then starts with "Open ND104 Studio" and shows
+/// the tooltip's details as a second, disabled line.
+const MENU_ONLY: bool = cfg!(target_os = "linux");
+
+/// The second status line on Linux: firmware trust and last sync.
+pub fn detail_line(i18n: &I18n, status: &Status) -> String {
+    let mut parts = Vec::new();
+    if let DeviceState::Ready(d) = &status.device {
+        parts.push(i18n.t(match d.trust {
+            Trust::Verified => "status.verified",
+            Trust::Compatible => "status.compatible",
+        }));
+    }
+    if let Some(at) = status.last_time_sync {
+        let time = at
+            .to_zoned(jiff::tz::TimeZone::system())
+            .strftime("%H:%M")
+            .to_string();
+        parts.push(i18n.tf("status.synced", &[("time", &time)]));
+    }
+    parts.join(" · ")
 }
 
 /// Tray menu: only the everyday actions. Everything else (update check,
@@ -152,31 +178,68 @@ pub fn build_menu(
         None::<&str>,
     )?;
 
-    let menu = Menu::with_items(
+    let settings = MenuItem::with_id(app, "settings", i18n.t("menu.settings"), true, None::<&str>)?;
+    let detail = if MENU_ONLY {
+        Some(MenuItem::with_id(
+            app,
+            "detail",
+            detail_line(i18n, status),
+            false,
+            None::<&str>,
+        )?)
+    } else {
+        None
+    };
+    let separator = || PredefinedMenuItem::separator(app);
+    let sync_now = MenuItem::with_id(app, "sync_now", i18n.t("menu.sync_now"), true, None::<&str>)?;
+    let autostart = CheckMenuItem::with_id(
         app,
-        &[
-            &status_item,
-            &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "sync_now", i18n.t("menu.sync_now"), true, None::<&str>)?,
-            &pause,
-            &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "settings", i18n.t("menu.settings"), true, None::<&str>)?,
-            &CheckMenuItem::with_id(
-                app,
-                "autostart",
-                i18n.t("menu.autostart"),
-                true,
-                autostart,
-                None::<&str>,
-            )?,
-            &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "quit", i18n.t("menu.quit"), true, None::<&str>)?,
-        ],
+        "autostart",
+        i18n.t("menu.autostart"),
+        true,
+        autostart,
+        None::<&str>,
     )?;
+    let quit = MenuItem::with_id(app, "quit", i18n.t("menu.quit"), true, None::<&str>)?;
+    let (sep1, sep2, sep3) = (separator()?, separator()?, separator()?);
+
+    let menu = match &detail {
+        // Linux: "Open ND104 Studio" first, then the status lines
+        Some(detail) => Menu::with_items(
+            app,
+            &[
+                &settings,
+                &sep1,
+                &status_item,
+                detail,
+                &sep2,
+                &sync_now,
+                &pause,
+                &autostart,
+                &sep3,
+                &quit,
+            ],
+        )?,
+        None => Menu::with_items(
+            app,
+            &[
+                &status_item,
+                &sep1,
+                &sync_now,
+                &pause,
+                &sep2,
+                &settings,
+                &autostart,
+                &sep3,
+                &quit,
+            ],
+        )?,
+    };
     Ok((
         menu,
         TrayItems {
             status: status_item,
+            detail,
             pause,
         },
     ))

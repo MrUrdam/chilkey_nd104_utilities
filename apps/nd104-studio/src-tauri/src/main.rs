@@ -68,7 +68,21 @@ pub(crate) struct AppState {
     pub(crate) keymap_restore: Mutex<Option<keymap_backup::PendingRestore>>,
 }
 
+/// Linux + NVIDIA driver: WebKitGTK may show a blank window under Wayland;
+/// the known workaround is to switch off its DMA-BUF renderer. Set before
+/// any thread starts, and only if the user did not choose otherwise.
+#[cfg(target_os = "linux")]
+fn webkit_workarounds() {
+    if std::path::Path::new("/proc/driver/nvidia").exists()
+        && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none()
+    {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+}
+
 fn main() {
+    #[cfg(target_os = "linux")]
+    webkit_workarounds();
     // before anything reads or writes data: take over nd104-sync's folders and keys
     let migrated = nd104_core::rebrand::migrate();
     let _log_guard = logging::init();
@@ -425,6 +439,9 @@ async fn watch_status(app: AppHandle, mut status: watch::Receiver<Status>) {
         let items = state.items.lock().unwrap().clone();
         if let Some(items) = items {
             let _ = items.status.set_text(tray::status_line(&i18n, &current));
+            if let Some(detail) = &items.detail {
+                let _ = detail.set_text(tray::detail_line(&i18n, &current));
+            }
             let _ = items.pause.set_text(i18n.t(if current.paused {
                 "menu.resume"
             } else {

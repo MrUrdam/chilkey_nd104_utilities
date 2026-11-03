@@ -601,5 +601,6 @@
   "ui.os.note_access": "Der Zugriff auf die Tastatur braucht unter Linux eine udev-Regel (die Pakete installieren sie); ohne sie zeigt ND104 Studio „Gefunden – kein Zugriff“.",
   "ui.os.note_updates": "Updates unter Linux: Das AppImage aktualisiert sich selbst; Pakete (.deb, .rpm) aktualisiert die Paketverwaltung des Systems (geplant).",
   "ui.pcl.srgb_windows_only": "SignalRGB gibt es nur für Windows – unter Linux die OpenRGB-Schnittstelle oben verwenden.",
-  "ui.modes.f.pc_lighting@linux": "Farben pro Taste aus OpenRGB, Artemis …"
+  "ui.modes.f.pc_lighting@linux": "Farben pro Taste aus OpenRGB, Artemis …",
+  "menu.settings@linux": "ND104 Studio öffnen"
 }

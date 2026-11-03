@@ -123,7 +123,10 @@ Done early (2026-11-03): platform-specific texts (`key@linux` variants in
 the locale files, resolved by the backend for tray and UI – e.g. "Start at
 login" instead of "Start with Windows", Secret Service instead of
 Credential Manager); the in-app table **Operating systems**; SignalRGB
-hidden on Linux.
+hidden on Linux. Tray on Linux: "Open ND104 Studio" first, the
+tooltip's details (firmware trust, last sync) as a second status line;
+WebKitGTK workaround `WEBKIT_DISABLE_DMABUF_RENDERER=1` when an NVIDIA
+driver is present.
 
 - Tray menu: "Open ND104 Studio" first; connection/time/weather as disabled
   lines (no tooltip on Linux).
