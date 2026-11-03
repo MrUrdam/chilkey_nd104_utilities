@@ -1,13 +1,16 @@
 # Builds and publishes an ND104 Studio release when a tag nd104-studio-vX.Y.Z is pushed.
-# Assets: own setup (.exe, crate installer/), MSI, portable zip and SHA256SUMS.txt.
+# Windows assets: own setup (.exe), MSI, portable zip. Linux assets: .deb, .rpm,
+# AppImage and a portable tarball. One SHA256SUMS.txt and THIRD-PARTY-NOTICES.txt
+# cover both platforms.
 # Installs of the former name nd104-sync (1.x) update through the bridge
 # release nd104-sync-v2.0.0 (made once for 2.0.0); from 2.0.0 on, ND104 Studio
 # finds these releases by itself, so no new bridge releases are made.
-# Release notes = the matching "## [X.Y.Z]" section of apps/nd104-studio/CHANGELOG.md.
+# Release notes = the matching "## [X.Y.Z]" section of apps/nd104-studio/CHANGELOG.md
+# plus a download list built from the files that were actually produced.
 # 0.x versions are published as beta (title), but not as GitHub pre-release,
-# so the app update check finds them. Versions with a suffix (X.Y.Z-rc.1) are
-# published as pre-release (without MSI, which needs a plain X.Y.Z version) and
-# are ignored by the update check.
+# so the app update check finds them. Versions with a suffix (X.Y.Z-beta.1) are
+# published as pre-release (the Windows MSI needs a plain X.Y.Z version and is
+# skipped) and are ignored by the update check.
 name: ND104 Studio release
 
 on:
@@ -18,8 +21,32 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  # Fails fast if the tag and the workspace version disagree, and hands the
+  # version to the build jobs so the asset names are consistent.
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check tag matches Cargo.toml version
+        id: v
+        working-directory: apps/nd104-studio
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#nd104-studio-v}"
+          CARGO_VERSION=$(tr -d '\r' < Cargo.toml | sed -nE 's/^version = "(.*)"/\1/p' | head -n1)
+          if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match Cargo.toml version $CARGO_VERSION"
+            exit 1
+          fi
+          echo "version=$CARGO_VERSION" >> "$GITHUB_OUTPUT"
+
+  build-windows:
+    needs: prepare
     runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
     defaults:
       run:
         shell: bash
@@ -32,16 +59,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/nd104-studio
-
-      - name: Check tag matches Cargo.toml version
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#nd104-studio-v}"
-          CARGO_VERSION=$(tr -d '\r' < Cargo.toml | sed -nE 's/^version = "(.*)"/\1/p' | head -n1)
-          if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match Cargo.toml version $CARGO_VERSION"
-            exit 1
-          fi
-          echo "VERSION=$CARGO_VERSION" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v5
         with:
@@ -87,11 +104,120 @@ jobs:
           for msi in target/release/bundle/msi/*.msi; do
             [ -e "$msi" ] && cp "$msi" "dist/nd104-studio_${VERSION}_x64_en-US.msi"
           done
+          rm -rf "dist/$NAME"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-windows
+          path: apps/nd104-studio/dist/
+          if-no-files-found: error
+
+  # The Linux port (docs/linux-port.md): bundles on the oldest supported base
+  # (Ubuntu 22.04, glibc 2.35). Linux bundles are built for every version,
+  # including betas, so a Linux release has assets to ship.
+  build-linux:
+    needs: prepare
+    runs-on: ubuntu-22.04
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/nd104-studio
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: System libraries (WebKitGTK, tray, D-Bus)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libdbus-1-dev libssl-dev pkg-config
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/nd104-studio
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/nd104-studio/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Test
+        run: cargo test --workspace --exclude nd104-studio-setup --locked
+
+      - name: Build console tools
+        run: cargo build --release --locked -p nd104-cli -p nd104-probe
+
+      - name: Build app and Linux bundles
+        run: |
+          # RPM's version field has no place for a semver pre-release (the '-'
+          # in 2.4.0-beta.1 is rejected, and a Cargo version cannot use '~');
+          # build the .rpm only for plain X.Y.Z versions. .deb and AppImage
+          # accept the pre-release version.
+          case "$VERSION" in
+            *-*) npx tauri build --bundles deb,appimage ;;
+            *)   npx tauri build --bundles deb,rpm,appimage ;;
+          esac
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          # GUI bundles – fixed, space-free names. The AppImage name must match
+          # nd104_core::app_update::appimage_name for the in-app self-update.
+          cp target/release/bundle/deb/*.deb "dist/nd104-studio_${VERSION}_amd64.deb"
+          cp target/release/bundle/appimage/*.AppImage "dist/nd104-studio_${VERSION}_amd64.AppImage"
+          # the .rpm is only built for plain X.Y.Z versions (see above)
+          for rpm in target/release/bundle/rpm/*.rpm; do
+            [ -e "$rpm" ] && cp "$rpm" "dist/nd104-studio_${VERSION}_x86_64.rpm"
+          done
+          # portable tarball: tray app + console tools + the udev rule (both variants)
+          NAME="nd104-studio-${VERSION}-linux-x64"
+          mkdir -p "$NAME"
+          cp target/release/nd104-studio target/release/nd104-cli target/release/nd104-probe \
+             README.md CHANGELOG.md THIRD-PARTY-NOTICES.txt ../../LICENSE "$NAME/"
+          cp linux/70-nd104-studio.rules linux/70-nd104-studio-plugdev.rules "$NAME/"
+          tar -czf "dist/$NAME.tar.gz" "$NAME"
+          rm -rf "$NAME"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux
+          path: apps/nd104-studio/dist/
+          if-no-files-found: error
+
+  publish:
+    needs: [prepare, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/nd104-studio
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: apps/nd104-studio/dist
+
+      - name: Checksums
+        run: |
           cd dist
           shopt -s nullglob
-          sha256sum *.zip *.exe *.msi > SHA256SUMS.txt
+          sha256sum *.zip *.exe *.msi *.deb *.rpm *.AppImage *.tar.gz > SHA256SUMS.txt
           cat SHA256SUMS.txt
-          echo "PACKAGE=$NAME" >> "$GITHUB_ENV"
 
       - name: Release notes from CHANGELOG
         run: |
@@ -105,18 +231,37 @@ jobs:
             echo "::error::No section '## [${VERSION}]' in CHANGELOG.md"
             exit 1
           fi
-          cat >> dist/notes.md <<EOF
-
-          ---
-          **Downloads** (Windows 10/11, x64 – USB cable, Bluetooth or 2.4 GHz, see [Connection modes](https://github.com/${GITHUB_REPOSITORY}/blob/main/apps/nd104-studio/README.md#connection-modes)):
-          - \`nd104-studio_${VERSION}_x64-setup.exe\` – **recommended**: setup for install, update and uninstall, per user, no admin rights
-          - \`nd104-studio_${VERSION}_x64_en-US.msi\` – MSI for managed/per-machine installs (admin rights)
-          - \`${PACKAGE}.zip\` – portable: tray app \`nd104-studio.exe\`, console runner \`nd104-cli.exe\`, diagnostic tool \`nd104-probe.exe\`
-          - \`THIRD-PARTY-NOTICES.txt\` – licences of the open-source software included (also in the app: General → About → Open-source licences)
-
-          The installers are not code-signed yet; Windows SmartScreen may ask for confirmation
-          ("More info" → "Run anyway"). Verify downloads with \`SHA256SUMS.txt\`.
-          EOF
+          cd dist
+          # link docs at the released tag, not main (a pre-release may be cut
+          # from a feature branch where these files are not yet on main)
+          BASE="https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/apps/nd104-studio"
+          README_URL="$BASE/README.md"
+          INSTALL_URL="$BASE/docs/installation.md"
+          # one bullet per asset, only for the files that were actually built
+          add() { [ -e "$1" ] && printf -- '- `%s` – %s\n' "$1" "$2"; }
+          {
+            echo
+            echo "---"
+            echo "**Downloads** (USB cable, Bluetooth or 2.4 GHz, see [Connection modes](${README_URL}#connection-modes)):"
+            echo
+            echo "**Windows 10/11, x64**"
+            echo
+            add "nd104-studio_${VERSION}_x64-setup.exe" "**recommended**: setup for install, update and uninstall, per user, no admin rights"
+            add "nd104-studio_${VERSION}_x64_en-US.msi" "MSI for managed / per-machine installs (admin rights)"
+            add "nd104-studio-${VERSION}-windows-x64.zip" "portable: tray app, console runner \`nd104-cli.exe\`, diagnostic tool \`nd104-probe.exe\`"
+            echo
+            echo "**Linux, x86-64** (needs the udev access rule – the .deb/.rpm install it; see [Installation](${INSTALL_URL}))"
+            echo
+            add "nd104-studio_${VERSION}_amd64.deb" "Debian / Ubuntu; installs the udev rule, updates through your software centre"
+            add "nd104-studio_${VERSION}_x86_64.rpm" "Fedora / openSUSE; installs the udev rule, updates through your software centre"
+            add "nd104-studio_${VERSION}_amd64.AppImage" "portable, self-updating; \`chmod +x\` then run"
+            add "nd104-studio-${VERSION}-linux-x64.tar.gz" "portable: tray app, \`nd104-cli\`, \`nd104-probe\` and the udev rule"
+            echo
+            add "THIRD-PARTY-NOTICES.txt" "licences of the open-source software included (also in the app: General → About → Open-source licences)"
+            echo
+            echo "The installers are not code-signed yet. On Windows, SmartScreen may ask for confirmation (\"More info\" → \"Run anyway\"). Verify downloads with \`SHA256SUMS.txt\`."
+          } >> notes.md
+          cat notes.md
 
       - name: Publish release
         env:
@@ -128,7 +273,8 @@ jobs:
             *-*) FLAGS="--prerelease"; TITLE="$TITLE (pre-release)" ;;
             0.*) TITLE="$TITLE (beta)" ;;
           esac
+          cd dist
           shopt -s nullglob
           gh release create "$GITHUB_REF_NAME" \
-            dist/*.zip dist/*.exe dist/*.msi dist/SHA256SUMS.txt dist/THIRD-PARTY-NOTICES.txt \
-            --title "$TITLE" --notes-file dist/notes.md $FLAGS
+            *.zip *.exe *.msi *.deb *.rpm *.AppImage *.tar.gz SHA256SUMS.txt THIRD-PARTY-NOTICES.txt \
+            --title "$TITLE" --notes-file notes.md $FLAGS

@@ -13,6 +13,35 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.4.0-beta.1] – 2026-11-03
+
+First **beta of the Linux version** of ND104 Studio, for testing. Windows is
+unchanged. On Linux the app connects to the ND104 over USB cable, the 2.4 GHz
+receiver and Bluetooth, keeps the display supplied with time and weather, shows
+your own pictures, sets the lighting, remaps keys and offers the OpenRGB
+interface – the same features as on Windows, minus SignalRGB (Windows only).
+See the [README](README.md) for installation and the udev access rule.
+
+### Added
+- **Linux support** (x86-64): `.deb` (Debian/Ubuntu), `.rpm` (Fedora/openSUSE)
+  and a portable, self-updating AppImage, built on Ubuntu 22.04 (glibc 2.35). A
+  portable tarball ships the tray app, `nd104-cli`, `nd104-probe` and the rule.
+- Device access over hidraw for USB, the 2.4 GHz receiver and Bluetooth. The
+  `.deb`/`.rpm` install a udev rule so the logged-in user reaches the keyboard
+  without root; when it is missing, a "found, no access" state names the rule
+  and how to apply it.
+- Desktop integration: StatusNotifierItem tray, `.desktop` launcher, autostart
+  at login, API keys in the Secret Service (with a 0600-file fallback), and the
+  Bluetooth battery read from BlueZ.
+- In-app self-update for the AppImage (download, SHA-256 check, replace,
+  restart); `.deb`/`.rpm` installs update through the system package manager.
+
+### Changed
+- The app description no longer says "Wired USB connection only" – it names the
+  USB, Bluetooth and 2.4 GHz connections.
+- The release workflow builds and publishes Linux assets next to the Windows
+  ones, under one `SHA256SUMS.txt`.
+
 ## [2.3.1] – 2026-11-02
 
 **OpenRGB, Artemis and Aurora** can now colour every LED of the ND104 too –
@@ -300,7 +329,7 @@ backups, API keys, autostart and shortcuts are taken over.
   colours.
 - **New locations:** `%LOCALAPPDATA%\Programs\nd104-studio` (program),
   `%APPDATA%\nd104-studio` (settings, profiles), `%LOCALAPPDATA%\nd104-studio`
-  (logs, automatic keymap backups); see [README → Files](README.md#files).
+  (logs, automatic keymap backups); see [Files](docs/usage.md#files).
 - **Release files** are named `nd104-studio_X.Y.Z_…` and tagged
   `nd104-studio-vX.Y.Z`. Each release is also published as
   `nd104-sync-vX.Y.Z`, so installed nd104-sync versions find it.
@@ -820,7 +849,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.1...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.1...HEAD
+[2.4.0-beta.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.1...nd104-studio-v2.4.0-beta.1
 [2.3.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.0...nd104-studio-v2.3.1
 [2.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.2.0...nd104-studio-v2.3.0
 [2.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.1.0...nd104-studio-v2.2.0

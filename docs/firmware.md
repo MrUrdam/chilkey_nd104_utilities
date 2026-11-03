@@ -116,7 +116,7 @@ What the firmware files show (both screen MCU images compared, read only):
   It compares the **build date** reported by the device with the date in the
   newest Drive file name, for the matching screen variant.
 - Implemented in ND104 Studio (see its
-  [firmware update check](../apps/nd104-studio/README.md#firmware-update-check)):
+  [firmware update check](../apps/nd104-studio/docs/firmware-safety.md#firmware-update-check)):
   1. The **firmware watch** action ([`firmware-watch.yml`](../.github/workflows/firmware-watch.yml),
      [`firmware/watch.py`](../firmware/watch.py)) checks the Drive folders and
      support pages every day and **opens an issue** when files, subfolders or

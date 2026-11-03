@@ -23,6 +23,8 @@ pub struct Release {
     pub published_at: Option<String>,
     /// Download URL of `nd104-studio_<version>_x64-setup.exe`, if attached.
     pub setup_url: Option<String>,
+    /// Download URL of `nd104-studio_<version>_amd64.AppImage`, if attached.
+    pub appimage_url: Option<String>,
     /// Download URL of `SHA256SUMS.txt`, if attached.
     pub checksums_url: Option<String>,
 }
@@ -54,9 +56,14 @@ struct GhAsset {
     browser_download_url: String,
 }
 
-/// File name of the setup attached to the release of `version`.
+/// File name of the Windows setup attached to the release of `version`.
 pub fn setup_name(version: &str) -> String {
     format!("nd104-studio_{version}_x64-setup.exe")
+}
+
+/// File name of the Linux AppImage attached to the release of `version`.
+pub fn appimage_name(version: &str) -> String {
+    format!("nd104-studio_{version}_amd64.AppImage")
 }
 
 /// Asks GitHub for the newest release and compares it with `current`.
@@ -93,9 +100,11 @@ fn evaluate(current: &str, body: &str) -> Result<UpdateStatus> {
                     .map(|a| a.browser_download_url.clone())
             };
             let setup_url = asset(&setup_name(&version));
+            let appimage_url = asset(&appimage_name(&version));
             let checksums_url = asset("SHA256SUMS.txt");
             Some(Release {
                 setup_url,
+                appimage_url,
                 checksums_url,
                 version,
                 tag: r.tag_name,
@@ -131,6 +140,7 @@ mod tests {
         {"tag_name": "nd104-studio-v0.2.0", "html_url": "u1", "published_at": "2026-11-20T10:00:00Z",
          "assets": [
             {"name": "nd104-studio_0.2.0_x64-setup.exe", "browser_download_url": "s1"},
+            {"name": "nd104-studio_0.2.0_amd64.AppImage", "browser_download_url": "a1"},
             {"name": "SHA256SUMS.txt", "browser_download_url": "c1"}
          ]},
         {"tag_name": "nd104-studio-v0.10.0", "html_url": "u2", "draft": true},
@@ -145,6 +155,7 @@ mod tests {
                 assert_eq!(r.version, "0.2.0");
                 assert_eq!(r.url, "u1");
                 assert_eq!(r.setup_url.as_deref(), Some("s1"));
+                assert_eq!(r.appimage_url.as_deref(), Some("a1"));
                 assert_eq!(r.checksums_url.as_deref(), Some("c1"));
             }
             other => panic!("{other:?}"),
@@ -164,7 +175,9 @@ mod tests {
         .unwrap()
         {
             UpdateStatus::Available(r) => {
-                assert!(r.setup_url.is_none() && r.checksums_url.is_none())
+                assert!(
+                    r.setup_url.is_none() && r.appimage_url.is_none() && r.checksums_url.is_none()
+                )
             }
             other => panic!("{other:?}"),
         }

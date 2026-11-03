@@ -149,7 +149,7 @@ hardware, loss of data or any other harm caused by using it.
 - the connections and features marked ✅ in [Connection modes](apps/nd104-studio/README.md#connection-modes),
 - the firmware versions marked ✅ in [Firmware](#firmware),
 - the platforms named in each tool's README (ND104 Studio: Windows 10/11;
-  Linux in preview – see its [Platform support](apps/nd104-studio/README.md#platform-support)).
+  Linux in beta – see its [Platform support](apps/nd104-studio/README.md#platform-support)).
 
 Everything else may work, but is untested. ND104 Studio has a safety lock that
 stops sending as soon as the keyboard behaves differently from what was tested,
@@ -168,7 +168,7 @@ answers. For problems with the keyboard itself, please contact
 - [zoom-sync](https://github.com/ozboar/zoom-sync), a model for weather and time sync
 - Weather and place data: Open-Meteo, Deutscher Wetterdienst (via Bright Sky),
   OpenWeather, WeatherAPI.com and GeoNames – licences and required credits in
-  [ND104 Studio → Weather providers](apps/nd104-studio/README.md#weather-providers)
+  [ND104 Studio → Weather providers](apps/nd104-studio/docs/usage.md#weather-providers)
 
 ## License
 

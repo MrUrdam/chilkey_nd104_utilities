@@ -172,7 +172,7 @@ observed. The firmware itself probably answers correctly.
 
 **Consequence for ND104 Studio:** use only the ASCII answer of the `0x11` query
 (§ 3.1 / § 3.2) and ignore the numeric byte. If a version string is not
-received within a timeout, the protocol check fails and the tool locks (firmware guard, see the [ND104 Studio README](../apps/nd104-studio/README.md#firmware-safety)).
+received within a timeout, the protocol check fails and the tool locks (firmware guard, see [Firmware safety](../apps/nd104-studio/docs/firmware-safety.md#firmware-safety)).
 
 ---
 

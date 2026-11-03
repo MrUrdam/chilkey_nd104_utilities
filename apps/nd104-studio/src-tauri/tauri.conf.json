@@ -18,7 +18,10 @@
   "bundle": {
     "active": true,
     "targets": [
-      "msi"
+      "msi",
+      "deb",
+      "rpm",
+      "appimage"
     ],
     "publisher": "MrUrdam",
     "homepage": "https://github.com/MrUrdam/chilkey_nd104_utilities",
@@ -26,7 +29,7 @@
     "copyright": "MIT License",
     "license": "MIT",
     "shortDescription": "Display, lighting and keymap for the Chilkey ND104 keyboard",
-    "longDescription": "Tray app for the Chilkey ND104 keyboard: keeps the display supplied with time and weather, shows your own pictures, sets the lighting and remaps keys, knob and round button. Wired USB connection only. Unofficial, not affiliated with Chilkey.",
+    "longDescription": "Tray app for the Chilkey ND104 keyboard: keeps the display supplied with time and weather, shows your own pictures, sets the lighting and remaps keys, knob and round button. Connects over USB cable, Bluetooth or the 2.4 GHz receiver. Unofficial, not affiliated with Chilkey.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -36,6 +39,32 @@
     "windows": {
       "wix": {
         "language": "en-US"
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libayatana-appindicator3-1",
+          "librsvg2-2"
+        ],
+        "files": {
+          "/usr/lib/udev/rules.d/70-nd104-studio.rules": "../linux/70-nd104-studio.rules"
+        },
+        "postInstallScript": "../linux/postinst.sh",
+        "postRemoveScript": "../linux/postrm.sh"
+      },
+      "rpm": {
+        "depends": [
+          "webkit2gtk4.1",
+          "libayatana-appindicator-gtk3",
+          "librsvg2"
+        ],
+        "files": {
+          "/usr/lib/udev/rules.d/70-nd104-studio.rules": "../linux/70-nd104-studio.rules"
+        },
+        "postInstallScript": "../linux/postinst.sh",
+        "postRemoveScript": "../linux/postrm.sh"
       }
     }
   }
