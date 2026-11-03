@@ -142,7 +142,9 @@ fn interface_info(path: &str) -> mpsc::Receiver<Result<HidInterfaceInfo>> {
     rx
 }
 
-/// Interface number from the path (`…&MI_01…`), -1 without one.
+/// Interface number from the path (`…&MI_01…`), -1 without one (Windows
+/// paths; on Linux hidapi reports it).
+#[cfg(windows)]
 fn interface_number(path: &str) -> i32 {
     let p = path.to_ascii_lowercase();
     p.find("&mi_")
