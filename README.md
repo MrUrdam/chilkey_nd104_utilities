@@ -148,7 +148,8 @@ hardware, loss of data or any other harm caused by using it.
 - the Chilkey ND104,
 - the connections and features marked ✅ in [Connection modes](apps/nd104-studio/README.md#connection-modes),
 - the firmware versions marked ✅ in [Firmware](#firmware),
-- the platforms named in each tool's README (ND104 Studio: Windows 10/11).
+- the platforms named in each tool's README (ND104 Studio: Windows 10/11;
+  Linux in preview – see its [Platform support](apps/nd104-studio/README.md#platform-support)).
 
 Everything else may work, but is untested. ND104 Studio has a safety lock that
 stops sending as soon as the keyboard behaves differently from what was tested,

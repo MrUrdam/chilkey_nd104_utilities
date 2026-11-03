@@ -188,6 +188,7 @@ function appInfo(version: string): AppInfo {
     ],
     min_weather_interval: 5,
     self_update: false,
+    platform: params.get("os") === "linux" ? "linux" : "windows",
   };
 }
 
@@ -322,7 +323,12 @@ let demoSignalRgb = {
 const demoKeyboardSettings = { debounce_mode: 1, debounce_time: 5, sleep_time: 10, deep_sleep_time: 30, pc_lighting: 1 };
 
 export function installDemo(version: string) {
-  const texts: Record<string, string> = { ...en, ...(language === "de" ? de : {}) };
+  // like the backend: `key@linux` replaces `key` on Linux, variants are dropped
+  const os = params.get("os") === "linux" ? "linux" : "windows";
+  const merged: Record<string, string> = { ...en, ...(language === "de" ? de : {}) };
+  const texts: Record<string, string> = {};
+  for (const [k, v] of Object.entries(merged)) if (!k.includes("@")) texts[k] = v;
+  for (const [k, v] of Object.entries(merged)) if (k.endsWith(`@${os}`)) texts[k.slice(0, -os.length - 1)] = v;
 
   mockIPC((cmd, args) => {
     const a = (args ?? {}) as Record<string, unknown>;

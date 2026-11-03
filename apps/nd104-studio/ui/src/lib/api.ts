@@ -160,6 +160,8 @@ export interface AppInfo {
   models: { id: string; name: string; verified_firmware: { role: string; version: string }[] }[];
   min_weather_interval: number;
   self_update: boolean;
+  /** "windows" or "linux". */
+  platform: string;
 }
 
 export interface ProviderInfo {

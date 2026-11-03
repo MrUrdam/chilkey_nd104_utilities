@@ -5,6 +5,7 @@
   import Icon from "../components/Icon.svelte";
   import KeyboardSettingsCard from "../components/KeyboardSettingsCard.svelte";
   import ConnectionModes from "../components/ConnectionModes.svelte";
+  import PlatformSupport from "../components/PlatformSupport.svelte";
 
   let {
     status,
@@ -171,6 +172,8 @@
   <KeyboardSettingsCard {status} />
 
   <ConnectionModes {status} />
+
+  <PlatformSupport />
 
   <div class="card stack">
     <h2>{t("ui.device.advanced")}</h2>

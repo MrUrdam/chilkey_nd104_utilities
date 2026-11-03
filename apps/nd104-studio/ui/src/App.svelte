@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from "svelte";
   import { api, onConfigChanged, onStatus, type AppInfo, type Config, type Status } from "./lib/api";
   import { setTexts, t } from "./lib/i18n.svelte";
+  import { setPlatform } from "./lib/platform.svelte";
   import { setLocale } from "./lib/format";
   import { validate } from "./lib/validate";
   import { bluetooth, watchBluetooth } from "./lib/bluetooth.svelte";
@@ -73,6 +74,7 @@
     const [i, texts] = await Promise.all([api.appInfo(), api.texts()]);
     info = i;
     setTexts(texts);
+    setPlatform(i.platform);
     setLocale(i.language);
     document.documentElement.lang = i.language;
   }

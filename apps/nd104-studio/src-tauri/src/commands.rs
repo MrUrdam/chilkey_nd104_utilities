@@ -45,6 +45,8 @@ pub struct AppInfo {
     min_weather_interval: u32,
     /// "Install update" is possible (installed by nd104-studio-setup).
     self_update: bool,
+    /// `windows` or `linux` (`std::env::consts::OS`).
+    platform: &'static str,
 }
 
 #[tauri::command]
@@ -72,6 +74,7 @@ pub fn app_info(state: State<'_, AppState>) -> AppInfo {
             .collect(),
         min_weather_interval: WeatherSettings::MIN_INTERVAL_MIN,
         self_update: crate::self_update::supported(),
+        platform: std::env::consts::OS,
     }
 }
 

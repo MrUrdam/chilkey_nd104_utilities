@@ -179,6 +179,39 @@ shown as long as the keyboard is also connected via Bluetooth.
 
 The same overview is in the app: **Device → Connection modes**.
 
+## Platform support
+
+ND104 Studio runs on **Windows 10/11**; **Linux** is in preview on the branch
+`linux-port` ([plan](../../docs/linux-port.md)). This table is the one place
+that says what differs between them – everything else (time and weather,
+own picture, lighting, keymap, settings, the connection modes above) works
+the same.
+
+| Feature | Windows 10/11 | Linux (preview) |
+|---|:-:|:-:|
+| OpenRGB interface (OpenRGB, Artemis …) | ✅ | ✅ |
+| SignalRGB plugin | ✅ | ❌ ¹ |
+| Tray icon | ✅ | ☑️ ² |
+| Start at login | ✅ | ✅ |
+| API keys in the system's secure store | ✅ Credential Manager | ✅ Secret Service (GNOME Keyring, KWallet) |
+| Keyboard access without admin rights | ✅ | ☑️ ³ |
+| Bluetooth connection and battery | ✅ | ✅ (BlueZ) |
+| Updates from within the app | ✅ | ☑️ ⁴ |
+
+✅ works · ☑️ with a limitation (footnote) · ❌ not available
+
+¹ SignalRGB (and Aurora) exist for Windows only; on Linux use the OpenRGB
+interface.
+² GNOME shows tray icons only with the AppIndicator extension (preinstalled
+on Ubuntu); on Linux a click opens the menu and there is no tooltip.
+ND104 Studio can also be opened from the app menu.
+³ Needs the udev rule (the packages install it) – see
+[Linux (preview)](#linux-preview-in-development).
+⁴ Planned: the AppImage updates itself; `.deb`/`.rpm` packages are updated
+by the system's package manager.
+
+The same overview is in the app: **Device → Operating systems**.
+
 ## PC lighting software (OpenRGB, SignalRGB)
 
 Besides its own effects, the ND104 can let a lighting program on the PC
@@ -240,7 +273,8 @@ lighting returns.
 
 - ❌ **Not every feature on every connection** – see
   [Connection modes](#connection-modes).
-- ❌ **No Linux / macOS support.** Windows 10/11 only.
+- ❌ **No macOS support.** Windows 10/11; Linux in preview (see
+  [Platform support](#platform-support)).
 - ❌ **No firmware flashing.** It never downloads, installs or modifies firmware.
   It only tells you an update exists.
 - ❌ **No risky communication.** Time, weather, lighting, the own picture and

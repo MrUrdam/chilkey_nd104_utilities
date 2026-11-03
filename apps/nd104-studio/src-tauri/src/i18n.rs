@@ -2,6 +2,11 @@
 //!
 //! Locale files live in `apps/nd104-studio/locales/` and are compiled in.
 //! A new language = new JSON file + entry in [`LANGUAGES`] and [`source`].
+//!
+//! Platform variants: a key with `@linux` (or another `std::env::consts::OS`
+//! name) replaces the plain key on that platform, e.g. `menu.autostart`
+//! "Start with Windows" / `menu.autostart@linux` "Start at login". The tray
+//! and the settings window both get the resolved texts.
 
 use std::collections::HashMap;
 
@@ -18,7 +23,24 @@ fn source(code: &str) -> &'static str {
 }
 
 fn parse(code: &str) -> HashMap<String, String> {
-    serde_json::from_str(source(code)).expect("locale files are valid JSON (tested)")
+    let texts = serde_json::from_str(source(code)).expect("locale files are valid JSON (tested)");
+    for_platform(texts, std::env::consts::OS)
+}
+
+/// Applies the `key@<os>` variants of `os` and drops all variants.
+fn for_platform(texts: HashMap<String, String>, os: &str) -> HashMap<String, String> {
+    let suffix = format!("@{os}");
+    let mut resolved: HashMap<String, String> = texts
+        .iter()
+        .filter(|(k, _)| !k.contains('@'))
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+    for (key, value) in texts {
+        if let Some(base) = key.strip_suffix(&suffix) {
+            resolved.insert(base.to_string(), value);
+        }
+    }
+    resolved
 }
 
 /// Resolves the `language` setting (`auto`, `de`, `en`) to a language code.
@@ -83,6 +105,34 @@ mod tests {
             let mut keys: Vec<_> = parse(code).into_keys().collect();
             keys.sort();
             assert_eq!(keys, reference, "locale {code} differs from {FALLBACK}");
+        }
+    }
+
+    #[test]
+    fn platform_variants_replace_the_plain_text() {
+        let texts: HashMap<String, String> = [
+            ("menu.autostart", "Start with Windows"),
+            ("menu.autostart@linux", "Start at login"),
+            ("menu.quit", "Quit"),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+        let linux = for_platform(texts.clone(), "linux");
+        assert_eq!(linux["menu.autostart"], "Start at login");
+        assert_eq!(linux["menu.quit"], "Quit");
+        assert!(!linux.contains_key("menu.autostart@linux"));
+        let windows = for_platform(texts, "windows");
+        assert_eq!(windows["menu.autostart"], "Start with Windows");
+        assert!(!windows.keys().any(|k| k.contains('@')));
+    }
+
+    #[test]
+    fn every_platform_variant_has_a_plain_text() {
+        let raw: HashMap<String, String> = serde_json::from_str(source(FALLBACK)).unwrap();
+        for key in raw.keys().filter(|k| k.contains('@')) {
+            let base = key.split('@').next().unwrap();
+            assert!(raw.contains_key(base), "{key} has no plain {base}");
         }
     }
 

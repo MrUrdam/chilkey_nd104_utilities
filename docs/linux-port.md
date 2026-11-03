@@ -2,7 +2,11 @@
 
 > Branch: **`linux-port`** (from `main` at 2.3.1). Status: **phase 1 done**
 > (2026-11-03) – the workspace builds, lints and tests on Ubuntu 22.04 in CI.
-> **Phase 2 implemented**, waiting for the test with the keyboard in the VM.
+> **Phase 2 implemented**; first test in the VM (Ubuntu 24.04, keyboard by
+> cable, 2026-11-03): without the udev rule "found, no access", with the rule
+> firmware verified (keyboard V3.0.14, screen V1.2.4) without replugging.
+> Still to test: the app window, writes (time, weather, lighting, keymap),
+> 2.4 GHz receiver, Bluetooth.
 > Phases 3–5 open. Windows stays the reference platform; every step keeps
 > the Windows build, tests and releases unchanged.
 
@@ -115,6 +119,12 @@ Implemented (2026-11-03):
 
 ### Phase 3 – desktop integration
 
+Done early (2026-11-03): platform-specific texts (`key@linux` variants in
+the locale files, resolved by the backend for tray and UI – e.g. "Start at
+login" instead of "Start with Windows", Secret Service instead of
+Credential Manager); the in-app table **Operating systems**; SignalRGB
+hidden on Linux.
+
 - Tray menu: "Open ND104 Studio" first; connection/time/weather as disabled
   lines (no tooltip on Linux).
 - `.desktop` launcher (app menu/Activities); second start opens the window.
@@ -168,7 +178,7 @@ itself from one test release to the next in the VM.
 | Document | Change |
 |---|---|
 | `README.md` (root) | Platforms: Windows 10/11 and Linux; disclaimer/test scope per platform |
-| `apps/nd104-studio/README.md` | New **Platform support** matrix (Windows / Linux, like the connection matrix – the one place for it); *Requirements* and *Installation* per platform (.deb, .rpm, AppImage, udev rule, `plugdev` variant); *Updating* per install type; *Files* (XDG paths: `~/.config/nd104-studio`, `~/.local/share/nd104-studio`); tray/launcher notes; *Troubleshooting*: "found, no access", missing tray on GNOME, NVIDIA/Wayland; *Building from source* on Linux |
+| `apps/nd104-studio/README.md` | ✅ New **Platform support** matrix (Windows / Linux, like the connection matrix – the one place for it; in the app: Device → Operating systems); *Requirements* and *Installation* per platform (.deb, .rpm, AppImage, udev rule, `plugdev` variant); *Updating* per install type; *Files* (XDG paths: `~/.config/nd104-studio`, `~/.local/share/nd104-studio`); tray/launcher notes; *Troubleshooting*: "found, no access", missing tray on GNOME, NVIDIA/Wayland; *Building from source* on Linux |
 | Connection matrix | unchanged rows; footnote where Linux differs (Bluetooth battery via BlueZ, SignalRGB Windows only) |
 | `crates/nd104-probe/README.md` | Linux usage with the udev rule |
 | `docs/protocol.md` | hidraw notes (report ID handling on Linux) |
