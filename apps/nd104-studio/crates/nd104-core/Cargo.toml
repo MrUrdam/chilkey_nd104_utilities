@@ -11,16 +11,24 @@ rust-version.workspace = true
 nd104-protocol.workspace = true
 anyhow.workspace = true
 directories.workspace = true
-hidapi.workspace = true
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp"] }
 jiff.workspace = true
-keyring.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 toml.workspace = true
 tracing.workspace = true
+
+# HID and the credential store per platform: Windows' own APIs; on Linux
+# hidraw (pure-Rust sysfs parsing, no libudev) and the Secret Service.
+[target.'cfg(windows)'.dependencies]
+hidapi = { workspace = true, features = ["windows-native"] }
+keyring = { workspace = true, features = ["windows-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+hidapi = { workspace = true, features = ["linux-native-basic-udev"] }
+keyring = { workspace = true, features = ["linux-native-sync-persistent", "crypto-rust"] }
 
 [target.'cfg(windows)'.dependencies.windows]
 version = "0.62"

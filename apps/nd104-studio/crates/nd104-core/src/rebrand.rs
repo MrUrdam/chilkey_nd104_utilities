@@ -27,6 +27,10 @@ pub const IDENTIFIER: &str = "io.github.mrurdam.nd104-studio";
 
 /// Moves everything over; returns what was done (for the log).
 pub fn migrate() -> Vec<String> {
+    // nd104-sync only ever existed on Windows
+    if !cfg!(windows) {
+        return Vec::new();
+    }
     let mut done = Vec::new();
     let mut note = |what: &str, result: Result<usize>| match result {
         Ok(0) => {}
