@@ -25,7 +25,10 @@
 > channel now drops reports of other collections unlogged. BlueZ reports
 > the battery (`Battery1.Percentage`), the app shows it. Open: `nd104-probe descriptors`
 > stalls on Linux (diagnostic tool only).
-> Phases 3–5 open. Windows stays the reference platform; every step keeps
+> **Phase 3 and Phase 4 done** (desktop integration; packaging, release
+> workflow and in-app update per install type) – first Linux release
+> **2.4.0-beta.1** (2026-11-03). **Phase 5** (install tests, manual VM round,
+> merge to `main`) open. Windows stays the reference platform; every step keeps
 > the Windows build, tests and releases unchanged.
 
 ## 1. Starting point – what was checked
@@ -174,8 +177,32 @@ the app is reachable, starts with the session and keeps its API key.
   `npx tauri build --bundles deb,rpm,appimage`, add the files to
   `SHA256SUMS.txt` and the release notes' download list.
 
-**Done:** a test tag builds Windows and Linux assets; the AppImage updates
+**Done:** a tag builds Windows and Linux assets; the AppImage updates
 itself from one test release to the next in the VM.
+
+Implemented (2026-11-03), released as **2.4.0-beta.1**:
+- `tauri.conf.json`: `deb`/`rpm`/`appimage` targets, runtime deps
+  (`libwebkit2gtk-4.1-0`, `libayatana-appindicator3-1`, `librsvg2-2`), the udev
+  rule shipped to `/usr/lib/udev/rules.d` with `postinst`/`postrm` scripts
+  (`udevadm control --reload && udevadm trigger`); the "Wired USB only"
+  description fixed.
+- `self_update.rs` / `app_update.rs`: install-type-aware update – the Windows
+  setup and the Linux AppImage (`$APPIMAGE`) replace themselves and restart;
+  `.deb`/`.rpm` notify only. New AppImage release asset
+  (`nd104-studio_<version>_amd64.AppImage`).
+- Release workflow rebuilt as `prepare → build-windows + build-linux →
+  publish` with one `SHA256SUMS.txt` over both platforms and a download list
+  built from the files actually produced.
+- Verified in the VM: the `.deb` (ships the udev rule, maintainer scripts and
+  deps) and the AppImage build at `2.4.0-beta.1`. The **`.rpm` is built only
+  for plain `X.Y.Z` versions** – RPM's version field rejects a semver
+  pre-release – so betas ship `.deb` + AppImage + tarball (use the AppImage on
+  Fedora/openSUSE).
+
+Open: AppImage self-update verified across two releases (beta.1 → a later
+build). Betas are GitHub pre-releases, which the in-app check ignores, so a
+**beta channel** (a pre-release install also sees newer pre-releases) is a
+small follow-up for that test.
 
 ### Phase 5 – install tests and release
 
