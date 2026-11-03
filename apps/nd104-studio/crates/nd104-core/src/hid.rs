@@ -347,12 +347,23 @@ fn bluetooth_connected(path: &str) -> bool {
     true
 }
 
-/// The report ID of a collection from its report descriptor: the first
-/// Report ID item (tag `0x84`, one data byte → `85 nn`), 0 without one.
-/// Walks the items properly, so a data byte `0x85` is not mistaken for it.
+/// The report ID of one top-level collection (`usage_page:usage`) in a
+/// report descriptor: the first Report ID item (`85 nn`) inside that
+/// collection, 0 without one.
+///
+/// On Linux one hidraw device covers a whole USB interface, so its
+/// descriptor holds several collections – the ND104's interface 4 has five
+/// (report IDs 03, 06, 02, 04 and 05 for the lighting channel), and over
+/// Bluetooth the keyboard collections come before the command channel
+/// (ID 2). Taking the first ID of the whole descriptor would pick the wrong
+/// one. Walks the items properly (no data byte is mistaken for an item).
 #[cfg_attr(windows, allow(dead_code))]
-pub fn report_id_from_descriptor(desc: &[u8]) -> u8 {
+pub fn report_id_for_collection(desc: &[u8], usage_page: u16, usage: u16) -> u8 {
     let mut i = 0;
+    let mut page = 0u16;
+    let mut last_usage: Option<u16> = None;
+    let mut depth = 0u32;
+    let mut inside = false;
     while i < desc.len() {
         let prefix = desc[i];
         if prefix == 0xFE {
@@ -365,8 +376,45 @@ pub fn report_id_from_descriptor(desc: &[u8]) -> u8 {
             3 => 4,
             n => usize::from(n),
         };
-        if prefix & 0xFC == 0x84 && size >= 1 {
-            return desc.get(i + 1).copied().unwrap_or(0);
+        let data = desc.get(i + 1..i + 1 + size).unwrap_or(&[]);
+        let value = data
+            .iter()
+            .rev()
+            .fold(0u32, |v, &b| (v << 8) | u32::from(b));
+        match prefix & 0xFC {
+            // Usage Page (global)
+            0x04 => page = value as u16,
+            // Usage (local); a 4-byte usage carries its own page
+            0x08 => {
+                last_usage = Some(if size == 4 {
+                    (value & 0xFFFF) as u16
+                } else {
+                    value as u16
+                });
+                if size == 4 {
+                    page = (value >> 16) as u16;
+                }
+            }
+            // Collection
+            0xA0 => {
+                if depth == 0 {
+                    inside = page == usage_page && last_usage == Some(usage);
+                }
+                depth += 1;
+                last_usage = None;
+            }
+            // End Collection
+            0xC0 => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    inside = false;
+                }
+            }
+            // Report ID (global)
+            0x84 if inside && size >= 1 => return data[0],
+            // Main items (Input/Output/Feature) end the local usages
+            0x80 | 0x90 | 0xB0 => last_usage = None,
+            _ => {}
         }
         i += 1 + size;
     }
@@ -477,12 +525,13 @@ impl HidBackend for HidapiBackend {
             .with_context(|| format!("cannot open {:04x}:{:04x}", info.vid, info.pid))?;
         // the collection's report ID from its descriptor: none for the
         // command channel over USB, 2 over Bluetooth, 5 for the lighting
-        // channel (docs/protocol.md § 5.4, § 5.5)
+        // channel (docs/protocol.md § 5.4, § 5.5). The hidraw descriptor
+        // can hold several collections – take the one being opened.
         let mut desc = [0u8; 4096];
         let len = device
             .get_report_descriptor(&mut desc)
             .context("cannot read the report descriptor")?;
-        let report_id = report_id_from_descriptor(&desc[..len]);
+        let report_id = report_id_for_collection(&desc[..len], info.usage_page, info.usage);
         Ok(Box::new(HidapiChannel { device, report_id }))
     }
 }
@@ -732,22 +781,34 @@ mod tests {
     }
 
     #[test]
-    fn report_id_comes_from_the_descriptor_items() {
-        // USB command channel: no report ID
+    fn report_id_is_taken_from_the_right_collection() {
+        // USB command channel alone: no report ID
         let usb = [
             0x06, 0x60, 0xFF, 0x09, 0x61, 0xA1, 0x01, 0x09, 0x62, 0x15, 0x00, 0x26, 0xFF, 0x00,
             0x95, 0x20, 0x75, 0x08, 0x81, 0x02, 0xC0,
         ];
-        assert_eq!(report_id_from_descriptor(&usb), 0);
-        // lighting channel: report ID 5
-        let light = [
+        assert_eq!(report_id_for_collection(&usb, 0xFF60, 0x61), 0);
+        // Linux hidraw of interface 4: system control (ID 3) first, then
+        // the lighting channel (ID 5)
+        let interface4 = [
+            0x05, 0x01, 0x09, 0x80, 0xA1, 0x01, 0x85, 0x03, 0x19, 0x81, 0x29, 0x83, 0x15, 0x00,
+            0x25, 0x01, 0x75, 0x01, 0x95, 0x03, 0x81, 0x02, 0x95, 0x05, 0x81, 0x01, 0xC0, //
             0x06, 0x59, 0xFF, 0x09, 0x60, 0xA1, 0x01, 0x85, 0x05, 0x09, 0x62, 0x15, 0x00, 0x26,
-            0xFF, 0x00, 0x75, 0x08, 0x95, 0x3F, 0x81, 0x02, 0xC0,
+            0xFF, 0x00, 0x75, 0x08, 0x95, 0x3F, 0x81, 0x02, 0x09, 0x63, 0x91, 0x02, 0xC0,
         ];
-        assert_eq!(report_id_from_descriptor(&light), 5);
-        // a data byte 0x85 (here: usage 0x85) is not a report ID
-        let data = [0x09, 0x85, 0xA1, 0x01, 0x85, 0x02, 0xC0];
-        assert_eq!(report_id_from_descriptor(&data), 2);
+        assert_eq!(report_id_for_collection(&interface4, 0xFF59, 0x60), 5);
+        assert_eq!(report_id_for_collection(&interface4, 0x0001, 0x80), 3);
+        assert_eq!(
+            report_id_for_collection(&interface4, 0x000C, 0x01),
+            0,
+            "not there"
+        );
+        // nested collections and a data byte 0x85 do not confuse it
+        let nested = [
+            0x09, 0x85, 0x06, 0x60, 0xFF, 0x09, 0x61, 0xA1, 0x01, 0xA1, 0x02, 0x85, 0x02, 0xC0,
+            0xC0,
+        ];
+        assert_eq!(report_id_for_collection(&nested, 0xFF60, 0x61), 2);
     }
 
     #[test]
