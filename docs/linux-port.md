@@ -14,7 +14,12 @@
 > changed and confirmed through the receiver. **Own picture** sent over USB
 > (3 pages, stored on the screen; picked with the GTK file dialog);
 > **keymap** written and undone, each with an automatic backup and verified
-> by reading back. Still to test: OpenRGB interface, Bluetooth.
+> by reading back. **OpenRGB interface**: OpenRGB 1.1 (Linux AppImage) as
+> SDK client on 127.0.0.1:6743 colours the keyboard – after a fix: on Linux
+> one hidraw device holds all collections of a USB interface, so the report
+> ID is now taken from the opened collection (interface 4: ID 5, not the
+> first ID 3). Still to test: Bluetooth. Open: `nd104-probe descriptors`
+> stalls on Linux (diagnostic tool only).
 > Phases 3–5 open. Windows stays the reference platform; every step keeps
 > the Windows build, tests and releases unchanged.
 
