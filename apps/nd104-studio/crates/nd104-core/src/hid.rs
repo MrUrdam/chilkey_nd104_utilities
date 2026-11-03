@@ -745,18 +745,43 @@ impl HidChannel for HidapiChannel {
     }
 
     fn read(&mut self, timeout: Duration) -> Result<Option<Vec<u8>>> {
+        let deadline = std::time::Instant::now() + timeout;
         let mut buf = [0u8; 65];
-        let ms = i32::try_from(timeout.as_millis()).unwrap_or(i32::MAX);
-        match self
-            .device
-            .read_timeout(&mut buf, ms)
-            .context("HID read failed")?
-        {
-            0 => Ok(None),
-            // with a report ID, Windows puts it in front of the data
-            n if self.report_id != 0 && buf[0] == self.report_id => Ok(Some(buf[1..n].to_vec())),
-            n => Ok(Some(buf[..n].to_vec())),
+        loop {
+            let left = deadline.saturating_duration_since(std::time::Instant::now());
+            let ms = i32::try_from(left.as_millis()).unwrap_or(i32::MAX);
+            let n = self
+                .device
+                .read_timeout(&mut buf, ms)
+                .context("HID read failed")?;
+            if n == 0 {
+                return Ok(None);
+            }
+            // another collection of the same hidraw device (e.g. a key
+            // press): never passed on or logged
+            if let Some(report) = own_report(&buf[..n], self.report_id) {
+                return Ok(Some(report.to_vec()));
+            }
+            if left.is_zero() {
+                return Ok(None);
+            }
         }
+    }
+}
+
+/// The part of a report read from a hidraw device that belongs to the opened
+/// collection, without its report ID; `None` for reports of other
+/// collections. On Linux one hidraw device carries every collection of a
+/// USB interface (over Bluetooth: of the whole keyboard), so key presses
+/// (report ID 1) arrive next to the command channel's answers (ID 2) –
+/// they must not be taken for answers. A collection without report ID is
+/// alone on its device (the command channel over USB).
+#[cfg_attr(windows, allow(dead_code))]
+fn own_report(report: &[u8], report_id: u8) -> Option<&[u8]> {
+    match report.split_first() {
+        _ if report_id == 0 => Some(report),
+        Some((&id, data)) if id == report_id => Some(data),
+        _ => None,
     }
 }
 
@@ -778,6 +803,17 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn reports_of_other_collections_are_dropped() {
+        // Bluetooth: a key press (ID 1) next to the command channel (ID 2)
+        assert_eq!(own_report(&[0x01, 0x00, 0x00, 0x18], 2), None);
+        assert_eq!(own_report(&[0x02, 0x11, 0x02], 2), Some(&[0x11, 0x02][..]));
+        // lighting channel (ID 5) on interface 4 next to the mouse (ID 3)
+        assert_eq!(own_report(&[0x03, 0x01], 5), None);
+        // command channel over USB: no report ID, the report as it is
+        assert_eq!(own_report(&[0x11, 0x02], 0), Some(&[0x11, 0x02][..]));
     }
 
     #[test]
