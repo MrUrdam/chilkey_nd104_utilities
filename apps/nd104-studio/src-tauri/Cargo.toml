@@ -32,6 +32,10 @@ tauri-plugin-notification = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 
+# Linux: Bluetooth connection and battery from BlueZ (D-Bus, system bus)
+[target.'cfg(target_os = "linux")'.dependencies]
+dbus = "0.9"
+
 [target.'cfg(windows)'.dependencies.windows]
 version = "0.62"
 features = [

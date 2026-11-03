@@ -1,7 +1,9 @@
 # ND104 Studio on Linux – implementation plan
 
-> Branch: **`linux-port`** (from `main` at 2.3.1). Status: plan, nothing
-> implemented yet. Windows stays the reference platform; every step keeps
+> Branch: **`linux-port`** (from `main` at 2.3.1). Status: **phase 1 done**
+> (2026-11-03) – the workspace builds, lints and tests on Ubuntu 22.04 in CI.
+> **Phase 2 implemented**, waiting for the test with the keyboard in the VM.
+> Phases 3–5 open. Windows stays the reference platform; every step keeps
 > the Windows build, tests and releases unchanged.
 
 ## 1. Starting point – what was checked
@@ -96,6 +98,20 @@ Each phase ends with green CI (Windows **and** Linux) and is a commit on
 **Done (in the VM):** keyboard by cable, receiver and – if a dongle is
 available – Bluetooth are found without sudo; time, weather, lighting,
 keymap, settings, picture and the OpenRGB interface work.
+
+Implemented (2026-11-03):
+- `HidInterfaceInfo.bus` (USB / Bluetooth); Windows from the path, Linux
+  from hidapi's `bus_type()`. Linux enumeration straight from hidapi.
+- Report ID from the descriptor for every collection (a proper item
+  parser) – needed for the lighting channel (ID 5) over USB on Linux.
+- `DeviceState::NoAccess { model_name, path }`: once in the log and as a
+  notification, shown in tray, sidebar, Dashboard and Device page with the
+  fix; retried every poll. Mock test.
+- `apps/nd104-studio/linux/70-nd104-studio.rules` (+ `-plugdev` variant);
+  a test checks that they cover every supported device.
+- Bluetooth status from BlueZ (`dbus` crate, `GetManagedObjects`:
+  `Device1.Connected/Alias/Modalias`, `Battery1.Percentage`); the
+  selection logic is tested on every platform.
 
 ### Phase 3 – desktop integration
 

@@ -64,6 +64,8 @@ export interface FirmwareInfo {
 
 export type DeviceState =
   | { kind: "not_connected" }
+  /** Found, but the system does not allow opening it (Linux: udev rule missing). */
+  | { kind: "no_access"; model_name: string; path: string }
   | {
       kind: "ready";
       /** USB cable (everything), Bluetooth or the 2.4 GHz receiver (no own picture). */

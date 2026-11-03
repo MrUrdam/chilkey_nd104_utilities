@@ -572,5 +572,10 @@
   "ui.orgb.note": "Colours are not stored in the keyboard. When the last program disconnects, the keyboard's own lighting returns. Use a port other than OpenRGB's own server (6742).",
   "ui.err.port": "Between 1024 and 65535.",
   "ui.pcl.blocked_hint": "Allow it to use OpenRGB, Artemis, Aurora (through ND104 Studio's OpenRGB interface) or SignalRGB (with the plugin).",
-  "ui.pcl.server_waits": "The OpenRGB interface is switched on, but has no effect while PC lighting software is blocked."
+  "ui.pcl.server_waits": "The OpenRGB interface is switched on, but has no effect while PC lighting software is blocked.",
+  "status.no_access": "Keyboard found, no access (udev rule missing)",
+  "notify.no_access_title": "Keyboard found – no access",
+  "notify.no_access_body": "The system does not let ND104 Studio open {path}. Install the udev rule (see README → Linux), then unplug and replug the keyboard.",
+  "ui.device.no_access": "Found – no access",
+  "ui.device.no_access_text": "The keyboard is connected, but the system does not let ND104 Studio open it ({path}). On Linux the udev rule is missing: the packages install it; for the AppImage or a source build copy 70-nd104-studio.rules to /etc/udev/rules.d/, run \"sudo udevadm control --reload && sudo udevadm trigger\", then unplug and replug the keyboard. ND104 Studio connects by itself once access is granted."
 }

@@ -526,6 +526,27 @@ MSI installation: uninstall it in Windows **Apps** as usual; the configuration
 and logs are kept. For the portable zip, untick "Start with Windows" first,
 then delete the folder.
 
+### Linux (preview, in development)
+
+ND104 Studio is being ported to Linux on the branch `linux-port` (plan:
+[docs/linux-port.md](../../docs/linux-port.md)). There are no Linux packages
+yet; building from source works on Ubuntu 22.04 or newer.
+
+On Linux the keyboard is reached through `/dev/hidraw*`, which belongs to
+root. A **udev rule** gives the logged-in user access:
+
+```bash
+sudo cp linux/70-nd104-studio.rules /etc/udev/rules.d/
+sudo udevadm control --reload && sudo udevadm trigger
+```
+
+Then unplug and replug the keyboard (and the 2.4 GHz receiver). Systems
+without systemd-logind use
+[`linux/70-nd104-studio-plugdev.rules`](linux/70-nd104-studio-plugdev.rules)
+instead (group `plugdev`). Without a rule, ND104 Studio shows **"Found – no
+access"** and connects by itself once the rule is in place. Bluetooth status
+and battery come from BlueZ.
+
 ## Updating
 
 **Update check:** ND104 Studio asks GitHub for the newest release 30 seconds
@@ -709,6 +730,7 @@ No telemetry, no analytics, no IP-based location unless you turn it on.
 | Problem | Fix |
 |---|---|
 | "Not connected" | Use a connection from [Connection modes](#connection-modes); try another USB port; avoid unpowered hubs; wake the keyboard by pressing a key |
+| "Found – no access" (Linux) | The udev rule is missing – see [Linux](#linux-preview-in-development); ND104 Studio connects by itself once it is installed |
 | Over Bluetooth or 2.4 GHz it stays at "Connecting …" / "Not connected" | The first time, connect the keyboard once with the USB cable; ND104 Studio remembers the firmware, then Bluetooth and 2.4 GHz work. Over 2.4 GHz also check that the keyboard is switched to 2.4 GHz (Fn + V) and awake |
 | Over Bluetooth it shows "Connecting …" now and then | The keyboard is asleep; it connects again as soon as you press a key |
 | Amber icon / locked | A protocol check failed (the reason is in the tray status line, the notification and the log). Re-connect the cable or use "Check keyboard again"; if it stays locked, your firmware behaves differently – please open an issue with the log |

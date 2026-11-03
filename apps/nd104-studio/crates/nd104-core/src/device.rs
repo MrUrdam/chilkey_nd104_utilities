@@ -133,6 +133,14 @@ pub enum DeviceState {
         firmware: Vec<FirmwareInfo>,
         reason: String,
     },
+    /// The keyboard is there, but the system does not let ND104 Studio open
+    /// it (Linux: the udev rule is missing). Not a lock: checked again on
+    /// every poll, so it connects as soon as access is granted.
+    NoAccess {
+        model_name: &'static str,
+        /// The device ND104 Studio may not open (e.g. `/dev/hidraw3`).
+        path: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -180,6 +188,8 @@ pub struct DeviceManager {
     /// Over Bluetooth, waiting for one USB connection (screen unknown);
     /// said once in the events, not every poll.
     waiting_for_usb: bool,
+    /// The device whose missing access was already reported (said once).
+    no_access_reported: Option<String>,
 }
 
 impl DeviceManager {
@@ -196,6 +206,7 @@ impl DeviceManager {
             wireless_retry: None,
             locked_over: None,
             waiting_for_usb: false,
+            no_access_reported: None,
         }
     }
 
@@ -270,6 +281,23 @@ impl DeviceManager {
         self.events.push(DeviceEvent { level, message });
     }
 
+    /// The system refused to open `path` (permissions): a state of its own
+    /// with the fix, not a lock – the next poll tries again.
+    fn no_access(&mut self, model_name: &'static str, path: &str) {
+        self.active = None;
+        self.state = DeviceState::NoAccess {
+            model_name,
+            path: path.to_owned(),
+        };
+        if self.no_access_reported.as_deref() != Some(path) {
+            self.no_access_reported = Some(path.to_owned());
+            self.event(
+                EventLevel::Warning,
+                format!("{model_name} found, but no access to {path} – the udev rule is missing (see README → Linux)"),
+            );
+        }
+    }
+
     fn lock(&mut self, reason: impl Into<String>) {
         let reason = reason.into();
         let (model_name, firmware) = match &self.state {
@@ -285,6 +313,7 @@ impl DeviceManager {
                     .map(|a| self.models[a.model].display_name()),
                 Vec::new(),
             ),
+            DeviceState::NoAccess { model_name, .. } => (Some(*model_name), Vec::new()),
         };
         self.event(EventLevel::Error, format!("Locked: {reason}"));
         self.locked_over = self.active.as_ref().map(|a| a.connection);
@@ -393,6 +422,10 @@ impl DeviceManager {
                 self.event(EventLevel::Info, "Keyboard re-connected – checking again");
             }
         }
+        if matches!(self.state, DeviceState::NoAccess { .. }) {
+            // access may have been granted (udev rule installed): try again
+            self.state = DeviceState::NotConnected;
+        }
         if matches!(self.state, DeviceState::NotConnected) && !usb_complete {
             if let Some(model) = found_bluetooth {
                 self.connect_bluetooth(model, &bluetooth);
@@ -431,6 +464,8 @@ impl DeviceManager {
                 self.connect(model, &interfaces)
             }
             (Some(_), DeviceState::NotConnected) => {}
+            // reset to NotConnected above; set again only by `connect`
+            (Some(_), DeviceState::NoAccess { .. }) => {}
         }
         self.state != before
     }
@@ -486,6 +521,10 @@ impl DeviceManager {
                             .channels
                             .insert(spec.role, (channel, spec.report_len));
                     }
+                }
+                Err(e) if permission_denied(&e) => {
+                    self.no_access(name, &info.path);
+                    return;
                 }
                 Err(e) => {
                     self.lock(format!("P1: cannot open {name} {}: {e:#}", spec.role));
@@ -573,6 +612,10 @@ impl DeviceManager {
         let report_len = spec.report_len;
         let channel = match self.backend.open(info) {
             Ok(c) => c,
+            Err(e) if permission_denied(&e) => {
+                self.no_access(name, &info.path);
+                return;
+            }
             // the Bluetooth link may just be rebuilding: try again next poll
             Err(e) => {
                 tracing::debug!("cannot open {name} over Bluetooth yet: {e:#}");
@@ -710,6 +753,11 @@ impl DeviceManager {
             .find(|q| q.role == Role::Keyboard);
         let channel = match self.backend.open(info) {
             Ok(c) => c,
+            Err(e) if permission_denied(&e) => {
+                self.no_access(name, &info.path);
+                self.retry_wireless_later();
+                return;
+            }
             Err(e) => {
                 tracing::debug!("cannot open the 2.4 GHz receiver: {e:#}");
                 self.retry_wireless_later();
@@ -1429,6 +1477,18 @@ impl DeviceManager {
     }
 }
 
+/// Opening failed because the system does not allow it (Linux: no udev rule,
+/// `/dev/hidrawN` belongs to root).
+fn permission_denied(e: &anyhow::Error) -> bool {
+    e.chain().any(|c| {
+        c.downcast_ref::<std::io::Error>()
+            .is_some_and(|io| io.kind() == std::io::ErrorKind::PermissionDenied)
+    }) || {
+        let text = format!("{e:#}");
+        text.contains("Permission denied") || text.contains("os error 13")
+    }
+}
+
 /// Hex dump without trailing zero padding, e.g. `1c 03 00 … c7`.
 fn hex(report: &[u8]) -> String {
     let end = report.iter().rposition(|&b| b != 0).map_or(0, |i| i + 1);
@@ -1717,6 +1777,8 @@ mod tests {
         /// The keyboard is linked to the receiver (otherwise only the
         /// receiver answers its version query).
         on_air: bool,
+        /// Opening is refused like on Linux without the udev rule.
+        no_access: bool,
         present: bool,
         keyboard_fw: &'static str,
         behaviour: Behaviour,
@@ -1755,6 +1817,7 @@ mod tests {
             interface_number: n,
             path: format!("{vid:04x}:{pid:04x}"),
             product: None,
+            bus: crate::hid::Bus::Usb,
         }
     }
 
@@ -1766,6 +1829,7 @@ mod tests {
                 keyboard.path =
                     r"\\?\HID#{00001812-0000-1000-8000-00805f9b34fb}_Dev_VID&016d67_PID&016c&Col02"
                         .into();
+                keyboard.bus = crate::hid::Bus::Bluetooth;
                 let mut list = vec![keyboard, iface(0x5542, 0x0001, 0)];
                 if s.cable_too {
                     list.push(iface(0x6D67, 0x016C, 1));
@@ -1782,6 +1846,12 @@ mod tests {
             Ok(list)
         }
         fn open(&mut self, info: &HidInterfaceInfo) -> Result<Box<dyn HidChannel>> {
+            if self.0.lock().unwrap().no_access {
+                return Err(anyhow!(
+                    "cannot open {}: Permission denied (os error 13)",
+                    info.path
+                ));
+            }
             let receiver = info.vid == 0x6D66;
             let role = if info.vid == 0x6D67 || receiver {
                 Role::Keyboard
@@ -1990,6 +2060,7 @@ mod tests {
             link_down: false,
             receiver: false,
             on_air: false,
+            no_access: false,
             present: true,
             keyboard_fw,
             behaviour,
@@ -2266,6 +2337,27 @@ mod tests {
             s.present = true;
         }
         m.poll();
+        m.poll();
+        assert_eq!(connection(&m), Some(Connection::Usb));
+    }
+
+    #[test]
+    fn missing_access_is_its_own_state_and_retried() {
+        let (mut m, shared) = manager(Behaviour::Normal, "3.0.14");
+        shared.lock().unwrap().no_access = true;
+        m.poll();
+        assert!(
+            matches!(m.state(), DeviceState::NoAccess { .. }),
+            "not a lock"
+        );
+        assert!(m
+            .take_events()
+            .iter()
+            .any(|e| e.message.contains("udev rule")));
+        m.poll();
+        assert!(m.take_events().is_empty(), "said once");
+        // the rule is installed: connects on the next poll
+        shared.lock().unwrap().no_access = false;
         m.poll();
         assert_eq!(connection(&m), Some(Connection::Usb));
     }

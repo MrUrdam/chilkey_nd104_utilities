@@ -572,5 +572,10 @@
   "ui.orgb.note": "Farben werden nicht in der Tastatur gespeichert. Trennt sich das letzte Programm, kehrt die eigene Beleuchtung der Tastatur zurück. Einen anderen Port als OpenRGBs eigenen Server (6742) verwenden.",
   "ui.err.port": "Zwischen 1024 und 65535.",
   "ui.pcl.blocked_hint": "Erlaube es, um OpenRGB, Artemis, Aurora (über die OpenRGB-Schnittstelle von ND104 Studio) oder SignalRGB (mit dem Plugin) zu nutzen.",
-  "ui.pcl.server_waits": "Die OpenRGB-Schnittstelle ist eingeschaltet, wirkt aber erst, wenn PC-Lichtsoftware erlaubt ist."
+  "ui.pcl.server_waits": "Die OpenRGB-Schnittstelle ist eingeschaltet, wirkt aber erst, wenn PC-Lichtsoftware erlaubt ist.",
+  "status.no_access": "Tastatur gefunden, kein Zugriff (udev-Regel fehlt)",
+  "notify.no_access_title": "Tastatur gefunden – kein Zugriff",
+  "notify.no_access_body": "Das System lässt ND104 Studio {path} nicht öffnen. Die udev-Regel installieren (siehe README → Linux), dann die Tastatur aus- und wieder einstecken.",
+  "ui.device.no_access": "Gefunden – kein Zugriff",
+  "ui.device.no_access_text": "Die Tastatur ist verbunden, aber das System lässt ND104 Studio sie nicht öffnen ({path}). Unter Linux fehlt die udev-Regel: Die Pakete installieren sie; für das AppImage oder einen eigenen Build 70-nd104-studio.rules nach /etc/udev/rules.d/ kopieren, „sudo udevadm control --reload && sudo udevadm trigger“ ausführen und die Tastatur aus- und wieder einstecken. ND104 Studio verbindet sich danach von selbst."
 }

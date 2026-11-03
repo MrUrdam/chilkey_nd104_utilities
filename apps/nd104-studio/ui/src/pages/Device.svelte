@@ -15,7 +15,9 @@
 
   let busy = $state(false);
   let model = $derived(info.models[0]);
-  let firmware = $derived<FirmwareInfo[]>(status.device.kind === "not_connected" ? [] : status.device.firmware);
+  let firmware = $derived<FirmwareInfo[]>(
+    status.device.kind === "ready" || status.device.kind === "locked" ? status.device.firmware : [],
+  );
 
   function verified(f: FirmwareInfo): boolean {
     return model.verified_firmware.some((v) => v.role === f.role && v.version === f.version);
@@ -73,6 +75,9 @@
         <dt>{t("ui.device.variant")}</dt>
         <dd>{t(`ui.variant.${status.device.screen_variant}`)}</dd>
       </dl>
+    {:else if status.device.kind === "no_access"}
+      <div class="state"><span class="led err"></span><strong>{t("ui.device.no_access")}</strong></div>
+      <div class="notice err selectable">{t("ui.device.no_access_text", { path: status.device.path })}</div>
     {:else if status.device.kind === "locked"}
       <div class="state"><span class="led err"></span><strong>{t("ui.device.locked")}</strong></div>
       <div class="notice err selectable">{status.device.reason}</div>

@@ -1,6 +1,7 @@
 //! Is the keyboard connected over Bluetooth, and what battery level does it
-//! report? Read from Windows' device properties – the same values as in
-//! "Settings → Bluetooth & devices". Nothing is sent to the keyboard.
+//! report? Read from the system – Windows' device properties (the values of
+//! "Settings → Bluetooth & devices"), on Linux BlueZ over D-Bus. Nothing is
+//! sent to the keyboard.
 //!
 //! The ND104 shows up as one Bluetooth LE device per slot ("ND104 BT1" …
 //! "ND104 BT3"); its GATT services carry the keyboard's USB IDs, e.g.
@@ -25,8 +26,8 @@ pub fn bluetooth_status() -> Option<BluetoothKeyboard> {
     imp::find()
 }
 
-/// "ND104 BT2" → 2. (Linux reads Bluetooth through BlueZ later – phase 2.)
-#[cfg(any(windows, test))]
+/// "ND104 BT2" → 2.
+#[cfg(any(windows, target_os = "linux", test))]
 fn slot_of(name: &str) -> Option<u8> {
     let at = name.rfind("BT")?;
     let digit = name[at + 2..].trim().chars().next()?.to_digit(10)?;
@@ -166,7 +167,80 @@ mod imp {
     }
 }
 
-#[cfg(not(windows))]
+/// One Bluetooth device as BlueZ describes it.
+#[cfg(any(target_os = "linux", test))]
+struct BlueZDevice {
+    name: String,
+    /// E.g. `usb:v6D67p016Cd0130` – the keyboard's USB IDs.
+    modalias: String,
+    connected: bool,
+    battery: Option<u8>,
+}
+
+/// The connected ND104 among BlueZ's devices (one per Bluetooth slot).
+#[cfg(any(target_os = "linux", test))]
+fn pick_bluez(devices: Vec<BlueZDevice>, ids: &[(u16, u16)]) -> Option<BluetoothKeyboard> {
+    let wanted: Vec<String> = ids
+        .iter()
+        .map(|(vid, pid)| format!("V{vid:04X}P{pid:04X}"))
+        .collect();
+    devices.into_iter().find_map(|d| {
+        let modalias = d.modalias.to_uppercase();
+        if !d.connected || !wanted.iter().any(|w| modalias.contains(w.as_str())) {
+            return None;
+        }
+        Some(BluetoothKeyboard {
+            slot: slot_of(&d.name),
+            battery: d.battery.filter(|&p| p <= 100),
+            name: d.name,
+        })
+    })
+}
+
+/// Linux: BlueZ on the system bus (`org.bluez.Device1`, `org.bluez.Battery1`).
+#[cfg(target_os = "linux")]
+mod imp {
+    use std::time::Duration;
+
+    use dbus::arg::prop_cast;
+    use dbus::blocking::stdintf::org_freedesktop_dbus::ObjectManager;
+    use dbus::blocking::Connection;
+    use nd104_core::model::{self, Role};
+
+    use super::{pick_bluez, BlueZDevice, BluetoothKeyboard};
+
+    pub fn find() -> Option<BluetoothKeyboard> {
+        let connection = Connection::new_system().ok()?;
+        let proxy = connection.with_proxy("org.bluez", "/", Duration::from_millis(500));
+        let objects = proxy.get_managed_objects().ok()?;
+        let devices = objects
+            .values()
+            .filter_map(|interfaces| {
+                let device = interfaces.get("org.bluez.Device1")?;
+                let text = |key: &str| prop_cast::<String>(device, key).cloned();
+                Some(BlueZDevice {
+                    name: text("Alias").or_else(|| text("Name")).unwrap_or_default(),
+                    modalias: text("Modalias").unwrap_or_default(),
+                    connected: prop_cast::<bool>(device, "Connected")
+                        .copied()
+                        .unwrap_or(false),
+                    battery: interfaces
+                        .get("org.bluez.Battery1")
+                        .and_then(|b| prop_cast::<u8>(b, "Percentage").copied()),
+                })
+            })
+            .collect();
+        let ids: Vec<(u16, u16)> = model::registry()
+            .iter()
+            .flat_map(|m| m.interfaces())
+            .filter(|i| i.role == Role::Keyboard)
+            .map(|i| (i.vid, i.pid))
+            .collect();
+        pick_bluez(devices, &ids)
+    }
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 mod imp {
     pub fn find() -> Option<super::BluetoothKeyboard> {
         None
@@ -175,7 +249,30 @@ mod imp {
 
 #[cfg(test)]
 mod tests {
-    use super::slot_of;
+    use super::{pick_bluez, slot_of, BlueZDevice};
+
+    #[test]
+    fn bluez_finds_the_connected_keyboard() {
+        let dev = |name: &str, modalias: &str, connected: bool| BlueZDevice {
+            name: name.into(),
+            modalias: modalias.into(),
+            connected,
+            battery: Some(87),
+        };
+        let ids = [(0x6D67, 0x016C)];
+        // paired but not connected (other slot), a mouse, the connected keyboard
+        let found = pick_bluez(
+            vec![
+                dev("ND104 BT1", "usb:v6D67p016Cd0130", false),
+                dev("Mouse", "usb:v046Dp4082d0001", true),
+                dev("ND104 BT2", "usb:v6D67p016Cd0130", true),
+            ],
+            &ids,
+        )
+        .unwrap();
+        assert_eq!((found.slot, found.battery), (Some(2), Some(87)));
+        assert!(pick_bluez(vec![dev("ND104 BT1", "usb:v6D67p016Cd0130", false)], &ids).is_none());
+    }
 
     #[test]
     fn slot_from_name() {

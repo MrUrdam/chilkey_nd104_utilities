@@ -419,6 +419,12 @@ fn print_device(state: &DeviceState) {
             }
             println!("Nothing is sent. Re-plug the keyboard or run again to re-check.");
         }
+        DeviceState::NoAccess { model_name, path } => {
+            println!("{model_name} found, but no access to {path}.");
+            println!(
+                "Install the udev rule (README → Linux), then unplug and replug the keyboard."
+            );
+        }
     }
 }
 
@@ -435,6 +441,7 @@ fn summary(s: &Status) -> String {
             }
         ),
         DeviceState::Locked { reason, .. } => format!("LOCKED: {reason}"),
+        DeviceState::NoAccess { path, .. } => format!("NO ACCESS to {path} (udev rule missing)"),
     };
     let time = s
         .last_sent_time

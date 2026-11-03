@@ -542,6 +542,12 @@ the firmware tries the SignalRGB commands (`21`–`28`) first and passes
 everything else to the OpenRGB dispatcher (`01`–`09`). Stock OpenRGB does not
 send that, so it would need its own controller or plugin.
 
+**Report IDs on Windows and Linux:** on both systems the report ID (or 0)
+is the first byte of every report read or written. ND104 Studio takes it
+from the collection's report descriptor (the first Report ID item, `85 nn`):
+none for the command channel over USB, `02` over Bluetooth, `05` for the
+lighting channel. On Linux (hidraw) the descriptor is read with hidapi.
+
 **SignalRGB on this channel** (checked on the keyboard 2026-11-02, reads with
 `nd104-probe rgb`, the stream with `nd104-probe rgb-test`):
 

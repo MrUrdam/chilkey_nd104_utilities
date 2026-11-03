@@ -335,6 +335,9 @@ export function installDemo(version: string) {
         return texts;
       case "get_status":
         // ?usb=0: no cable (e.g. together with ?bt=1)
+        // ?access=0: found, but no access (Linux without the udev rule)
+        if (params.get("access") === "0")
+          return { ...status, device: { kind: "no_access", model_name: "Chilkey ND104", path: "/dev/hidraw3" } };
         return params.get("usb") === "0" ? { ...status, device: { kind: "not_connected" } } : status;
       case "get_config":
         return structuredClone(config);

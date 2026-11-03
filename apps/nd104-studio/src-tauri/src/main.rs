@@ -435,6 +435,12 @@ async fn watch_status(app: AppHandle, mut status: watch::Receiver<Status>) {
         // Notifications on transitions only.
         match (&previous.device, &current.device) {
             (DeviceState::Locked { .. }, DeviceState::Locked { .. }) => {}
+            (DeviceState::NoAccess { .. }, DeviceState::NoAccess { .. }) => {}
+            (_, DeviceState::NoAccess { path, .. }) => notify(
+                &app,
+                &i18n.t("notify.no_access_title"),
+                &i18n.tf("notify.no_access_body", &[("path", path)]),
+            ),
             (_, DeviceState::Locked { reason, .. }) => notify(
                 &app,
                 &i18n.t("notify.locked_title"),

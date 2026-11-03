@@ -142,6 +142,9 @@
     if (status?.device.kind === "ready") {
       return { kind: "usb", icon: "plug" as const, text: t("ui.conn.usb"), title: t("ui.conn.usb_title") };
     }
+    if (status?.device.kind === "no_access") {
+      return { kind: "locked", icon: "lock" as const, text: t("ui.device.no_access"), title: status.device.path };
+    }
     if (status?.device.kind === "locked") {
       return { kind: "locked", icon: "lock" as const, text: t("ui.device.locked"), title: status.device.reason };
     }
@@ -157,6 +160,7 @@
       case "ready":
         return "ok";
       case "locked":
+      case "no_access":
         return "err";
       default:
         // Bluetooth works, but only for status and battery
@@ -234,6 +238,8 @@
           {#if bt.keyboard?.battery != null}<span class="muted">· {t("ui.bt.battery", { n: bt.keyboard.battery })}</span>{/if}
         {:else if status.device.kind === "locked"}
           <span class="badge err">{t("ui.device.locked")}</span>
+        {:else if status.device.kind === "no_access"}
+          <span class="badge err">{t("ui.device.no_access")}</span>
         {:else if bt.keyboard}
           <span class="badge">{t("ui.bt.badge")}</span>
           {#if bt.keyboard.battery !== null}<span class="muted">· {t("ui.bt.battery", { n: bt.keyboard.battery })}</span>{/if}

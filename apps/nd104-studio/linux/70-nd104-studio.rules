@@ -1,0 +1,14 @@
+# ND104 Studio – lets the logged-in user open the Chilkey ND104 without root.
+# Install: copy to /etc/udev/rules.d/ (packages use /usr/lib/udev/rules.d/),
+# then: sudo udevadm control --reload && sudo udevadm trigger
+# and unplug/replug the keyboard. Needs systemd-logind ("uaccess"); without
+# systemd use 70-nd104-studio-plugdev.rules instead.
+#
+# The parent HID device is named BUS:VID:PID.N – bus 0003 USB, 0005 Bluetooth.
+
+# keyboard (USB cable and Bluetooth)
+SUBSYSTEM=="hidraw", KERNELS=="*:6D67:016C.*", TAG+="uaccess"
+# display controller (USB cable)
+SUBSYSTEM=="hidraw", KERNELS=="*:5542:0001.*", TAG+="uaccess"
+# 2.4 GHz receiver
+SUBSYSTEM=="hidraw", KERNELS=="*:6D66:8572.*", TAG+="uaccess"

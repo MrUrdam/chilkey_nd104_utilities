@@ -29,7 +29,7 @@ impl TrayState {
     pub fn of(status: &Status) -> Self {
         match &status.device {
             DeviceState::NotConnected => TrayState::Off,
-            DeviceState::Locked { .. } => TrayState::Locked,
+            DeviceState::Locked { .. } | DeviceState::NoAccess { .. } => TrayState::Locked,
             DeviceState::Ready(_) if status.weather_stale => TrayState::Error,
             DeviceState::Ready(_) => TrayState::Ok,
         }
@@ -66,6 +66,7 @@ pub fn status_line(i18n: &I18n, status: &Status) -> String {
     let mut line = match &status.device {
         DeviceState::NotConnected => i18n.t("status.not_connected"),
         DeviceState::Locked { reason, .. } => i18n.tf("status.locked", &[("reason", reason)]),
+        DeviceState::NoAccess { .. } => i18n.t("status.no_access"),
         DeviceState::Ready(d) => {
             let model = d.model_name.trim_start_matches("Chilkey ");
             // "ND104 (Bluetooth)" when not on the cable
