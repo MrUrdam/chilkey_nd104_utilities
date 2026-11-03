@@ -5,8 +5,16 @@
 > **Phase 2 implemented**; first test in the VM (Ubuntu 24.04, keyboard by
 > cable, 2026-11-03): without the udev rule "found, no access", with the rule
 > firmware verified (keyboard V3.0.14, screen V1.2.4) without replugging.
-> Still to test: the app window, writes (time, weather, lighting, keymap),
-> 2.4 GHz receiver, Bluetooth.
+> App in the VM (Wayland, USB, 2026-11-03): connects, time and weather
+> sent, lighting changed and stored, keymap read (6 layers), keyboard
+> settings written and read back, reconnects by itself after re-attaching
+> (udev rule applied to the new device), start at login via
+> `~/.config/autostart`. **2.4 GHz** (receiver passed through): connected
+> 60 ms after the cable left, time and weather sent, lighting and settings
+> changed and confirmed through the receiver. **Own picture** sent over USB
+> (3 pages, stored on the screen; picked with the GTK file dialog);
+> **keymap** written and undone, each with an automatic backup and verified
+> by reading back. Still to test: OpenRGB interface, Bluetooth.
 > Phases 3–5 open. Windows stays the reference platform; every step keeps
 > the Windows build, tests and releases unchanged.
 
