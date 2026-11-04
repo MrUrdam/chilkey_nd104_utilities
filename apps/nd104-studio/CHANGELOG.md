@@ -562,7 +562,7 @@ Updating from 1.0.0 is optional.
 ### Added
 - **Screenshots** of all settings pages (Dashboard, Weather, Clock,
   Device & Firmware, General) in
-  [`docs/images/nd104-sync/`](../../docs/images/nd104-sync/), with a list
+  `docs/images/nd104-sync/` (now [`docs/images/nd104-studio/`](../../docs/images/nd104-studio/)), with a list
   describing each image.
 - **Demo mode** for the settings window (`npm run build:demo`): runs in a
   normal browser with sample data, without app or keyboard. It is built into

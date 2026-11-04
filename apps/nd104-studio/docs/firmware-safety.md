@@ -8,7 +8,7 @@
 |---|---|---|
 | Keyboard | V3.0.14 (`20260710_123331`) | ✅ verified on hardware (2026-10-31) |
 | Screen (24 h / °C) | V1.2.4 (`Mar 17 2026 21:37:00`) | ✅ verified on hardware (2026-10-31) |
-| Screen (12 h / °F) | – | not verified (runs as "compatible" if all checks pass) |
+| Screen (12 h / °F) | – (newest file: V1.2.2) | not verified (runs as "compatible" if all checks pass) |
 
 Other versions run as **compatible (unverified)** as long as every protocol
 check passes. Firmware sources and the newest files:
@@ -36,13 +36,20 @@ write:
 | Any check fails (before or during operation) | **Locked:** stops sending immediately. Tray icon turns amber, a notification names the failed check, and the status page explains what to do |
 | Version cannot be read | Locked |
 
-A lock is only lifted by re-connecting the keyboard or by
-"Check again", and either way all checks run again. There is intentionally
+A lock is only lifted by re-connecting the keyboard or by **Check keyboard
+again** (tray menu or Device & Firmware), and either way all checks run again. There is intentionally
 **no "ignore and continue" override**.
 
-Lighting and the own picture use the same checks. They are extras: if the
+Lighting, keymap, keyboard settings and the own picture use the same checks. They are extras: if the
 firmware answers "not supported" or does not answer, the page shows that and
 time/weather keep running; a damaged answer locks like everywhere else.
+
+**Bluetooth and 2.4 GHz:** the screen version can only be read over the
+cable, and over 2.4 GHz the keyboard version only answers from the receiver.
+ND104 Studio therefore remembers the versions from the last USB (or
+Bluetooth) connection and checks against those. Until the keyboard was
+connected once by cable it waits ("Connecting …") instead of locking, see
+[Connection modes](../README.md#connection-modes).
 
 On Linux the same checks run (the protocol is unchanged); nothing is ever
 flashed.

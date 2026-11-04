@@ -1,14 +1,16 @@
 # nd104-probe
 
-Diagnostic command-line tool for **milestone M0**. It checks the Chilkey ND104
-protocol on real hardware before the ND104 Studio app is built.
+Diagnostic command-line tool for the Chilkey ND104 protocol. It reads
+firmware versions, sends single test packets and checks new firmware on real
+hardware. It started as the test tool for milestone M0, before ND104 Studio
+existed, and ships with every release (portable zip and tarball).
 
-> 🔌 **USB cable, Bluetooth or 2.4 GHz** – the same as ND104 Studio, see
-> [Connection modes](../../README.md#connection-modes) (`picture` and the screen version: cable only).
-> 🪟 Tested target: Windows 10/11. Linux (branch `linux-port`) needs the udev
-> rule from [`../../linux/`](../../linux/) – or run it with `sudo`.
-> ⚠️ Close the official web driver (nd104.chilkey.com) first. It holds the
-> same HID interfaces open.
+| | |
+|---|---|
+| 🔌 **Connections** | USB cable, Bluetooth or 2.4 GHz, like ND104 Studio ([Connection modes](../../README.md#connection-modes)). `picture` and the screen version: cable only |
+| 🪟 **Windows 10/11** | runs as is |
+| 🐧 **Linux** | needs the udev rule ([installation](../../docs/installation.md#keyboard-access--the-udev-rule)) or `sudo`. `descriptors` can stall on Linux |
+| ⚠️ **Before you start** | close the official web driver (nd104.chilkey.com) and quit ND104 Studio, both hold the same HID interfaces open |
 
 ## What it does
 
@@ -85,13 +87,13 @@ Options for the writing commands:
 | `--force` | off | Write despite unknown firmware (verification only) |
 | `--report-len N` | 32 / 64 | Override the HID report length if Windows rejects the write |
 
-## M0 test plan
+## Test plan for new firmware
 
-Work through these in order and note the results in
+Originally the M0 plan. Work through these in order and note the results in
 [docs/protocol.md § 6](../../../../docs/protocol.md#6-open-points-for-m0-hardware-verification):
 
 1. `list`: do both devices appear with usage page `ff60` and usage `0061`?
-2. `version`: which strings come back? Note the raw answers. â†’ fill in the
+2. `version`: which strings come back? Note the raw answers → fill in the
    README firmware table.
 3. `time --target keyboard`, then `time --target screen`: which one updates the clock?
 4. `weather --icon 0 --current 21.5 --max 24 --min 12`: are the values shown correctly?
@@ -101,12 +103,12 @@ Work through these in order and note the results in
 
 ## Build
 
-Requirements: Rust stable (MSVC toolchain) and the Visual Studio Build Tools
-(C++ workload). HID access uses the pure-Rust Windows backend of `hidapi`
-(`windows-native`), so no C compiler is needed for HID itself.
+Requirements: as in [Building from source](../../docs/building.md#prerequisites).
+On Windows, HID access uses the pure-Rust backend of `hidapi`
+(`windows-native`), on Linux its hidraw backend.
 
 ```bash
 cd apps/nd104-studio
-cargo build -p nd104-probe --release   # â†’ target/release/nd104-probe.exe
+cargo build -p nd104-probe --release   # → target/release/nd104-probe(.exe)
 cargo test -p nd104-protocol           # protocol unit tests, no hardware needed
 ```

@@ -6,12 +6,12 @@
 ![Unofficial](https://img.shields.io/badge/Chilkey-unofficial%20%C2%B7%20not%20affiliated-lightgrey)
 [![Connection modes: USB, Bluetooth, 2.4 GHz](https://img.shields.io/badge/connection%20modes-matrix-blue)](apps/nd104-studio/README.md#connection-modes)
 
-Tools for the **Chilkey ND104** keyboard and its built-in 1.47" display, without
-the vendor software: show the current time and weather or your own picture on
-the display, set the lighting, remap keys, knob and round button, and know
-when new firmware is out.
+Tools for the **Chilkey ND104** keyboard and its built-in 1.47" display,
+without the vendor software. Time, weather or your own picture on the display,
+lighting, keymap, and a heads-up when new firmware is out.
 
-> ⚠️ **Unofficial hobby project. Use at your own risk.** No warranty, no
+> [!WARNING]
+> **Unofficial hobby project, use at your own risk.** No warranty, no
 > guaranteed support, not affiliated with Chilkey. Only tested with the
 > firmware versions listed below. Please read the [disclaimer](#disclaimer)
 > before you use any tool.
@@ -34,22 +34,19 @@ when new firmware is out.
     <td valign="top">
       <h3><a href="apps/nd104-studio/README.md">ND104 Studio</a></h3>
       <p>
-        Everything for the ND104 in one small tray app: keeps the display up
-        to date with the <b>current time and weather</b>, shows <b>your own
-        picture or GIF</b>, controls the <b>lighting</b> and <b>remaps keys,
-        knob and round button</b>. Set it up once, then forget it.
-        <i>Formerly nd104-sync.</i>
+        Everything for the ND104 in one small tray app. Set it up once, then
+        forget it. <i>Formerly nd104-sync.</i>
       </p>
-      <ul>
-        <li>Time sync with time zones, NTP and summer/winter time</li>
-        <li>Weather from 5 providers, 2 of them without API key</li>
-        <li>Lighting: on/off, effects, brightness, speed, colour</li>
-        <li>Own picture or animated GIF on the screen, checked and scaled first</li>
-        <li>Keymap: keys, knob and round button on all layers, ISO/ANSI, labels, profiles, backups</li>
-        <li>Firmware safety lock and firmware update notification</li>
-        <li>Own setup with one-click updates from the app</li>
-        <li>Settings window with live display preview, English/German, two styles in dark/light</li>
-      </ul>
+      <p>
+        🕒 Time sync: time zones, NTP, summer/winter time<br>
+        🌦️ Weather: 5 providers, 2 without API key<br>
+        🖼️ Own picture or GIF on the screen<br>
+        💡 Lighting, plus OpenRGB and SignalRGB<br>
+        ⌨️ Keymap: keys, knob, round button, profiles<br>
+        📶 USB, Bluetooth and 2.4 GHz<br>
+        🛡️ Firmware safety lock and update notice<br>
+        🔄 One-click app updates
+      </p>
       <p>
         <img src="https://img.shields.io/github/v/release/MrUrdam/chilkey_nd104_utilities?filter=nd104-studio-v*&label=version&color=0969da" alt="version">
         <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11">
@@ -68,65 +65,74 @@ when new firmware is out.
 
 The [Chilkey ND104](https://chilkey.com/products/nd104-keyboard) is a full-size
 keyboard (104 keys) with an aluminium case, hot-swap sockets, a rotary knob and
-a 1.47" colour display.
+a 1.47" colour display (320 × 172).
 
-- Connection: USB-C, 2.4 GHz, Bluetooth 5.4 – what ND104 Studio supports on each: [Connection modes](apps/nd104-studio/README.md#connection-modes)
-- Display: 320×172 TFT, shows time, weather and images/GIFs
-- Official software: [Chilkey web driver](https://nd104.chilkey.com/)
-  (WebHID, Chromium-based browsers only) and the
-  [Chilkey console / downloads](https://chilkey.com/pages/console)
-- Support & FAQ: [ND104 Support & Resources](https://chilkey.com/blogs/updates/nd104-faq-resources)
+- 📶 **Connection:** USB-C, 2.4 GHz, Bluetooth 5.4. What works on which:
+  [Connection modes](apps/nd104-studio/README.md#connection-modes)
+- 🌐 **Official software:** [web driver](https://nd104.chilkey.com/) (WebHID,
+  Chromium-based browsers only) and [console / downloads](https://chilkey.com/pages/console)
+- ❓ **Support & FAQ:** [ND104 Support & Resources](https://chilkey.com/blogs/updates/nd104-faq-resources)
 
-### Hardware (from community reverse engineering)
+<details>
+<summary><b>Hardware (from community reverse engineering)</b></summary>
 
 | Component | Chip / info | USB VID:PID |
 |---|---|---|
 | Keyboard MCU | WCH CH585 (RISC-V, BLE) | `6d67:016c` |
+| 2.4 GHz receiver | – | `6d66:8572` |
 | Display controller | U-BEST UB32F341S (ARM, RTX + LVGL) | `5542:0001` |
 | Display in DFU mode | – | `5542:1000` |
 
 Details: [docs/protocol.md](docs/protocol.md).
 
+</details>
+
 ## Firmware
 
-The tools are tested with the firmware versions marked ✅. Other versions may
-work, but nobody has checked them (see [disclaimer](#disclaimer)).
+| Part | Tested with | |
+|---|---|:-:|
+| Keyboard | **V3.0.14** (`20260710_123331`) | ✅ |
+| Screen, 24 h / °C | **V1.2.4** (`Mar 17 2026 21:37:00`) | ✅ |
+| Screen, 12 h / °F | V1.2.2 (newest file) | not tested |
 
-| Part | Support page says | Newest file on Chilkey's Drive | Tested with (read 2026-10-31) |
-|---|---|---|---|
-| Keyboard | V3.0.4 | `VN001_314A108_1V0_RGB_TYPE1_20260710.bin` (2026-07-10) | **V3.0.14** `20260710_123331` ✅ |
-| Screen, 24 h / °C | V1.2.1 | MCU `…_V1.0.0_20260317.bin`, UI `…_V1.0.0_20251104.bin` | **V1.2.4** `Mar 17 2026 21:37:00` ✅ |
-| Screen, 12 h / °F | V1.2.1 | MCU `…_CF_…_V1.0.0_20260305.bin`, UI `…_V1.0.0_20251230.bin` | not tested |
+Other versions may work, but nobody has checked them (see [disclaimer](#disclaimer)).
+ND104 Studio tells you when Chilkey publishes newer firmware.
+
+<details>
+<summary><b>Where the newest firmware comes from, and how to read your version</b></summary>
+
+| Part | Support page says | Newest file on Chilkey's Drive (read 2026-10-31) |
+|---|---|---|
+| Keyboard | V3.0.4 | `VN001_314A108_1V0_RGB_TYPE1_20260710.bin` (2026-07-10) |
+| Screen, 24 h / °C | V1.2.1 | MCU `…_V1.0.0_20260317.bin`, UI `…_V1.0.0_20251104.bin` |
+| Screen, 12 h / °F | V1.2.1 | MCU `…_CF_…_V1.0.0_20260305.bin`, UI `…_V1.0.0_20251230.bin` |
 
 The support page text is outdated. The newest firmware is only visible through
 the file names in Chilkey's Google Drive folders. Details and links:
 [docs/firmware.md](docs/firmware.md).
 
-The installed versions are read with `nd104-probe version`
-([apps/nd104-studio/crates/nd104-probe](apps/nd104-studio/crates/nd104-probe/README.md)).
-They are also shown in the [web driver](https://nd104.chilkey.com/) info dialog,
-but the screen version is often wrong there, see
+The installed versions are shown in ND104 Studio (**Device & Firmware**) and
+read with `nd104-probe version`
+([nd104-probe](apps/nd104-studio/crates/nd104-probe/README.md)). The
+[web driver](https://nd104.chilkey.com/) info dialog shows them too, but its
+screen version is often wrong, see
 [docs/protocol.md § 3.3](docs/protocol.md#33-why-the-screen-version-looks-broken-on-the-web-driver).
 
-## Repository layout
+</details>
 
-| Folder | Content |
+## Repository & documentation
+
+| Where | What |
 |---|---|
-| `apps/` | Standalone programs (e.g. `nd104-studio`) |
-| `scripts/` | Small scripts and experiments for the display and keyboard |
-| `docs/` | Protocol, firmware and hardware documentation, screenshots |
-| `firmware/` | Firmware version list (`versions.json`) and the firmware watcher, no vendor binaries ([details](firmware/README.md)) |
-| `assets/` | Images and GIFs for the display (320×172) |
-
-## Documentation
-
-| Document | Content |
-|---|---|
-| [docs/protocol.md](docs/protocol.md) | HID protocol over USB and Bluetooth: devices, checksums, version queries, time and weather packets |
-| [docs/firmware.md](docs/firmware.md) | Where the latest firmware really comes from, screen variants (°C / °F) |
-| [docs/keyboard-api.md](docs/keyboard-api.md) | What the ND104 can do, and what ND104 Studio uses |
-| [nd104-probe](apps/nd104-studio/crates/nd104-probe/README.md) | Diagnostic CLI: read firmware versions, test time/weather packets |
-| [apps/nd104-studio/README.md](apps/nd104-studio/README.md) | ND104 Studio features, installation, usage, building |
+| 🧰 [`apps/nd104-studio`](apps/nd104-studio/README.md) | ND104 Studio: features, install, usage, building |
+| 🔬 [`nd104-probe`](apps/nd104-studio/crates/nd104-probe/README.md) | Diagnostic CLI: read firmware versions, test packets |
+| 📡 [docs/protocol.md](docs/protocol.md) | HID protocol over USB, Bluetooth and 2.4 GHz |
+| 🧩 [docs/keyboard-api.md](docs/keyboard-api.md) | What the ND104 can do, and what ND104 Studio uses |
+| 💾 [docs/firmware.md](docs/firmware.md) | Where the newest firmware really comes from, screen variants (°C / °F) |
+| 🐧 [docs/linux-port.md](docs/linux-port.md) | Plan and status of the Linux version |
+| 👀 [`firmware/`](firmware/README.md) | Firmware version list and the daily firmware watcher (no vendor binaries) |
+| 🛠️ `scripts/` | Small scripts and experiments for display and keyboard |
+| 🖼️ `assets/`, `docs/images/` | Pictures and GIFs for the display (320 × 172), screenshots |
 
 ## Disclaimer
 
@@ -149,8 +155,8 @@ hardware, loss of data or any other harm caused by using it.
 - the Chilkey ND104,
 - the connections and features marked ✅ in [Connection modes](apps/nd104-studio/README.md#connection-modes),
 - the firmware versions marked ✅ in [Firmware](#firmware),
-- the platforms named in each tool's README (ND104 Studio: Windows 10/11;
-  Linux in beta – see its [Platform support](apps/nd104-studio/README.md#platform-support)).
+- the platforms named in each tool's README (ND104 Studio: Windows 10/11,
+  Linux in beta, see its [Platform support](apps/nd104-studio/README.md#platform-support)).
 
 Everything else may work, but is untested. ND104 Studio has a safety lock that
 stops sending as soon as the keyboard behaves differently from what was tested,
@@ -168,7 +174,7 @@ answers. For problems with the keyboard itself, please contact
 - Official [Chilkey web driver](https://nd104.chilkey.com/), analysed for the version queries
 - [zoom-sync](https://github.com/ozboar/zoom-sync), a model for weather and time sync
 - Weather and place data: Open-Meteo, Deutscher Wetterdienst (via Bright Sky),
-  OpenWeather, WeatherAPI.com and GeoNames – licences and required credits in
+  OpenWeather, WeatherAPI.com and GeoNames. Licences and required credits:
   [ND104 Studio → Weather providers](apps/nd104-studio/docs/usage.md#weather-providers)
 
 ## License
