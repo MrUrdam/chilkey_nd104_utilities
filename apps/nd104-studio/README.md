@@ -25,22 +25,20 @@ knob and the round button** on all layers. Set it up once, then forget it.
   <img src="../../docs/images/nd104-studio/dashboard.png" width="760" alt="ND104 Studio settings window, dashboard page with live preview of the keyboard display">
 </p>
 
-<!-- page order as in the sidebar -->
+<!-- page order as in the sidebar; 3 columns, 250 px each -->
 <table>
   <tr>
-    <td align="center"><img src="../../docs/images/nd104-studio/keymap.png" width="370" alt="Keymap page"><br><sub>Keymap: layers, ISO/ANSI, labels, keys, knob and round button</sub></td>
-    <td align="center"><img src="../../docs/images/nd104-studio/lighting.png" width="370" alt="Lighting page"><br><sub>Lighting: on/off, effect, brightness, speed, colour, PC lighting software</sub></td>
+    <td align="center" valign="top" width="33%"><a href="../../docs/images/nd104-studio/keymap.png"><img src="../../docs/images/nd104-studio/keymap.png" width="250" alt="Keymap page"></a><br><sub>Keymap: layers, ISO/ANSI, keys, knob, round button</sub></td>
+    <td align="center" valign="top" width="33%"><a href="../../docs/images/nd104-studio/lighting.png"><img src="../../docs/images/nd104-studio/lighting.png" width="250" alt="Lighting page"></a><br><sub>Lighting: effects, colour, PC lighting software</sub></td>
+    <td align="center" valign="top" width="33%"><a href="../../docs/images/nd104-studio/weather.png"><img src="../../docs/images/nd104-studio/weather.png" width="250" alt="Weather page"></a><br><sub>Weather: provider, location search, test</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="../../docs/images/nd104-studio/weather.png" width="370" alt="Weather page"><br><sub>Weather: provider, location search, test</sub></td>
-    <td align="center"><img src="../../docs/images/nd104-studio/clock.png" width="370" alt="Clock page"><br><sub>Clock: source, time zone, summer/winter time</sub></td>
+    <td align="center" valign="top" width="33%"><a href="../../docs/images/nd104-studio/clock.png"><img src="../../docs/images/nd104-studio/clock.png" width="250" alt="Clock page"></a><br><sub>Clock: source, time zone, summer/winter time</sub></td>
+    <td align="center" valign="top" width="33%"><a href="../../docs/images/nd104-studio/picture.png"><img src="../../docs/images/nd104-studio/picture.png" width="250" alt="Screen picture page"></a><br><sub>Screen picture: checks, animated preview, send</sub></td>
+    <td align="center" valign="top" width="33%"><a href="../../docs/images/nd104-studio/device.png"><img src="../../docs/images/nd104-studio/device.png" width="250" alt="Device and Firmware page"></a><br><sub>Device & Firmware: safety state, update check</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="../../docs/images/nd104-studio/picture.png" width="370" alt="Screen picture page"><br><sub>Screen picture: checks, animated preview, send</sub></td>
-    <td align="center"><img src="../../docs/images/nd104-studio/device.png" width="370" alt="Device and Firmware page"><br><sub>Device & Firmware: safety state, update check</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="../../docs/images/nd104-studio/general.png" width="370" alt="General page"><br><sub>General: autostart, language, theme, style, updates</sub></td>
+    <td align="center" valign="top" colspan="3"><a href="../../docs/images/nd104-studio/general.png"><img src="../../docs/images/nd104-studio/general.png" width="250" alt="General page"></a><br><sub>General: autostart, language, theme, style, updates</sub></td>
   </tr>
 </table>
 

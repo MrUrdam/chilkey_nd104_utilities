@@ -53,6 +53,7 @@ when new firmware is out.
       <p>
         <img src="https://img.shields.io/github/v/release/MrUrdam/chilkey_nd104_utilities?filter=nd104-studio-v*&label=version&color=0969da" alt="version">
         <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11">
+        <img src="https://img.shields.io/badge/Linux-x86--64%20(beta)-FCC624?logo=linux&logoColor=black" alt="Linux x86-64 (beta)">
       </p>
       <p>
         📖 <a href="apps/nd104-studio/README.md">Documentation</a> ·
