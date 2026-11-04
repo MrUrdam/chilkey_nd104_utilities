@@ -237,8 +237,10 @@ jobs:
           BASE="https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/apps/nd104-studio"
           README_URL="$BASE/README.md"
           INSTALL_URL="$BASE/docs/installation.md"
-          # one bullet per asset, only for the files that were actually built
-          add() { [ -e "$1" ] && printf -- '- `%s` – %s\n' "$1" "$2"; }
+          # one bullet per asset, only for the files that were actually built.
+          # Must return 0 even when the file is absent (beta has no .msi/.rpm);
+          # a bare function returning non-zero would abort the step under `set -e`.
+          add() { if [ -e "$1" ]; then printf -- '- `%s` – %s\n' "$1" "$2"; fi; }
           {
             echo
             echo "---"
