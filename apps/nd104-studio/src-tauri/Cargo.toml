@@ -1,6 +1,6 @@
 [package]
 name = "nd104-studio"
-description = "ND104 Studio: display, lighting and keymap for the Chilkey ND104 (tray app, wired USB only)"
+description = "ND104 Studio: display, lighting and keymap for the Chilkey ND104 (tray app; USB, Bluetooth or 2.4 GHz)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

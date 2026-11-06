@@ -150,6 +150,7 @@ fn main() {
             commands::engine_command,
             commands::open_target,
             commands::install_update,
+            commands::install_udev_rule,
             hardware::light_read,
             hardware::light_apply,
             bluetooth::bluetooth_status,

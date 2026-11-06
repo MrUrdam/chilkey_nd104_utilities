@@ -1,7 +1,7 @@
 //! nd104-probe – milestone M0 diagnostic tool.
 //!
-//! Verifies the Chilkey ND104 USB HID protocol on real hardware before the
-//! actual nd104-studio app is built. Wired USB connection only.
+//! Verifies the Chilkey ND104 HID protocol on real hardware before the
+//! actual nd104-studio app is built. Primarily a USB-cable diagnostic.
 
 mod extra;
 mod hid;
@@ -27,7 +27,7 @@ const KNOWN_SCREEN_FIRMWARE: &[&str] = &["1.2.4"];
 #[command(
     name = "nd104-probe",
     version,
-    about = "Chilkey ND104 protocol probe (M0, wired USB only)"
+    about = "Chilkey ND104 protocol probe (M0)"
 )]
 struct Cli {
     #[command(subcommand)]

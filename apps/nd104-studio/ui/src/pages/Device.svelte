@@ -6,6 +6,7 @@
   import KeyboardSettingsCard from "../components/KeyboardSettingsCard.svelte";
   import ConnectionModes from "../components/ConnectionModes.svelte";
   import PlatformSupport from "../components/PlatformSupport.svelte";
+  import { platform } from "../lib/platform.svelte";
 
   let {
     status,
@@ -51,6 +52,22 @@
       setTimeout(() => (busy = false), 800);
     }
   }
+
+  // Linux AppImage/tarball: install the udev access rule with pkexec.
+  let ruleBusy = $state(false);
+  let ruleError = $state<string | null>(null);
+  async function installRule() {
+    ruleBusy = true;
+    ruleError = null;
+    try {
+      await api.installUdevRule();
+      await api.engine("recheck");
+    } catch (e) {
+      ruleError = String(e);
+    } finally {
+      ruleBusy = false;
+    }
+  }
 </script>
 
 <div class="stack">
@@ -79,6 +96,11 @@
     {:else if status.device.kind === "no_access"}
       <div class="state"><span class="led err"></span><strong>{t("ui.device.no_access")}</strong></div>
       <div class="notice err selectable">{t("ui.device.no_access_text", { path: status.device.path })}</div>
+      {#if platform() === "linux"}
+        <button class="key primary" onclick={installRule} disabled={ruleBusy}>{t("ui.device.install_rule")}</button>
+        <p class="muted">{t("ui.device.install_rule_hint")}</p>
+        {#if ruleError}<div class="notice err selectable">{ruleError}</div>{/if}
+      {/if}
     {:else if status.device.kind === "locked"}
       <div class="state"><span class="led err"></span><strong>{t("ui.device.locked")}</strong></div>
       <div class="notice err selectable">{status.device.reason}</div>

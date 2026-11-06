@@ -724,7 +724,9 @@ pub mod win {
 #[cfg(not(windows))]
 struct HidapiChannel {
     device: hidapi::HidDevice,
-    /// 0 over USB; the collection's report ID over Bluetooth.
+    /// 0 if the collection has no report ID (the USB command channel);
+    /// otherwise its ID (lighting channel 5 over USB, command channel 2
+    /// over Bluetooth).
     report_id: u8,
 }
 

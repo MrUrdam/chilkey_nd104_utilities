@@ -25,11 +25,16 @@
 > channel now drops reports of other collections unlogged. BlueZ reports
 > the battery (`Battery1.Percentage`), the app shows it. Open: `nd104-probe descriptors`
 > stalls on Linux (diagnostic tool only).
-> **Phase 3 and Phase 4 done** (desktop integration; packaging, release
-> workflow and in-app update per install type) – first Linux release
-> **2.4.0-beta.1** (2026-11-03). **Phase 5** (install tests, manual VM round,
-> merge to `main`) open. Windows stays the reference platform; every step keeps
-> the Windows build, tests and releases unchanged.
+> **Phases 3 and 4 done** (desktop integration; packaging, release workflow and
+> in-app update per install type) – first Linux pre-release **2.4.0-beta.1**
+> published 2026-11-04 (`.deb`, AppImage, tarball + the Windows assets, one
+> `SHA256SUMS.txt`). A repo review on 2026-11-06 found gaps (see **§ 6**); the
+> two Phase-3 ones are now closed (2026-11-06): the Secret Service **0600 file
+> fallback + warning** and the AppImage **"Install access rule" (`pkexec`)
+> button** are implemented (clippy/tests green on Windows and Linux). **Phase 5**
+> (install tests, manual VM round, merge to `main`) open, plus the remaining
+> § 6 clean-ups. Windows stays the reference platform; every step keeps the
+> Windows build, tests and releases unchanged.
 
 ## 1. Starting point – what was checked
 
@@ -154,14 +159,20 @@ driver is present.
 - `.desktop` launcher (app menu/Activities); second start opens the window.
 - Autostart: `tauri-plugin-autostart` (XDG); README note for Sway/Hyprland/i3
   (`exec nd104-studio --hidden`).
-- Secret Service for API keys with the 0600-file fallback and a warning.
+- Secret Service for API keys, with the **0600-file fallback and warning** done
+  (2026-11-06): when the keyring call fails (no Secret Service on Sway/i3/
+  Hyprland/headless), `secrets.rs` reads/writes `~/.config/nd104-studio/secrets`
+  at mode 0600 and warns; `secure_store_available()` drives the UI warning.
 - WebKitGTK on Wayland + NVIDIA: set `WEBKIT_DISABLE_DMABUF_RENDERER=1` at
   start when an NVIDIA driver is present.
 - Hide the SignalRGB part of the PC lighting card on Linux; keep OpenRGB.
 - Notification actions ("Open") for lock and update notices.
 
-**Done:** on GNOME (with and without the AppIndicator extension) and KDE
-the app is reachable, starts with the session and keeps its API key.
+**Done:** on GNOME (with and without the AppIndicator extension) and KDE the
+app is reachable, starts with the session and keeps its API key. The Secret
+Service **0600 fallback + warning** and the AppImage **"Install access rule"
+(`pkexec`) button** (Device page, shown on "no access" on Linux) are
+implemented and match the docs (2026-11-06).
 
 ### Phase 4 – packages and updates
 
@@ -177,8 +188,12 @@ the app is reachable, starts with the session and keeps its API key.
   `npx tauri build --bundles deb,rpm,appimage`, add the files to
   `SHA256SUMS.txt` and the release notes' download list.
 
-**Done:** a tag builds Windows and Linux assets; the AppImage updates
-itself from one test release to the next in the VM.
+**Done:** a tag builds Windows and Linux assets and publishes them under one
+`SHA256SUMS.txt`; `2.4.0-beta.1` is live. **Still open** (see § 6): the AppImage
+self-update restart may race with the single-instance plugin; the `.rpm`
+dependency names fit Fedora only; `THIRD-PARTY-NOTICES.txt` covers the Windows
+build only. The AppImage self-update over two releases is still untested – betas
+are pre-releases the update check ignores, so it needs the beta channel.
 
 Implemented (2026-11-03), released as **2.4.0-beta.1**:
 - `tauri.conf.json`: `deb`/`rpm`/`appimage` targets, runtime deps
@@ -276,3 +291,47 @@ extension), Kubuntu (KDE).
   launcher must be enough.
 - Distribution beyond .deb/.rpm/AppImage (OBS, AUR, Flatpak) is separate
   work after the first Linux release.
+
+### Found in the 2026-11-06 repo review (close before merge to `main`)
+
+Code vs. documentation — **all fixed 2026-11-06** (clippy/tests green on
+Windows and Linux):
+- ✅ **Secret Service fallback.** `secrets.rs` now falls back to
+  `~/.config/nd104-studio/secrets` (mode 0600) when the keyring is unavailable,
+  and warns via `secure_store_available()` → `AppInfo.secure_store` and an
+  `ApiKeyField` note (EN/DE).
+- ✅ **AppImage "Install access rule" button.** `install_udev_rule` command
+  (writes the embedded rule, `pkexec` installs it and reloads udev); the Device
+  page shows the button on "no access" on Linux.
+- ✅ **Stale "wired USB only" texts** removed from `src-tauri/Cargo.toml`,
+  `nd104-cli`, `nd104-probe`, `nd104-protocol/src/lib.rs`, `nd104-core/src/lib.rs`.
+- ✅ **`hid.rs` comment** on `HidapiChannel.report_id` corrected (notes ID 5
+  over USB for the lighting channel).
+
+Packaging / release:
+- **AppImage self-update restart race.** `self_update::download_and_start`
+  spawns the new AppImage and only then does `commands.rs` call `quit()`. The
+  new instance may see the old one through `tauri-plugin-single-instance`, just
+  ask it to open its window and exit; the old one then quits too → nothing runs.
+  Windows is safe (the setup waits). → give the new instance the old PID and
+  wait for it to exit (e.g. `--after-update <pid>`), or restart only after the
+  old process has quit. Timing-dependent, so it may not show every time.
+- **`.rpm` dependencies are Fedora-only.** `webkit2gtk4.1`,
+  `libayatana-appindicator-gtk3`, `librsvg2` do not match openSUSE
+  (`libwebkit2gtk-4_1-0`, `librsvg-2-2`, …), yet the docs recommend the `.rpm`
+  there. The `.rpm` path has never run (betas skip it). → fix the names and/or
+  scope the recommendation; the Phase 5 container install-tests would catch it.
+- **`THIRD-PARTY-NOTICES.txt` covers the Windows build only.**
+  `scripts/third_party_notices.py` pins `TARGET = x86_64-pc-windows-msvc`, so
+  the Linux crates (`dbus`, the `keyring` Secret Service backend, udev and
+  gtk-rs/webkit2gtk bindings) are missing, and the AppImage bundles LGPL system
+  libraries (WebKitGTK, GTK) that should be acknowledged. The file ships in
+  every Linux package. → generate it per target and mention the bundled libs.
+- **Linux CI builds no packages.** A broken `.deb`/AppImage only surfaces at
+  the release tag. → add `npx tauri build --bundles deb` (or deb+appimage) to
+  the Linux CI job on `linux-port`.
+
+Still open from earlier:
+- `nd104-probe descriptors` hangs on Linux (diagnostic tool only).
+- **Beta/pre-release update channel** missing, so the AppImage self-update
+  cannot be exercised beta → beta.

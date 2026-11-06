@@ -162,6 +162,8 @@ export interface AppInfo {
   self_update: boolean;
   /** "windows" or "linux". */
   platform: string;
+  /** OS keyring reachable; false (Linux) means keys use the 0600 fallback file. */
+  secure_store: boolean;
 }
 
 export interface ProviderInfo {
@@ -251,6 +253,7 @@ export const api = {
   appInfo: () => invoke<AppInfo>("app_info"),
   thirdPartyNotices: () => invoke<string>("third_party_notices"),
   installUpdate: () => invoke<void>("install_update"),
+  installUdevRule: () => invoke<void>("install_udev_rule"),
   texts: () => invoke<Record<string, string>>("texts"),
   status: () => invoke<Status>("get_status"),
   config: () => invoke<Config>("get_config"),

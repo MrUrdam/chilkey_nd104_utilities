@@ -189,6 +189,7 @@ function appInfo(version: string): AppInfo {
     min_weather_interval: 5,
     self_update: false,
     platform: params.get("os") === "linux" ? "linux" : "windows",
+    secure_store: params.get("keyring") !== "0",
   };
 }
 

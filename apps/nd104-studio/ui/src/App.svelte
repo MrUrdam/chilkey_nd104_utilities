@@ -2,7 +2,7 @@
   import { onDestroy, onMount } from "svelte";
   import { api, onConfigChanged, onStatus, type AppInfo, type Config, type Status } from "./lib/api";
   import { setTexts, t } from "./lib/i18n.svelte";
-  import { setPlatform } from "./lib/platform.svelte";
+  import { setPlatform, setSecureStore } from "./lib/platform.svelte";
   import { setLocale } from "./lib/format";
   import { validate } from "./lib/validate";
   import { bluetooth, watchBluetooth } from "./lib/bluetooth.svelte";
@@ -75,6 +75,7 @@
     info = i;
     setTexts(texts);
     setPlatform(i.platform);
+    setSecureStore(i.secure_store);
     setLocale(i.language);
     document.documentElement.lang = i.language;
   }
