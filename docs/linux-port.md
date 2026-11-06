@@ -239,9 +239,12 @@ runs [`linux/install-test.sh`](../apps/nd104-studio/linux/install-test.sh) in
 `ubuntu:22.04/24.04`, `debian:12/13`, `fedora:41/42`, `opensuse/tumbleweed`
 and `archlinux` (`.deb`/`.rpm` where the release has one, the AppImage
 everywhere; `nd104-cli --version`, udev rule, `ldd`, GUI start under Xvfb).
-On `linux-port` it is started by hand with a tag (`workflow_dispatch`);
-the automatic run after each release only works from `main`. First run
-against `2.4.0-beta.2` pending; the manual VM round and the merge are open.
+GitHub only registers a workflow once it is on the default branch, so on
+`linux-port` neither `workflow_dispatch` nor the automatic run after a
+release can start it; there it runs on every push that changes the script
+or the workflow, against the newest release. Both other triggers take
+effect once the file is on `main`. First run against `2.4.0-beta.2`
+pending; the manual VM round and the merge are open.
 
 - CI install tests in containers: `ubuntu:22.04/24.04`, `debian:12/13`,
   `fedora:41/42`, `opensuse/tumbleweed`, `archlinux` – `ldd` complete,

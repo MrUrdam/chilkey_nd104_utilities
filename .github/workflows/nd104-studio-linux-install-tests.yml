@@ -1,10 +1,13 @@
 # Installs a released ND104 Studio Linux build in distribution containers and
 # checks that it works (docs/linux-port.md, phase 5): .deb on Debian/Ubuntu,
 # .rpm on Fedora/openSUSE (stable releases only), the AppImage everywhere.
-# Run it by hand against a release tag (Actions -> this workflow -> Run
-# workflow), or leave the tag empty for the newest release. The automatic run
-# after every release ("workflow_run") only works once this file is on the
-# default branch - GitHub reads workflow_run triggers from there.
+# GitHub registers a workflow only once its file is on the default branch, and
+# only registered workflows can be started by hand (workflow_dispatch) or
+# after a release (workflow_run). On a feature branch the push trigger below
+# is what runs it: every push that changes this file or the test script tests
+# the newest release. Once on the default branch: run it by hand against a
+# release tag (Actions -> this workflow -> Run workflow; empty tag = newest
+# release), and it runs after every successful release on its own.
 name: ND104 Studio Linux install tests
 
 on:
@@ -17,6 +20,11 @@ on:
   workflow_run:
     workflows: ["ND104 Studio release"]
     types: [completed]
+  push:
+    branches: [linux-port, main]
+    paths:
+      - .github/workflows/nd104-studio-linux-install-tests.yml
+      - apps/nd104-studio/linux/install-test.sh
 
 permissions:
   contents: read
@@ -24,7 +32,7 @@ permissions:
 jobs:
   # Picks the release and downloads its Linux assets once for all containers.
   assets:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.pick.outputs.tag }}
