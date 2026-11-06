@@ -123,7 +123,9 @@ Stable releases follow SemVer (`MAJOR.MINOR.PATCH`); pre-releases use
 Every push to `main` or `linux-port` also runs
 [`nd104-studio-ci.yml`](../../../.github/workflows/nd104-studio-ci.yml) on
 Windows **and** Linux: frontend type check and build, Rust format check,
-clippy (warnings are errors) and tests.
+clippy (warnings are errors), tests, and the check that
+`THIRD-PARTY-NOTICES.txt` is up to date (it covers both builds; regenerate it
+with `python scripts/third_party_notices.py` after changing dependencies).
 
 ## Main dependencies
 

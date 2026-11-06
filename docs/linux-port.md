@@ -191,10 +191,10 @@ implemented and match the docs (2026-11-06).
 **Done:** a tag builds Windows and Linux assets and publishes them under one
 `SHA256SUMS.txt`; `2.4.0-beta.1` is live. The AppImage restart race is fixed
 (`--after-update <pid>`, see § 6); the `.rpm` now depends by soname, so it
-resolves on Fedora and openSUSE alike (see § 6). **Still open** (see § 6):
-`THIRD-PARTY-NOTICES.txt` covers the Windows build only. The AppImage
-self-update over two releases is still untested – betas are pre-releases the
-update check ignores, so it needs the beta channel.
+resolves on Fedora and openSUSE alike (see § 6); `THIRD-PARTY-NOTICES.txt`
+covers both builds and the AppImage's bundled libraries (see § 6). **Still
+open:** the AppImage self-update over two releases is still untested – betas
+are pre-releases the update check ignores, so it needs the beta channel.
 
 Implemented (2026-11-03), released as **2.4.0-beta.1**:
 - `tauri.conf.json`: `deb`/`rpm`/`appimage` targets, runtime deps
@@ -326,12 +326,17 @@ Packaging / release:
   `librsvg-2.so.2()(64bit)` (and dropped the matching redundant `.deb` names).
   The package now *declares* cross-distro deps; an actual install on
   Fedora/openSUSE is still to be exercised by the Phase 5 container tests.
-- **`THIRD-PARTY-NOTICES.txt` covers the Windows build only.**
-  `scripts/third_party_notices.py` pins `TARGET = x86_64-pc-windows-msvc`, so
-  the Linux crates (`dbus`, the `keyring` Secret Service backend, udev and
-  gtk-rs/webkit2gtk bindings) are missing, and the AppImage bundles LGPL system
-  libraries (WebKitGTK, GTK) that should be acknowledged. The file ships in
-  every Linux package. → generate it per target and mention the bundled libs.
+- ✅ **`THIRD-PARTY-NOTICES.txt` covers the Windows build only** – fixed
+  2026-11-06. `scripts/third_party_notices.py` now resolves both targets
+  (`cargo metadata --filter-platform`, which needs no target toolchain, so it
+  runs from Windows and Linux alike) into one list: 487 crates, 127 marked
+  "Linux only" (`dbus`, `secret-service`, `linux-keyutils`, `basic-udev`, the
+  gtk-rs/webkit2gtk stack …), 22 "Windows only". A static section describes
+  the ~190 shared libraries the AppImage bundles from the Ubuntu 22.04 build
+  host (mostly LGPL), where their copyright files sit inside the AppImage
+  (`usr/share/doc/<package>/copyright` – verified in an unpacked build),
+  where the source packages are, and that a bundled library may be replaced.
+  The Linux CI job now runs the `--check` as well.
 - **Linux CI builds no packages.** A broken `.deb`/AppImage only surfaces at
   the release tag. → add `npx tauri build --bundles deb` (or deb+appimage) to
   the Linux CI job on `linux-port`.
