@@ -161,8 +161,12 @@ sudo dnf install ./nd104-studio_X.Y.Z_x86_64.rpm      # Fedora
 sudo zypper install ./nd104-studio_X.Y.Z_x86_64.rpm   # openSUSE
 ```
 
-Same result as the `.deb`. Not built for pre-releases (see the note above) –
-use the AppImage there.
+Same result as the `.deb`. The package declares its libraries by **soname**
+(`libwebkit2gtk-4.1.so.0`, `libayatana-appindicator3.so.1`, `libgtk-3.so.0`,
+`librsvg-2.so.2`) rather than by distribution-specific package names, so it
+resolves on Fedora, openSUSE and the RHEL family alike. Not built for
+pre-releases (see the note above) – use the AppImage there. It has not been
+test-installed on a real Fedora/openSUSE system yet – please report problems.
 
 ### Option C – AppImage (any distribution)
 

@@ -190,10 +190,11 @@ implemented and match the docs (2026-11-06).
 
 **Done:** a tag builds Windows and Linux assets and publishes them under one
 `SHA256SUMS.txt`; `2.4.0-beta.1` is live. The AppImage restart race is fixed
-(`--after-update <pid>`, see § 6). **Still open** (see § 6): the `.rpm`
-dependency names fit Fedora only; `THIRD-PARTY-NOTICES.txt` covers the Windows
-build only. The AppImage self-update over two releases is still untested – betas
-are pre-releases the update check ignores, so it needs the beta channel.
+(`--after-update <pid>`, see § 6); the `.rpm` now depends by soname, so it
+resolves on Fedora and openSUSE alike (see § 6). **Still open** (see § 6):
+`THIRD-PARTY-NOTICES.txt` covers the Windows build only. The AppImage
+self-update over two releases is still untested – betas are pre-releases the
+update check ignores, so it needs the beta channel.
 
 Implemented (2026-11-03), released as **2.4.0-beta.1**:
 - `tauri.conf.json`: `deb`/`rpm`/`appimage` targets, runtime deps
@@ -316,11 +317,15 @@ Packaging / release:
   once the old one is gone instead of handing its arguments to it and exiting.
   (Clippy green on Linux; a real two-release update still needs the beta
   channel to be exercised end to end.)
-- **`.rpm` dependencies are Fedora-only.** `webkit2gtk4.1`,
-  `libayatana-appindicator-gtk3`, `librsvg2` do not match openSUSE
-  (`libwebkit2gtk-4_1-0`, `librsvg-2-2`, …), yet the docs recommend the `.rpm`
-  there. The `.rpm` path has never run (betas skip it). → fix the names and/or
-  scope the recommendation; the Phase 5 container install-tests would catch it.
+- ✅ **`.rpm` dependencies are Fedora-only** – fixed 2026-11-06. A real
+  `.rpm` built in the VM (plain version `2.4.0`) showed Tauri's own defaults are
+  already **soname** requires (`libwebkit2gtk-4.1.so.0()(64bit)`,
+  `libayatana-appindicator3.so.1()(64bit)`, `libgtk-3.so.0()(64bit)`), which
+  resolve on any rpm distro; the only Fedora-name entries were our own
+  `depends`. Replaced them with the one thing Tauri does not add,
+  `librsvg-2.so.2()(64bit)` (and dropped the matching redundant `.deb` names).
+  The package now *declares* cross-distro deps; an actual install on
+  Fedora/openSUSE is still to be exercised by the Phase 5 container tests.
 - **`THIRD-PARTY-NOTICES.txt` covers the Windows build only.**
   `scripts/third_party_notices.py` pins `TARGET = x86_64-pc-windows-msvc`, so
   the Linux crates (`dbus`, the `keyring` Secret Service backend, udev and

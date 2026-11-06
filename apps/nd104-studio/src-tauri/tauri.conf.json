@@ -44,8 +44,6 @@
     "linux": {
       "deb": {
         "depends": [
-          "libwebkit2gtk-4.1-0",
-          "libayatana-appindicator3-1",
           "librsvg2-2"
         ],
         "files": {
@@ -56,9 +54,7 @@
       },
       "rpm": {
         "depends": [
-          "webkit2gtk4.1",
-          "libayatana-appindicator-gtk3",
-          "librsvg2"
+          "librsvg-2.so.2()(64bit)"
         ],
         "files": {
           "/usr/lib/udev/rules.d/70-nd104-studio.rules": "../linux/70-nd104-studio.rules"
