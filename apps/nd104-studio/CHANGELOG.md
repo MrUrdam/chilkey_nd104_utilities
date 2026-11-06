@@ -13,6 +13,35 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.4.0-beta.2] – 2026-11-06
+
+Second Linux beta. It closes the gaps a review of the first beta found; the
+Windows build is unchanged apart from the shared fixes below.
+
+### Added
+- **Linux: API keys without a system keyring.** When no Secret Service runs
+  (Sway, i3, Hyprland, headless), keys are kept in
+  `~/.config/nd104-studio/secrets` (mode 0600) and the Weather page says so.
+- **Linux: "Install access rule" button** on the Device page when the keyboard
+  is found but not accessible – installs the udev rule via `pkexec` (for the
+  AppImage and the tarball; the `.deb`/`.rpm` install it themselves).
+
+### Fixed
+- **AppImage self-update** could end with no instance running: the new
+  AppImage now waits for the old process to exit before it starts.
+- **`.rpm` on openSUSE:** dependencies are declared by library soname instead
+  of Fedora package names, so the package resolves on Fedora, openSUSE and the
+  RHEL family alike (not built for pre-releases, see the README).
+- `THIRD-PARTY-NOTICES.txt` now covers the Linux build too (127 Linux-only
+  crates) and describes the libraries the AppImage bundles.
+- Outdated "wired USB only" wording in crate descriptions and `--help` texts.
+
+### Changed
+- READMEs restructured for a quick overview; the ND104 Studio README links to
+  focused guides (installation, usage, firmware, building, troubleshooting).
+- CI: the Linux job checks the third-party notices and builds a `.deb` to
+  catch packaging mistakes before a release.
+
 ## [2.4.0-beta.1] – 2026-11-03
 
 First **beta of the Linux version** of ND104 Studio, for testing. Windows is
@@ -849,7 +878,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.1...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.2...HEAD
+[2.4.0-beta.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.1...nd104-studio-v2.4.0-beta.2
 [2.4.0-beta.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.1...nd104-studio-v2.4.0-beta.1
 [2.3.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.0...nd104-studio-v2.3.1
 [2.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.2.0...nd104-studio-v2.3.0
