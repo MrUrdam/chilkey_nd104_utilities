@@ -149,7 +149,13 @@ pub async fn download_and_start(release: &Release) -> Result<()> {
     std::fs::rename(&tmp, &current)
         .with_context(|| format!("cannot replace {}", current.display()))?;
 
+    // The new copy must not start its single-instance check while this
+    // process is still alive, or it would only hand its arguments to us and
+    // exit (and we quit right after). `--after-update <pid>` makes it wait
+    // for this process to end first (see `wait_for_previous_instance`).
     std::process::Command::new(&current)
+        .arg("--after-update")
+        .arg(std::process::id().to_string())
         .spawn()
         .context("cannot restart the app")?;
     tracing::info!("update to {} started", release.version);

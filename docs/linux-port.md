@@ -189,8 +189,8 @@ implemented and match the docs (2026-11-06).
   `SHA256SUMS.txt` and the release notes' download list.
 
 **Done:** a tag builds Windows and Linux assets and publishes them under one
-`SHA256SUMS.txt`; `2.4.0-beta.1` is live. **Still open** (see § 6): the AppImage
-self-update restart may race with the single-instance plugin; the `.rpm`
+`SHA256SUMS.txt`; `2.4.0-beta.1` is live. The AppImage restart race is fixed
+(`--after-update <pid>`, see § 6). **Still open** (see § 6): the `.rpm`
 dependency names fit Fedora only; `THIRD-PARTY-NOTICES.txt` covers the Windows
 build only. The AppImage self-update over two releases is still untested – betas
 are pre-releases the update check ignores, so it needs the beta channel.
@@ -309,13 +309,13 @@ Windows and Linux):
   over USB for the lighting channel).
 
 Packaging / release:
-- **AppImage self-update restart race.** `self_update::download_and_start`
-  spawns the new AppImage and only then does `commands.rs` call `quit()`. The
-  new instance may see the old one through `tauri-plugin-single-instance`, just
-  ask it to open its window and exit; the old one then quits too → nothing runs.
-  Windows is safe (the setup waits). → give the new instance the old PID and
-  wait for it to exit (e.g. `--after-update <pid>`), or restart only after the
-  old process has quit. Timing-dependent, so it may not show every time.
+- ✅ **AppImage self-update restart race** – fixed 2026-11-06. The old
+  instance now starts the new AppImage with `--after-update <pid>`;
+  `main.rs::wait_for_previous_instance` polls `/proc/<pid>` (bounded to 30 s)
+  *before* the single-instance plugin runs, so the new instance only registers
+  once the old one is gone instead of handing its arguments to it and exiting.
+  (Clippy green on Linux; a real two-release update still needs the beta
+  channel to be exercised end to end.)
 - **`.rpm` dependencies are Fedora-only.** `webkit2gtk4.1`,
   `libayatana-appindicator-gtk3`, `librsvg2` do not match openSUSE
   (`libwebkit2gtk-4_1-0`, `librsvg-2-2`, …), yet the docs recommend the `.rpm`

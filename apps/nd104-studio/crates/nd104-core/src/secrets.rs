@@ -63,7 +63,9 @@ pub fn set(provider: &str, key: &str) -> Result<()> {
 /// error stands.
 #[cfg(target_os = "linux")]
 fn store_failed(provider: &str, key: &str, e: keyring::Error) -> Result<()> {
-    tracing::warn!("system keyring unavailable ({e}); storing the API key in the 0600 fallback file");
+    tracing::warn!(
+        "system keyring unavailable ({e}); storing the API key in the 0600 fallback file"
+    );
     fallback::set(provider, key)
 }
 
