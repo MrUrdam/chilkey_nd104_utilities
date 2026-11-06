@@ -358,9 +358,11 @@ Packaging / release:
   (`usr/share/doc/<package>/copyright` – verified in an unpacked build),
   where the source packages are, and that a bundled library may be replaced.
   The Linux CI job now runs the `--check` as well.
-- **Linux CI builds no packages.** A broken `.deb`/AppImage only surfaces at
-  the release tag. → add `npx tauri build --bundles deb` (or deb+appimage) to
-  the Linux CI job on `linux-port`.
+- ✅ **Linux CI builds no packages** – fixed 2026-11-06. The Linux CI job
+  bundles a debug `.deb` (`tauri build --debug --bundles deb`, the release's
+  bundler step at a fraction of the time) and asserts the udev rule and the
+  `postinst`/`postrm` scripts are inside; proven green in CI (run 42299495652,
+  +1 min on the Linux job). The AppImage stays with the release workflow.
 
 Still open from earlier:
 - `nd104-probe descriptors` hangs on Linux (diagnostic tool only).
