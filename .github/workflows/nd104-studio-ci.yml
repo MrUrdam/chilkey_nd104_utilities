@@ -107,3 +107,16 @@ jobs:
       # the notices cover both targets and are generated from either host
       - name: Third-party notices up to date
         run: python3 scripts/third_party_notices.py --check
+
+      # Packaging check: bundle a debug .deb (the same bundler step as the
+      # release, at a fraction of the time) and assert what bit us before -
+      # the udev rule and the maintainer scripts must be in the package. The
+      # AppImage is left to the release workflow (linuxdeploy download).
+      - name: Package check (.deb)
+        run: |
+          npx tauri build --debug --bundles deb
+          deb=$(ls target/debug/bundle/deb/*.deb)
+          dpkg-deb -c "$deb" | grep -q 'usr/lib/udev/rules.d/70-nd104-studio.rules'
+          dpkg-deb --ctrl-tarfile "$deb" | tar -t | grep -qE '(^|/)postinst$'
+          dpkg-deb --ctrl-tarfile "$deb" | tar -t | grep -qE '(^|/)postrm$'
+          dpkg-deb -f "$deb" Depends
