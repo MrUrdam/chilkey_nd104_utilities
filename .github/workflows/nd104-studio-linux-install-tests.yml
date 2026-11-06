@@ -1,0 +1,100 @@
+# Installs a released ND104 Studio Linux build in distribution containers and
+# checks that it works (docs/linux-port.md, phase 5): .deb on Debian/Ubuntu,
+# .rpm on Fedora/openSUSE (stable releases only), the AppImage everywhere.
+# Run it by hand against a release tag (Actions -> this workflow -> Run
+# workflow), or leave the tag empty for the newest release. The automatic run
+# after every release ("workflow_run") only works once this file is on the
+# default branch - GitHub reads workflow_run triggers from there.
+name: ND104 Studio Linux install tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (nd104-studio-vX.Y.Z or -beta.N); empty = newest release"
+        required: false
+        default: ""
+  workflow_run:
+    workflows: ["ND104 Studio release"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  # Picks the release and downloads its Linux assets once for all containers.
+  assets:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.pick.outputs.tag }}
+      version: ${{ steps.pick.outputs.version }}
+    steps:
+      - name: Pick the release
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+          RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          # a tag push reaches workflow_run with the tag as head_branch
+          TAG="${INPUT_TAG:-$RUN_BRANCH}"
+          case "$TAG" in nd104-studio-v*) ;; *) TAG="" ;; esac
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 30 --json tagName \
+              --jq '[.[] | select(.tagName | startswith("nd104-studio-v"))][0].tagName')
+          fi
+          if [ -z "$TAG" ]; then
+            echo "::error::no ND104 Studio release found"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#nd104-studio-v}" >> "$GITHUB_OUTPUT"
+          echo "testing $TAG"
+
+      - name: Download the Linux assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir dist && cd dist
+          gh release download "${{ steps.pick.outputs.tag }}" --repo "$GITHUB_REPOSITORY" \
+            --pattern '*.deb' --pattern '*.rpm' --pattern '*.AppImage' --pattern '*-linux-x64.tar.gz'
+          ls -la
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-assets
+          path: dist/
+          if-no-files-found: error
+
+  install:
+    needs: assets
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - ubuntu:22.04
+          - ubuntu:24.04
+          - debian:12
+          - debian:13
+          - fedora:41
+          - fedora:42
+          - opensuse/tumbleweed
+          - archlinux:latest
+    name: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-assets
+          path: dist
+
+      - name: Install and check in ${{ matrix.image }}
+        run: |
+          docker run --rm \
+            -v "$PWD/dist:/dist:ro" \
+            -v "$PWD/apps/nd104-studio/linux:/scripts:ro" \
+            "${{ matrix.image }}" \
+            bash /scripts/install-test.sh /dist "${{ needs.assets.outputs.version }}"
