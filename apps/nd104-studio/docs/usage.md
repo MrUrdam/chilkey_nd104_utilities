@@ -2,15 +2,17 @@
 
 [← Back to the README](../README.md) · [Installation](installation.md) · [Troubleshooting](troubleshooting.md)
 
-- [Getting started](#getting-started)
-- [Settings window](#settings-window)
-- [Console runner `nd104-cli`](#console-runner-nd104-cli)
-- [PC lighting software – setup](#pc-lighting-software--setup)
-- [Key combinations of the ND104](#key-combinations-of-the-nd104)
-- [App command-line options](#app-command-line-options)
-- [Files](#files)
-- [Weather providers](#weather-providers)
-- [Clock sources](#clock-sources)
+| | |
+|---|---|
+| 🚀 [Getting started](#getting-started) | first steps, tray menu, icon colours, notifications |
+| 🖥️ [Settings window](#settings-window) | what each page does |
+| ⌨️ [Console runner `nd104-cli`](#console-runner-nd104-cli) | all commands |
+| 🎨 [PC lighting software – setup](#pc-lighting-software--setup) | OpenRGB, Artemis, Aurora, SignalRGB |
+| 🔑 [Key combinations of the ND104](#key-combinations-of-the-nd104) | Fn shortcuts of the keyboard |
+| ▶️ [App command-line options](#app-command-line-options) | `--minimized`, `--settings` |
+| 📁 [Files](#files) | config, logs, backups per OS |
+| 🌦️ [Weather providers](#weather-providers) | providers, API keys, data credits |
+| 🕒 [Clock sources](#clock-sources) | system, time zone, NTP, manual |
 
 ## Getting started
 
@@ -29,7 +31,7 @@
 | Sync now | Send time and weather immediately (fetches fresh weather) |
 | Pause / Resume updates | Stop / resume all updates |
 | Settings… | Opens the settings window |
-| Start at login | Autostart on/off |
+| Start with Windows / Start at login | Autostart on/off |
 | Quit | Exit the app |
 
 Everything else is in the settings window: **Check for updates** (app and
@@ -56,11 +58,11 @@ running in the tray.
 |---|---|
 | **Dashboard** | Large live preview of the keyboard display with keyboard state and last/next syncs (incl. next DST change) next to it; weather, firmware, recent events; Sync now, Pause/Resume |
 | **Keymap** | Layers (renamable), ISO/ANSI drawing with detection, label sets, function picker for keys, knob and round button, list of changes, write with automatic backup; profiles; keymap backup and restore |
-| **Lighting** | Background lighting (under the keys) and bottom lighting (around the keyboard + light bar below Del/End/PgDn): on/off, effect, brightness, speed, colour (sent and stored right away) |
+| **Lighting** | Background lighting (under the keys) and bottom lighting (around the keyboard + light bar below Del/End/PgDn): on/off, effect, brightness, speed, colour (sent and stored right away); *PC lighting software* switch, OpenRGB interface, SignalRGB plugin |
 | **Weather** | Location via city search (with OpenStreetMap link to check a result) or coordinates; provider, fallback, interval, °C/°F in the window; Test button (fetches without sending) |
 | **Clock** | Source (System / Time zone / NTP / Manual), time zone, NTP test, summer/winter time mode, sync interval; live preview of the time sent |
 | **Screen picture** | Choose a picture or GIF, see the checks and a preview (fill the screen or show the whole picture), send it to the screen with a progress bar |
-| **Device & Firmware** | Verified / unverified / locked state, installed vs. verified firmware, display variant, Check keyboard again; keyboard settings (debounce, sleep times); polling interval |
+| **Device & Firmware** | Verified / unverified / locked state, installed vs. verified firmware, display variant, firmware update check, Check keyboard again; keyboard settings (debounce, sleep times); polling interval; overviews *Connection modes* and *Operating systems* |
 | **General** | Start at login, language, appearance (like the system / dark / light), style (Calm / Gamer), update check, About with version, config file and log folder |
 
 Changes take effect with **Apply** (shown only when something changed);
@@ -180,20 +182,21 @@ nd104-studio --settings     # open the settings window right away
 | Logs | `%LOCALAPPDATA%\nd104-studio\logs\` | `~/.local/share/nd104-studio/logs/` |
 | Automatic keymap backups (last 20) | `%LOCALAPPDATA%\nd104-studio\keymap-backups\` | `~/.local/share/nd104-studio/keymap-backups/` |
 | Remembered firmware (for Bluetooth / 2.4 GHz) | `%LOCALAPPDATA%\nd104-studio\screen-firmware.json`, `keyboard-firmware.json` | `~/.local/share/nd104-studio/…` |
-| API keys | Windows Credential Manager (`nd104-studio/<provider>`) | Secret Service (GNOME Keyring, KWallet); fallback file `~/.config/nd104-studio/secrets` (mode 0600) |
+| API keys | Windows Credential Manager (shown as `<provider>.nd104-studio`) | Secret Service (GNOME Keyring, KWallet); fallback file `~/.config/nd104-studio/secrets` (mode 0600) |
 | Program | `%LOCALAPPDATA%\Programs\nd104-studio\` (incl. `nd104-studio-setup.exe` for uninstalling) | where the package manager put it, or your AppImage / tarball |
 
 ## Weather providers
 
-| Provider | API key | Coverage | Status |
-|---|---|---|---|
-| [Open-Meteo](https://open-meteo.com/) (default) | no | worldwide | ✅ available |
-| [Bright Sky](https://brightsky.dev/) (DWD data) | no | Germany and nearby | ✅ available |
-| [OpenWeatherMap](https://openweathermap.org/) | [free key](https://home.openweathermap.org/users/sign_up) | worldwide | ✅ available |
-| [WeatherAPI.com](https://www.weatherapi.com/) | [free key](https://www.weatherapi.com/signup.aspx) | worldwide | ✅ available |
-| Manual / Test | – | – | ✅ available |
+| Provider | API key | Coverage |
+|---|---|---|
+| [Open-Meteo](https://open-meteo.com/) (default) | no | worldwide |
+| [Bright Sky](https://brightsky.dev/) (DWD data) | no | Germany and nearby |
+| [OpenWeatherMap](https://openweathermap.org/) | [free key](https://home.openweathermap.org/users/sign_up) | worldwide |
+| [WeatherAPI.com](https://www.weatherapi.com/) | [free key](https://www.weatherapi.com/signup.aspx) | worldwide |
+| Manual / Test | – | – |
 
-**Data credits and licences:**
+<details>
+<summary><b>Data credits and licences</b></summary>
 
 | Data | Source and licence | Credit shown in the app |
 |---|---|---|
@@ -206,6 +209,8 @@ nd104-studio --settings     # open the settings window right away
 The app shows the credit of the selected provider on the Weather page, the
 city search credit below the search, and all of them under **General →
 About → Data sources**. Using a provider means accepting its terms.
+
+</details>
 
 **Default location:** Berlin, until you pick your own (city search in the
 settings, or `nd104-cli geocode "<city>" --set 1`). Your location is stored only
@@ -227,8 +232,9 @@ so more can be added.
 - Enter them in the settings window → **Weather** → *API key – …* → **Save key**,
   or on the console: `nd104-cli api-key set openweathermap` (the key is read
   from the console, not from the command line).
-- They are stored in the OS credential store (entry `<provider>.nd104-studio`),
-  never in the config file or the log, and are only sent to that provider.
+- They are stored in the system's secure store (service `nd104-studio`,
+  account `<provider>`, see [Files](#files)), never in the config file or the
+  log, and are only sent to that provider.
 - The window shows only *stored / not stored*; a stored key is never displayed
   again. **Test** can check a key before you save it.
 - New OpenWeatherMap keys can take up to two hours to become active.

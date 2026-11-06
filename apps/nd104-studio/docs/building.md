@@ -2,9 +2,11 @@
 
 [← Back to the README](../README.md) · [Installation](installation.md) · [Usage](usage.md)
 
-The workspace builds on **Windows** (the reference platform) and **Linux**.
-`npm run build` must run before any `cargo build` of the app, because the
-settings window's files are compiled into the `nd104-studio` binary.
+The workspace builds on **🪟 Windows** (the reference platform) and **🐧 Linux**.
+
+> [!IMPORTANT]
+> `npm run build` must run before any `cargo build` of the app, because the
+> settings window's files are compiled into the `nd104-studio` binary.
 
 ## Prerequisites
 
@@ -132,7 +134,8 @@ with `python scripts/third_party_notices.py` after changing dependencies).
 | Crate / package | Purpose |
 |---|---|
 | `tauri` v2 + plugins `autostart`, `single-instance`, `notification` | App shell, tray, window |
-| `hidapi` | HID communication (Windows native / Linux hidraw) |
+| `hidapi` | HID communication (Linux hidraw; on Windows device list and the probe) |
+| `windows` | Windows: talks to the keyboard with Windows' own HID functions (no device scan) |
 | `tokio` | Async runtime, scheduler |
 | `reqwest` (rustls) | HTTP for weather / geocoding / manifest |
 | `jiff` | Time zones and DST |
@@ -156,13 +159,16 @@ apps/nd104-studio/
 │   ├── nd104-protocol/   # packet building, CRC (pure, unit tested)
 │   ├── nd104-probe/      # diagnostic CLI for hardware tests
 │   ├── nd104-core/       # model interface, device + firmware guard,
-│   │                     # clock, weather, scheduler, config, update check
+│   │                     # clock, weather, scheduler, config, update check,
+│   │                     # lighting, keymap, picture, OpenRGB server
 │   └── nd104-cli/        # console runner for the core
 ├── src-tauri/            # Tauri tray app, icons, MSI config
 ├── ui/                   # Svelte settings window
 ├── installer/            # setup: install, update, uninstall (Windows, own window)
 ├── installer-ui/         # Svelte setup window
 ├── linux/                # udev rules, package maintainer scripts
+├── signalrgb/            # SignalRGB plugin and the LED table (make_plugin.py)
+├── scripts/              # screenshots, third-party notices
 └── locales/              # en.json, de.json (the setup has its own in installer/locales)
 ```
 

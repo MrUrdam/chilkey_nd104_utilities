@@ -1,40 +1,51 @@
 # ND104 Studio on Linux – implementation plan
 
-> Branch: **`linux-port`** (from `main` at 2.3.1). Status: **phase 1 done**
-> (2026-11-03) – the workspace builds, lints and tests on Ubuntu 22.04 in CI.
-> **Phase 2 implemented**; first test in the VM (Ubuntu 24.04, keyboard by
-> cable, 2026-11-03): without the udev rule "found, no access", with the rule
-> firmware verified (keyboard V3.0.14, screen V1.2.4) without replugging.
-> App in the VM (Wayland, USB, 2026-11-03): connects, time and weather
-> sent, lighting changed and stored, keymap read (6 layers), keyboard
-> settings written and read back, reconnects by itself after re-attaching
-> (udev rule applied to the new device), start at login via
-> `~/.config/autostart`. **2.4 GHz** (receiver passed through): connected
-> 60 ms after the cable left, time and weather sent, lighting and settings
-> changed and confirmed through the receiver. **Own picture** sent over USB
-> (3 pages, stored on the screen; picked with the GTK file dialog);
-> **keymap** written and undone, each with an automatic backup and verified
-> by reading back. **OpenRGB interface**: OpenRGB 1.1 (Linux AppImage) as
-> SDK client on 127.0.0.1:6743 colours the keyboard – after a fix: on Linux
-> one hidraw device holds all collections of a USB interface, so the report
-> ID is now taken from the opened collection (interface 4: ID 5, not the
-> first ID 3). **Bluetooth** (USB dongle in the VM): connected via BlueZ,
-> firmware verified, time, weather and configuration sent while typing –
-> after a fix: over Bluetooth one hidraw device carries the whole keyboard,
-> so key presses (ID 1) reached the command channel and locked it; the
-> channel now drops reports of other collections unlogged. BlueZ reports
-> the battery (`Battery1.Percentage`), the app shows it. Open: `nd104-probe descriptors`
-> stalls on Linux (diagnostic tool only).
-> **Phases 3 and 4 done** (desktop integration; packaging, release workflow and
-> in-app update per install type) – first Linux pre-release **2.4.0-beta.1**
-> published 2026-11-04 (`.deb`, AppImage, tarball + the Windows assets, one
-> `SHA256SUMS.txt`). A repo review on 2026-11-06 found gaps (see **§ 6**); the
-> two Phase-3 ones are now closed (2026-11-06): the Secret Service **0600 file
-> fallback + warning** and the AppImage **"Install access rule" (`pkexec`)
-> button** are implemented (clippy/tests green on Windows and Linux). **Phase 5**
-> (install tests, manual VM round, merge to `main`) open, plus the remaining
-> § 6 clean-ups. Windows stays the reference platform; every step keeps the
-> Windows build, tests and releases unchanged.
+> Branch: **`linux-port`** (from `main` at 2.3.1). Windows stays the reference
+> platform; every step keeps the Windows build, tests and releases unchanged.
+
+| Phase | Status | |
+|---|---|---|
+| 1 – it compiles on Linux | ✅ done (2026-11-03) | builds, lints and tests on Ubuntu 22.04 in CI |
+| 2 – the keyboard works | ✅ done, tested in the VM | USB, 2.4 GHz, Bluetooth incl. battery; time, weather, picture, lighting, keymap, settings, OpenRGB |
+| 3 – desktop integration | ✅ done | tray, launcher, autostart, Secret Service (0600 fallback + warning), pkexec rule button |
+| 4 – packages and updates | ✅ done | **2.4.0-beta.1** published 2026-11-04 (.deb, AppImage, tarball + Windows assets) |
+| 5 – install tests and release | ⏳ open | CI install tests, manual VM round, merge to `main` |
+
+Open: `nd104-probe descriptors` stalls on Linux (diagnostic tool only).
+
+Review 2026-11-06: four points fixed (see § 6); remaining: Linux CI package
+build, beta channel.
+
+<details>
+<summary><b>Test log of phase 2 (2026-11-03)</b></summary>
+
+VM: Ubuntu 24.04, Wayland, devices passed through by USB.
+
+- **USB cable:** without the udev rule "found, no access"; with the rule
+  firmware verified (keyboard V3.0.14, screen V1.2.4) without replugging.
+  Time and weather sent, lighting changed and stored, keymap read (6 layers),
+  keyboard settings written and read back. Reconnects by itself after
+  re-attaching (udev rule applied to the new device). Start at login via
+  `~/.config/autostart`.
+- **2.4 GHz** (receiver passed through): connected 60 ms after the cable
+  left; time, weather, lighting and settings sent and confirmed through the
+  receiver.
+- **Own picture** sent over USB (3 pages, stored on the screen; picked with
+  the GTK file dialog).
+- **Keymap** written and undone, each with an automatic backup and verified
+  by reading back.
+- **OpenRGB interface:** OpenRGB 1.1 (Linux AppImage) as SDK client on
+  127.0.0.1:6743 colours the keyboard. Fix needed: on Linux one hidraw device
+  holds all collections of a USB interface, so the report ID is now taken
+  from the opened collection (interface 4: ID 5, not the first ID 3).
+- **Bluetooth** (USB dongle in the VM): connected via BlueZ, firmware
+  verified, time, weather and configuration sent while typing. Fix needed:
+  one hidraw device carries the whole keyboard, so key presses (ID 1)
+  reached the command channel and locked it; the channel now drops reports
+  of other collections unlogged. BlueZ reports the battery
+  (`Battery1.Percentage`), the app shows it.
+
+</details>
 
 ## 1. Starting point – what was checked
 

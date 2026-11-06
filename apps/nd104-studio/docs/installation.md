@@ -2,10 +2,24 @@
 
 [← Back to the README](../README.md) · [Usage](usage.md) · [Building from source](building.md) · [Troubleshooting](troubleshooting.md)
 
+> **Which file do I need?**
+>
+> | Your system | Take | Updates |
+> |---|---|---|
+> | 🪟 Windows 10/11 | `…_x64-setup.exe` → [Option A](#option-a--installer-recommended) | one click in the app |
+> | 🐧 Debian, Ubuntu, Mint | `…_amd64.deb` → [Option A](#option-a--deb-debian-ubuntu-mint-) | package manager |
+> | 🐧 Fedora, openSUSE | `…_x86_64.rpm` → [Option B](#option-b--rpm-fedora-opensuse-) (AppImage for betas) | package manager |
+> | 🐧 any other distribution | `…_amd64.AppImage` → [Option C](#option-c--appimage-any-distribution) | one click in the app |
+>
+> Then connect the keyboard **once by USB cable** ([Connection modes](../README.md#connection-modes))
+> and pick your city under **Weather → Location**.
+
+<details>
+<summary><b>All release files</b></summary>
+
 Releases are published on the
 [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
-(tag `nd104-studio-vX.Y.Z`). You need the keyboard connected (see
-[Connection modes](../README.md#connection-modes)). Each release has:
+(tag `nd104-studio-vX.Y.Z`). Each release has:
 
 | File | Platform | What | When to use |
 |---|---|---|---|
@@ -23,6 +37,8 @@ Releases are published on the
 > pre-release (e.g. `2.4.0-beta.1`), so beta/rc releases ship the `.deb`, the
 > AppImage and the tarball only. On Fedora/openSUSE use the **AppImage** for a
 > pre-release.
+
+</details>
 
 ---
 
@@ -64,8 +80,13 @@ installation as well (see the next section).
 
 ### Coming from nd104-sync
 
-ND104 Studio was called **nd104-sync** up to version 1.5. Installed nd104-sync
-versions find ND104 Studio as a normal update (**Settings → General → Install
+ND104 Studio was called **nd104-sync** up to version 1.5. Updating takes your
+settings, profiles, backups and API keys over.
+
+<details>
+<summary><b>What exactly happens</b></summary>
+
+Installed nd104-sync versions find ND104 Studio as a normal update (**Settings → General → Install
 update**), or simply run the ND104 Studio setup. Either way it:
 
 - closes nd104-sync, installs ND104 Studio to
@@ -83,6 +104,8 @@ The app does the same moves on its first start, so the portable zip and the
 MSI take your data over too. Anything that already exists under the new name
 is kept; old folders are only removed once they are empty. Keymap backups and
 profile exports made with nd104-sync can still be restored and imported.
+
+</details>
 
 ### Option B – portable zip
 

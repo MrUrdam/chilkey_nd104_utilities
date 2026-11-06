@@ -1,9 +1,9 @@
 # ND104 HID Protocol Notes (USB and Bluetooth)
 
-> **Status:** Collected from public sources and static analysis of the official
-> web driver. Parts marked ✅ have been verified on real hardware (wired USB,
-> keyboard V3.0.14, screen V1.2.4). Everything else is unverified – see the
-> M0 checklist in § 6.
+> **Status:** Collected from public sources, static analysis of the official
+> web driver and the keyboard firmware. Parts marked ✅ have been verified on
+> real hardware (keyboard V3.0.14, screen V1.2.4; USB cable, Bluetooth and the
+> 2.4 GHz receiver). Everything else is unverified, see the open points in § 6.
 >
 > Sources:
 > - Official web driver [nd104.chilkey.com](https://nd104.chilkey.com/)
@@ -13,6 +13,15 @@
 > Scope: **USB cable** (§ 1–5), **Bluetooth** (§ 5.5) and the **2.4 GHz
 > receiver** (§ 5.6). What ND104 Studio supports on each:
 > [Connection modes](../apps/nd104-studio/README.md#connection-modes).
+
+**Contents:** [1 USB devices](#1-usb-devices) ·
+[2 Checksums](#2-checksums) ·
+[3 Firmware version queries](#3-firmware-version-queries) ·
+[4 Screen commands](#4-screen-commands-1c-packet-family) (time, weather, picture) ·
+[5 Keyboard commands](#5-keyboard-commands) (lighting, settings, keymap, PC lighting) ·
+[5.5 Bluetooth](#55-over-bluetooth-analysis-2026-11-02) ·
+[5.6 2.4 GHz](#56-over-the-24-ghz-receiver-analysis-2026-11-02) ·
+[6 Open points](#6-open-points-for-m0-hardware-verification)
 
 ---
 
@@ -432,8 +441,8 @@ back the written value (checked 2026-11-02: write 5 → read 5, write 1 → read
 ND104 Studio reads `0B`.
 
 Each write is followed by `09 00` (store). The polling-rate row exists in the
-driver but is hidden; keyboard colour and online RGB are not used by
-ND104 Studio.
+driver but is hidden; keyboard colour is not used by ND104 Studio, online
+RGB is shown as the *PC lighting software* switch on the Lighting page.
 
 #### 5.2.1 What the firmware does with each id (V3.0.14)
 
@@ -525,7 +534,8 @@ logged, ignored, no lock.
 |---|---|
 | `0x01` | protocol/layout version |
 
-**PC lighting protocols** (found in V3.0.14, not tested): the firmware also
+**PC lighting protocols** (found in V3.0.14; the SignalRGB commands are
+verified on the keyboard, see below): the firmware also
 contains the **OpenRGB QMK protocol** (commands `01`–`09`: protocol version,
 QMK version `0.19.2`, device/mode/LED info, enabled modes 1–50, `07` set mode,
 `08` set one LED, `09` set a block of LEDs; answers `0x32` success, `0x19`
