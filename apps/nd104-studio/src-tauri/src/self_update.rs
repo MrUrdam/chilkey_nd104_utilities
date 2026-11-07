@@ -1,11 +1,14 @@
-//! "Install update": downloads the setup of the newest release, checks it
-//! against the release's SHA256SUMS.txt and runs it in update mode
-//! (`--update`: progress window only, restarts the app afterwards).
+//! "Install update": downloads the newest release's artifact, checks it against
+//! the release's SHA256SUMS.txt and swaps it in.
 //!
-//! Offered only when this copy was installed by nd104-studio-setup (1.1.0+);
-//! MSI and portable installs keep the "open release page" link.
+//! - **Windows setup install** (1.1.0+): runs the new setup in update mode
+//!   (`--update`: progress window only, restarts the app afterwards).
+//! - **Linux AppImage** (`$APPIMAGE` set): replaces the AppImage file in place
+//!   and restarts.
+//!
+//! Other install types (MSI, portable, `.deb`/`.rpm`) do not update themselves;
+//! the app keeps the "open release page" link for them.
 
-use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -13,12 +16,25 @@ use nd104_core::app_update::{self, Release};
 use sha2::{Digest, Sha256};
 
 /// `%LOCALAPPDATA%\Programs\nd104-studio`, where the setup installs.
-fn setup_install_dir() -> Option<PathBuf> {
+#[cfg(windows)]
+fn setup_install_dir() -> Option<std::path::PathBuf> {
     let base = std::env::var_os("LOCALAPPDATA")?;
-    Some(PathBuf::from(base).join("Programs").join("nd104-studio"))
+    Some(
+        std::path::PathBuf::from(base)
+            .join("Programs")
+            .join("nd104-studio"),
+    )
 }
 
-/// This executable belongs to an installation made by the setup.
+/// Path of the running AppImage (`$APPIMAGE`), if this copy was started as one.
+#[cfg(target_os = "linux")]
+fn appimage_path() -> Option<std::path::PathBuf> {
+    let path = std::env::var_os("APPIMAGE")?;
+    (!path.is_empty()).then(|| std::path::PathBuf::from(path))
+}
+
+/// This copy can replace itself (Windows setup install or Linux AppImage).
+#[cfg(windows)]
 pub fn supported() -> bool {
     let (Some(dir), Ok(exe)) = (setup_install_dir(), std::env::current_exe()) else {
         return false;
@@ -30,7 +46,52 @@ pub fn supported() -> bool {
     exe.parent().is_some_and(|p| same(p, &dir)) && dir.join("nd104-studio-setup.exe").exists()
 }
 
-/// Downloads and verifies the setup, then starts it. The caller quits the app.
+#[cfg(target_os = "linux")]
+pub fn supported() -> bool {
+    appimage_path().is_some()
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
+pub fn supported() -> bool {
+    false
+}
+
+/// Downloads `url`, checks its SHA-256 against the `name` entry in the release's
+/// SHA256SUMS.txt (from `sums_url`), and returns the verified bytes.
+async fn fetch_verified(url: &str, sums_url: &str, name: &str) -> Result<Vec<u8>> {
+    let client = reqwest::Client::builder()
+        .user_agent(nd104_core::user_agent())
+        .timeout(Duration::from_secs(300))
+        .build()?;
+    let get = |url: String| {
+        let request = client.get(url);
+        async move {
+            let response = request.send().await?.error_for_status()?;
+            anyhow::Ok(response.bytes().await?)
+        }
+    };
+
+    let sums = String::from_utf8_lossy(
+        &get(sums_url.to_string())
+            .await
+            .context("cannot download SHA256SUMS.txt")?,
+    )
+    .into_owned();
+    let expected = expected_hash(&sums, name)
+        .ok_or_else(|| anyhow!("{name} is not listed in SHA256SUMS.txt"))?;
+    let bytes = get(url.to_string())
+        .await
+        .context("cannot download the update")?;
+    let actual = hex(&Sha256::digest(&bytes));
+    if !actual.eq_ignore_ascii_case(&expected) {
+        bail!("checksum of {name} does not match – download discarded");
+    }
+    Ok(bytes.to_vec())
+}
+
+/// Downloads and verifies the new artifact, then starts the swap. The caller
+/// quits the app.
+#[cfg(windows)]
 pub async fn download_and_start(release: &Release) -> Result<()> {
     let setup_url = release
         .setup_url
@@ -40,32 +101,8 @@ pub async fn download_and_start(release: &Release) -> Result<()> {
         .checksums_url
         .as_deref()
         .ok_or_else(|| anyhow!("release {} has no SHA256SUMS.txt", release.version))?;
-    let client = reqwest::Client::builder()
-        .user_agent(nd104_core::user_agent())
-        .timeout(Duration::from_secs(300))
-        .build()?;
-    let get = |url: &str| {
-        let request = client.get(url);
-        async move {
-            let response = request.send().await?.error_for_status()?;
-            anyhow::Ok(response.bytes().await?)
-        }
-    };
-
     let name = app_update::setup_name(&release.version);
-    let sums = String::from_utf8_lossy(
-        &get(sums_url)
-            .await
-            .context("cannot download SHA256SUMS.txt")?,
-    )
-    .into_owned();
-    let expected = expected_hash(&sums, &name)
-        .ok_or_else(|| anyhow!("{name} is not listed in SHA256SUMS.txt"))?;
-    let setup = get(setup_url).await.context("cannot download the setup")?;
-    let actual = hex(&Sha256::digest(&setup));
-    if !actual.eq_ignore_ascii_case(&expected) {
-        bail!("checksum of {name} does not match – download discarded");
-    }
+    let setup = fetch_verified(setup_url, sums_url, &name).await?;
 
     let dir = std::env::temp_dir().join("nd104-studio-update");
     std::fs::create_dir_all(&dir)?;
@@ -77,6 +114,127 @@ pub async fn download_and_start(release: &Release) -> Result<()> {
         .context("cannot start the setup")?;
     tracing::info!("update to {} started", release.version);
     Ok(())
+}
+
+#[cfg(target_os = "linux")]
+pub async fn download_and_start(release: &Release) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let current = appimage_path().ok_or_else(|| anyhow!("not running as an AppImage"))?;
+    let url = release
+        .appimage_url
+        .as_deref()
+        .ok_or_else(|| anyhow!("release {} has no AppImage", release.version))?;
+    let sums_url = release
+        .checksums_url
+        .as_deref()
+        .ok_or_else(|| anyhow!("release {} has no SHA256SUMS.txt", release.version))?;
+    let name = app_update::appimage_name(&release.version);
+    let bytes = fetch_verified(url, sums_url, &name).await?;
+
+    // Write next to the current AppImage, then rename over it (atomic on the
+    // same filesystem). The running process keeps the old inode until it exits,
+    // so the restart below launches the replacement.
+    let dir = current
+        .parent()
+        .ok_or_else(|| anyhow!("the AppImage has no parent directory"))?;
+    let file_name = current
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("nd104-studio.AppImage");
+    let tmp = dir.join(format!(".{file_name}.new"));
+    std::fs::write(&tmp, &bytes).with_context(|| format!("cannot write {}", tmp.display()))?;
+    std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o755))
+        .context("cannot make the new AppImage executable")?;
+    std::fs::rename(&tmp, &current)
+        .with_context(|| format!("cannot replace {}", current.display()))?;
+
+    // The new copy must not start its single-instance check while this
+    // process is still alive, or it would only hand its arguments to us and
+    // exit (and we quit right after). `--after-update <pid>` makes it wait
+    // for this process to end first (see `wait_for_previous_instance`).
+    // `--settings`: the update was started from the window, so bring it back.
+    let mut restart = std::process::Command::new(&current);
+    restart
+        .arg("--after-update")
+        .arg(std::process::id().to_string())
+        .arg("--settings");
+    detach_from_appdir(&mut restart);
+    restart.spawn().context("cannot restart the app")?;
+    tracing::info!("update to {} started", release.version);
+    Ok(())
+}
+
+/// Keeps the restarted AppImage off this copy's mount (`$APPDIR`). AppRun put
+/// the mount into `PATH`, `LD_LIBRARY_PATH`, `XDG_DATA_DIRS` and more, the
+/// working directory is inside it, and the AppImage runtime left fds open (its
+/// keep-alive pipe and the mount). Inherited, these keep the old mount (and its
+/// runtime process) alive
+/// as long as the new copy runs – one more stale mount per update – and the
+/// new copy would load files from the old version.
+#[cfg(target_os = "linux")]
+fn detach_from_appdir(cmd: &mut std::process::Command) {
+    use std::os::unix::ffi::OsStrExt;
+
+    let Some(appdir) = std::env::var_os("APPDIR") else {
+        return;
+    };
+    let appdir = appdir.as_bytes().to_vec();
+    if appdir.is_empty() {
+        return;
+    }
+    let inside = |entry: &[u8]| entry.starts_with(&appdir);
+
+    // the runtime sets these afresh for the new copy
+    for var in ["APPDIR", "APPIMAGE", "ARGV0", "OWD"] {
+        cmd.env_remove(var);
+    }
+    for (key, value) in std::env::vars_os() {
+        let bytes = value.as_bytes();
+        if !bytes.windows(appdir.len()).any(|w| w == appdir.as_slice()) {
+            continue;
+        }
+        // a path list: drop the entries in the mount, keep the user's own
+        let kept: Vec<&[u8]> = bytes
+            .split(|&b| b == b':')
+            .filter(|e| !e.is_empty() && !inside(e))
+            .collect();
+        if kept.is_empty() {
+            cmd.env_remove(&key);
+        } else {
+            cmd.env(&key, std::ffi::OsStr::from_bytes(&kept.join(&b':')));
+        }
+    }
+    let home = std::env::var_os("HOME").unwrap_or_else(|| "/".into());
+    cmd.current_dir(&home).env("PWD", &home);
+
+    // No inherited fd beyond stdio may reach the new process. The runtime
+    // keeps its mount until the read end of its keep-alive pipe (fd 3 here)
+    // and its fd on the mount are closed in every process – inherited by the
+    // new copy (and its WebKit children) they never would be. This process
+    // quits right after the restart, so close-on-exec costs it nothing.
+    let fds: Vec<i32> = std::fs::read_dir("/proc/self/fd")
+        .map(|dir| {
+            dir.flatten()
+                .filter_map(|e| e.file_name().to_str()?.parse().ok())
+                .collect()
+        })
+        .unwrap_or_default();
+    for n in fds.into_iter().filter(|&n| n > 2) {
+        // SAFETY: fcntl on an fd number of this process; only its flags change
+        // (an fd closed meanwhile, such as the read_dir's own, just fails)
+        unsafe {
+            let flags = libc::fcntl(n, libc::F_GETFD);
+            if flags >= 0 {
+                libc::fcntl(n, libc::F_SETFD, flags | libc::FD_CLOEXEC);
+            }
+        }
+    }
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
+pub async fn download_and_start(_release: &Release) -> Result<()> {
+    bail!("this installation cannot update itself")
 }
 
 /// Hash for `file` from `sha256sum` output (`<hash>  <name>` or `<hash> *<name>`).

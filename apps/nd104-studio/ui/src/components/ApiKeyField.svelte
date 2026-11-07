@@ -3,6 +3,7 @@
   // only "stored yes/no". Keys live in the Windows Credential Manager.
   import { api, type ProviderInfo } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
+  import { platform, secureStore } from "../lib/platform.svelte";
   import Icon from "./Icon.svelte";
 
   let {
@@ -84,6 +85,9 @@
   {#if error}<span class="error-text selectable">{error}</span>{/if}
   {#if message}<span class="ok-text">{message}</span>{/if}
   <span class="muted small with-icon"><Icon name="lock" size={14} />{t("ui.key.hint")}</span>
+  {#if platform() === "linux" && !secureStore()}
+    <span class="warn-text small with-icon"><Icon name="lock" size={14} />{t("ui.key.insecure_store")}</span>
+  {/if}
 </div>
 
 <style>
@@ -114,5 +118,9 @@
     color: var(--ok);
     font-size: 12px;
     font-weight: 600;
+  }
+
+  .warn-text {
+    color: var(--warn, #b26b00);
   }
 </style>

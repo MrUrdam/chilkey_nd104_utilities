@@ -67,6 +67,7 @@ Read with `nd104-probe version` on 2026-10-31 (wired USB):
 |---|---|---|---|
 | Keyboard | `V3.0.14 20260710_123331` | `VN001_314A108_1V0_RGB_TYPE1_20260710.bin` (same build date 2026-07-10) | ✅ yes |
 | Screen MCU | `V1.2.4 Mar 17 2026 21:37:00` | `ND104_SCREEN_MCU_320_172_V1.0.0_20260317.bin` (24 h/°C, same build date 2026-03-17) | ✅ yes |
+| Screen MCU, 12 h/°F | not on a device here; the file reports `V1.2.2 Mar  5 2026 15:39:11` | `ND104_SCREEN_MCU_CF_320_172_V1.0.0_20260305.bin` | – |
 
 What this shows:
 - The **build date** in the version answer matches the date in the Drive file
@@ -116,7 +117,7 @@ What the firmware files show (both screen MCU images compared, read only):
   It compares the **build date** reported by the device with the date in the
   newest Drive file name, for the matching screen variant.
 - Implemented in ND104 Studio (see its
-  [firmware update check](../apps/nd104-studio/README.md#firmware-update-check)):
+  [firmware update check](../apps/nd104-studio/docs/firmware-safety.md#firmware-update-check)):
   1. The **firmware watch** action ([`firmware-watch.yml`](../.github/workflows/firmware-watch.yml),
      [`firmware/watch.py`](../firmware/watch.py)) checks the Drive folders and
      support pages every day and **opens an issue** when files, subfolders or

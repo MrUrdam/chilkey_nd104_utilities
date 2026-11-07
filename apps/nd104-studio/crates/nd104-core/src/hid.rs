@@ -1,15 +1,27 @@
 //! HID access behind small traits so the device manager can be tested
 //! without hardware.
 
+#[cfg(windows)]
 use std::collections::HashMap;
 #[cfg(not(windows))]
 use std::ffi::CString;
+#[cfg(windows)]
 use std::sync::mpsc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[cfg(windows)]
+use std::time::Instant;
 
 use anyhow::{anyhow, Context, Result};
 #[cfg(not(windows))]
 use hidapi::HidApi;
+
+/// How an interface is connected.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Bus {
+    Usb,
+    Bluetooth,
+    Unknown,
+}
 
 /// One enumerated HID interface (collection).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,18 +33,31 @@ pub struct HidInterfaceInfo {
     pub interface_number: i32,
     pub path: String,
     pub product: Option<String>,
+    /// Windows: from the device path; Linux: from hidraw (hidapi).
+    pub bus: Bus,
 }
 
-/// Bluetooth "HID over GATT" service: part of the device path of every HID
-/// interface that is connected over Bluetooth instead of USB.
+/// Bluetooth "HID over GATT" service: part of the Windows device path of
+/// every HID interface that is connected over Bluetooth instead of USB.
+#[cfg_attr(not(windows), allow(dead_code))]
 const BLUETOOTH_HID_SERVICE: &str = "{00001812-0000-1000-8000-00805f9b34fb}";
+
+/// The bus of a Windows HID device path.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn bus_from_path(path: &str) -> Bus {
+    if path.to_lowercase().contains(BLUETOOTH_HID_SERVICE) {
+        Bus::Bluetooth
+    } else {
+        Bus::Usb
+    }
+}
 
 impl HidInterfaceInfo {
     /// Connected over Bluetooth? The ND104 reports the same IDs and usages
     /// there, but its vendor collection uses report ID 2 (docs/protocol.md
     /// § 5.5), so it must not be mixed up with the USB interface.
     pub fn is_bluetooth(&self) -> bool {
-        self.path.to_lowercase().contains(BLUETOOTH_HID_SERVICE)
+        self.bus == Bus::Bluetooth
     }
 }
 
@@ -52,8 +77,10 @@ pub trait HidBackend {
 /// How long opening one interface for its details may take. A paired
 /// Bluetooth keyboard that is not connected stays in Windows' device list,
 /// and opening it blocks for many seconds each time.
+#[cfg(windows)]
 const INFO_TIMEOUT: Duration = Duration::from_secs(3);
 /// When to try an interface again that could not be opened.
+#[cfg(windows)]
 const INFO_RETRY: Duration = Duration::from_secs(30);
 
 /// Real backend.
@@ -72,12 +99,15 @@ pub struct HidapiBackend {
     /// Vendor/product IDs worth opening (keyboards, screens, receivers).
     wanted: Vec<(u16, u16)>,
     /// Details of interfaces opened before, by path.
+    #[cfg(windows)]
     known: HashMap<String, HidInterfaceInfo>,
     /// Interfaces that were too slow or failed, and when to try again.
+    #[cfg(windows)]
     skipped: HashMap<String, Instant>,
     /// Interfaces whose details did not come in time: their answer is still
     /// awaited (not asked again), e.g. while another program scans every HID
     /// device of the PC and Windows answers slowly.
+    #[cfg(windows)]
     pending: HashMap<String, mpsc::Receiver<Result<HidInterfaceInfo>>>,
 }
 
@@ -92,11 +122,16 @@ impl HidapiBackend {
             }
         }
         Ok(Self {
+            // on Linux hidapi reads sysfs: creating it is cheap (no slow
+            // scan as on Windows)
             #[cfg(not(windows))]
-            api: hidapi_without_scan().context("cannot initialise HID API")?,
+            api: HidApi::new().context("cannot initialise HID API")?,
             wanted,
+            #[cfg(windows)]
             known: HashMap::new(),
+            #[cfg(windows)]
             skipped: HashMap::new(),
+            #[cfg(windows)]
             pending: HashMap::new(),
         })
     }
@@ -120,19 +155,10 @@ pub fn ids_from_path(path: &str) -> Option<(u16, u16)> {
     Some((vid, hex(p.get(j + 4..j + 8)?)?))
 }
 
-/// A hidapi context that does not scan all HID devices of the PC (that is
-/// what blocks on stale Bluetooth devices). ND104 Studio, its setup and the
-/// device thread are the only hidapi users in their processes, so the
-/// global switch behind it is fine here.
-#[cfg(not(windows))]
-#[allow(deprecated)]
-fn hidapi_without_scan() -> hidapi::HidResult<HidApi> {
-    HidApi::new_without_enumerate()
-}
-
 /// Reads one interface's details in a helper thread, so that a device that
 /// does not answer cannot hold up the others; a receiver that stays empty
 /// means too slow (the thread finishes on its own later).
+#[cfg(windows)]
 fn interface_info(path: &str) -> mpsc::Receiver<Result<HidInterfaceInfo>> {
     let (tx, rx) = mpsc::channel();
     let path = path.to_owned();
@@ -142,7 +168,9 @@ fn interface_info(path: &str) -> mpsc::Receiver<Result<HidInterfaceInfo>> {
     rx
 }
 
-/// Interface number from the path (`…&MI_01…`), -1 without one.
+/// Interface number from the path (`…&MI_01…`), -1 without one (Windows
+/// paths; on Linux hidapi reports it).
+#[cfg(windows)]
 fn interface_number(path: &str) -> i32 {
     let p = path.to_ascii_lowercase();
     p.find("&mi_")
@@ -198,24 +226,9 @@ fn read_interface_info(path: String) -> Result<HidInterfaceInfo> {
         usage_page: caps.UsagePage,
         usage: caps.Usage,
         interface_number: interface_number(&path),
+        bus: bus_from_path(&path),
         path,
         product: None,
-    })
-}
-
-#[cfg(not(windows))]
-fn read_interface_info(path: String) -> Result<HidInterfaceInfo> {
-    let api = hidapi_without_scan()?;
-    let c_path = CString::new(path.clone()).map_err(|_| anyhow!("invalid HID path"))?;
-    let d = api.open_path(&c_path)?.get_device_info()?;
-    Ok(HidInterfaceInfo {
-        vid: d.vendor_id(),
-        pid: d.product_id(),
-        usage_page: d.usage_page(),
-        usage: d.usage(),
-        interface_number: d.interface_number(),
-        path,
-        product: d.product_string().map(str::to_owned),
     })
 }
 
@@ -334,22 +347,110 @@ fn bluetooth_connected(path: &str) -> bool {
     true
 }
 
-#[cfg(not(windows))]
-fn bluetooth_connected(_path: &str) -> bool {
-    true
-}
-
-#[cfg(not(windows))]
-fn hid_paths() -> Result<Vec<String>> {
-    let mut api = HidApi::new().context("cannot initialise HID API")?;
-    api.refresh_devices().context("HID enumeration failed")?;
-    Ok(api
-        .device_list()
-        .map(|d| d.path().to_string_lossy().into_owned())
-        .collect())
+/// The report ID of one top-level collection (`usage_page:usage`) in a
+/// report descriptor: the first Report ID item (`85 nn`) inside that
+/// collection, 0 without one.
+///
+/// On Linux one hidraw device covers a whole USB interface, so its
+/// descriptor holds several collections – the ND104's interface 4 has five
+/// (report IDs 03, 06, 02, 04 and 05 for the lighting channel), and over
+/// Bluetooth the keyboard collections come before the command channel
+/// (ID 2). Taking the first ID of the whole descriptor would pick the wrong
+/// one. Walks the items properly (no data byte is mistaken for an item).
+#[cfg_attr(windows, allow(dead_code))]
+pub fn report_id_for_collection(desc: &[u8], usage_page: u16, usage: u16) -> u8 {
+    let mut i = 0;
+    let mut page = 0u16;
+    let mut last_usage: Option<u16> = None;
+    let mut depth = 0u32;
+    let mut inside = false;
+    while i < desc.len() {
+        let prefix = desc[i];
+        if prefix == 0xFE {
+            // long item: 0xFE, size, tag, data
+            let size = usize::from(*desc.get(i + 1).unwrap_or(&0));
+            i += 3 + size;
+            continue;
+        }
+        let size = match prefix & 0x03 {
+            3 => 4,
+            n => usize::from(n),
+        };
+        let data = desc.get(i + 1..i + 1 + size).unwrap_or(&[]);
+        let value = data
+            .iter()
+            .rev()
+            .fold(0u32, |v, &b| (v << 8) | u32::from(b));
+        match prefix & 0xFC {
+            // Usage Page (global)
+            0x04 => page = value as u16,
+            // Usage (local); a 4-byte usage carries its own page
+            0x08 => {
+                last_usage = Some(if size == 4 {
+                    (value & 0xFFFF) as u16
+                } else {
+                    value as u16
+                });
+                if size == 4 {
+                    page = (value >> 16) as u16;
+                }
+            }
+            // Collection
+            0xA0 => {
+                if depth == 0 {
+                    inside = page == usage_page && last_usage == Some(usage);
+                }
+                depth += 1;
+                last_usage = None;
+            }
+            // End Collection
+            0xC0 => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    inside = false;
+                }
+            }
+            // Report ID (global)
+            0x84 if inside && size >= 1 => return data[0],
+            // Main items (Input/Output/Feature) end the local usages
+            0x80 | 0x90 | 0xB0 => last_usage = None,
+            _ => {}
+        }
+        i += 1 + size;
+    }
+    0
 }
 
 impl HidBackend for HidapiBackend {
+    /// Linux and others: hidapi lists the hidraw devices with all details
+    /// (IDs, usage, interface number, bus) – only the supported ones are kept.
+    #[cfg(not(windows))]
+    fn enumerate(&mut self) -> Result<Vec<HidInterfaceInfo>> {
+        self.api
+            .refresh_devices()
+            .context("HID enumeration failed")?;
+        Ok(self
+            .api
+            .device_list()
+            .filter(|d| self.wanted.contains(&(d.vendor_id(), d.product_id())))
+            .map(|d| HidInterfaceInfo {
+                vid: d.vendor_id(),
+                pid: d.product_id(),
+                usage_page: d.usage_page(),
+                usage: d.usage(),
+                interface_number: d.interface_number(),
+                path: d.path().to_string_lossy().into_owned(),
+                product: d.product_string().map(str::to_owned),
+                bus: match d.bus_type() {
+                    hidapi::BusType::Usb => Bus::Usb,
+                    hidapi::BusType::Bluetooth => Bus::Bluetooth,
+                    _ => Bus::Unknown,
+                },
+            })
+            .collect())
+    }
+
+    #[cfg(windows)]
     fn enumerate(&mut self) -> Result<Vec<HidInterfaceInfo>> {
         let started = Instant::now();
         let paths: Vec<String> = hid_paths()?
@@ -422,21 +523,15 @@ impl HidBackend for HidapiBackend {
             .api
             .open_path(&path)
             .with_context(|| format!("cannot open {:04x}:{:04x}", info.vid, info.pid))?;
-        // over USB the vendor collection has no report ID; over Bluetooth it
-        // has one (ND104: 2), declared in the report descriptor (tag 0x85)
-        let report_id = if info.is_bluetooth() {
-            let mut desc = [0u8; 4096];
-            let len = device
-                .get_report_descriptor(&mut desc)
-                .context("cannot read the Bluetooth report descriptor")?;
-            desc[..len]
-                .windows(2)
-                .find(|w| w[0] == 0x85)
-                .map(|w| w[1])
-                .ok_or_else(|| anyhow!("Bluetooth interface without report ID"))?
-        } else {
-            0
-        };
+        // the collection's report ID from its descriptor: none for the
+        // command channel over USB, 2 over Bluetooth, 5 for the lighting
+        // channel (docs/protocol.md § 5.4, § 5.5). The hidraw descriptor
+        // can hold several collections – take the one being opened.
+        let mut desc = [0u8; 4096];
+        let len = device
+            .get_report_descriptor(&mut desc)
+            .context("cannot read the report descriptor")?;
+        let report_id = report_id_for_collection(&desc[..len], info.usage_page, info.usage);
         Ok(Box::new(HidapiChannel { device, report_id }))
     }
 }
@@ -629,7 +724,9 @@ pub mod win {
 #[cfg(not(windows))]
 struct HidapiChannel {
     device: hidapi::HidDevice,
-    /// 0 over USB; the collection's report ID over Bluetooth.
+    /// 0 if the collection has no report ID (the USB command channel);
+    /// otherwise its ID (lighting channel 5 over USB, command channel 2
+    /// over Bluetooth).
     report_id: u8,
 }
 
@@ -650,24 +747,107 @@ impl HidChannel for HidapiChannel {
     }
 
     fn read(&mut self, timeout: Duration) -> Result<Option<Vec<u8>>> {
+        let deadline = std::time::Instant::now() + timeout;
         let mut buf = [0u8; 65];
-        let ms = i32::try_from(timeout.as_millis()).unwrap_or(i32::MAX);
-        match self
-            .device
-            .read_timeout(&mut buf, ms)
-            .context("HID read failed")?
-        {
-            0 => Ok(None),
-            // with a report ID, Windows puts it in front of the data
-            n if self.report_id != 0 && buf[0] == self.report_id => Ok(Some(buf[1..n].to_vec())),
-            n => Ok(Some(buf[..n].to_vec())),
+        loop {
+            let left = deadline.saturating_duration_since(std::time::Instant::now());
+            let ms = i32::try_from(left.as_millis()).unwrap_or(i32::MAX);
+            let n = self
+                .device
+                .read_timeout(&mut buf, ms)
+                .context("HID read failed")?;
+            if n == 0 {
+                return Ok(None);
+            }
+            // another collection of the same hidraw device (e.g. a key
+            // press): never passed on or logged
+            if let Some(report) = own_report(&buf[..n], self.report_id) {
+                return Ok(Some(report.to_vec()));
+            }
+            if left.is_zero() {
+                return Ok(None);
+            }
         }
+    }
+}
+
+/// The part of a report read from a hidraw device that belongs to the opened
+/// collection, without its report ID; `None` for reports of other
+/// collections. On Linux one hidraw device carries every collection of a
+/// USB interface (over Bluetooth: of the whole keyboard), so key presses
+/// (report ID 1) arrive next to the command channel's answers (ID 2) –
+/// they must not be taken for answers. A collection without report ID is
+/// alone on its device (the command channel over USB).
+#[cfg_attr(windows, allow(dead_code))]
+fn own_report(report: &[u8], report_id: u8) -> Option<&[u8]> {
+    match report.split_first() {
+        _ if report_id == 0 => Some(report),
+        Some((&id, data)) if id == report_id => Some(data),
+        _ => None,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn udev_rules_cover_every_supported_device() {
+        let rules = [
+            include_str!("../../../linux/70-nd104-studio.rules"),
+            include_str!("../../../linux/70-nd104-studio-plugdev.rules"),
+        ];
+        for model in crate::model::registry() {
+            for spec in model.interfaces().iter().chain(model.receiver()) {
+                let id = format!("*:{:04X}:{:04X}.*", spec.vid, spec.pid);
+                for r in rules {
+                    assert!(r.contains(&id), "udev rule for {id} missing");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn reports_of_other_collections_are_dropped() {
+        // Bluetooth: a key press (ID 1) next to the command channel (ID 2)
+        assert_eq!(own_report(&[0x01, 0x00, 0x00, 0x18], 2), None);
+        assert_eq!(own_report(&[0x02, 0x11, 0x02], 2), Some(&[0x11, 0x02][..]));
+        // lighting channel (ID 5) on interface 4 next to the mouse (ID 3)
+        assert_eq!(own_report(&[0x03, 0x01], 5), None);
+        // command channel over USB: no report ID, the report as it is
+        assert_eq!(own_report(&[0x11, 0x02], 0), Some(&[0x11, 0x02][..]));
+    }
+
+    #[test]
+    fn report_id_is_taken_from_the_right_collection() {
+        // USB command channel alone: no report ID
+        let usb = [
+            0x06, 0x60, 0xFF, 0x09, 0x61, 0xA1, 0x01, 0x09, 0x62, 0x15, 0x00, 0x26, 0xFF, 0x00,
+            0x95, 0x20, 0x75, 0x08, 0x81, 0x02, 0xC0,
+        ];
+        assert_eq!(report_id_for_collection(&usb, 0xFF60, 0x61), 0);
+        // Linux hidraw of interface 4: system control (ID 3) first, then
+        // the lighting channel (ID 5)
+        let interface4 = [
+            0x05, 0x01, 0x09, 0x80, 0xA1, 0x01, 0x85, 0x03, 0x19, 0x81, 0x29, 0x83, 0x15, 0x00,
+            0x25, 0x01, 0x75, 0x01, 0x95, 0x03, 0x81, 0x02, 0x95, 0x05, 0x81, 0x01, 0xC0, //
+            0x06, 0x59, 0xFF, 0x09, 0x60, 0xA1, 0x01, 0x85, 0x05, 0x09, 0x62, 0x15, 0x00, 0x26,
+            0xFF, 0x00, 0x75, 0x08, 0x95, 0x3F, 0x81, 0x02, 0x09, 0x63, 0x91, 0x02, 0xC0,
+        ];
+        assert_eq!(report_id_for_collection(&interface4, 0xFF59, 0x60), 5);
+        assert_eq!(report_id_for_collection(&interface4, 0x0001, 0x80), 3);
+        assert_eq!(
+            report_id_for_collection(&interface4, 0x000C, 0x01),
+            0,
+            "not there"
+        );
+        // nested collections and a data byte 0x85 do not confuse it
+        let nested = [
+            0x09, 0x85, 0x06, 0x60, 0xFF, 0x09, 0x61, 0xA1, 0x01, 0xA1, 0x02, 0x85, 0x02, 0xC0,
+            0xC0,
+        ];
+        assert_eq!(report_id_for_collection(&nested, 0xFF60, 0x61), 2);
+    }
 
     #[test]
     fn ids_come_from_usb_and_bluetooth_paths() {

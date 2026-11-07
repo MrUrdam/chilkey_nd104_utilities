@@ -16,7 +16,7 @@
 //! - [`rebrand`]: takes over the data of the former name nd104-sync
 //! - [`firmware_update`]: compare keyboard firmware with `firmware/versions.json`
 //!
-//! Scope: wired USB only, Windows first.
+//! Scope: Windows and Linux; USB cable, Bluetooth and 2.4 GHz.
 
 pub mod app_update;
 pub mod clock;

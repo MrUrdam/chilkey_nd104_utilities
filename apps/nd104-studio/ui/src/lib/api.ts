@@ -64,6 +64,8 @@ export interface FirmwareInfo {
 
 export type DeviceState =
   | { kind: "not_connected" }
+  /** Found, but the system does not allow opening it (Linux: udev rule missing). */
+  | { kind: "no_access"; model_name: string; path: string }
   | {
       kind: "ready";
       /** USB cable (everything), Bluetooth or the 2.4 GHz receiver (no own picture). */
@@ -158,6 +160,10 @@ export interface AppInfo {
   models: { id: string; name: string; verified_firmware: { role: string; version: string }[] }[];
   min_weather_interval: number;
   self_update: boolean;
+  /** "windows" or "linux". */
+  platform: string;
+  /** OS keyring reachable; false (Linux) means keys use the 0600 fallback file. */
+  secure_store: boolean;
 }
 
 export interface ProviderInfo {
@@ -247,6 +253,7 @@ export const api = {
   appInfo: () => invoke<AppInfo>("app_info"),
   thirdPartyNotices: () => invoke<string>("third_party_notices"),
   installUpdate: () => invoke<void>("install_update"),
+  installUdevRule: () => invoke<void>("install_udev_rule"),
   texts: () => invoke<Record<string, string>>("texts"),
   status: () => invoke<Status>("get_status"),
   config: () => invoke<Config>("get_config"),

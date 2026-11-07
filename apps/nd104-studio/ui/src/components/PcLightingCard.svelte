@@ -7,6 +7,7 @@
   import { t } from "../lib/i18n.svelte";
   import Icon from "./Icon.svelte";
   import OpenRgbCard from "./OpenRgbCard.svelte";
+  import { platform } from "../lib/platform.svelte";
 
   let {
     status,
@@ -105,6 +106,9 @@
   {#if allowed === 1}
   <OpenRgbCard bind:draft {errors} />
 
+  {#if platform() === "linux"}
+  <p class="muted small">{t("ui.pcl.srgb_windows_only")}</p>
+  {:else}
   <div class="plugin stack">
     <div class="head">
       <div>
@@ -138,6 +142,7 @@
     {#if plugin}<p class="faint small selectable">{plugin.folder}</p>{/if}
     {#if pluginError}<div class="notice err selectable"><Icon name="alert" />{pluginError}</div>{/if}
   </div>
+  {/if}
   {/if}
 </div>
 

@@ -68,6 +68,9 @@
           <span class="badge {status.device.trust === 'verified' ? 'ok' : 'warn'}">
             {t(status.device.trust === "verified" ? "status.verified" : "status.compatible")}
           </span>
+        {:else if status.device.kind === "no_access"}
+          <span class="value"><span class="led err"></span>{t("ui.device.no_access")}</span>
+          <span class="faint small selectable">{t("ui.device.no_access_text", { path: status.device.path })}</span>
         {:else if status.device.kind === "locked"}
           <span class="value"><span class="led err"></span>{t("ui.device.locked")}</span>
           <button class="key" disabled={busy} onclick={() => run("recheck")}>{t("menu.recheck")}</button>
@@ -136,7 +139,7 @@
 
     <div class="card">
       <h2>{t("ui.dash.firmware")}</h2>
-      {#if status.device.kind !== "not_connected" && status.device.firmware.length}
+      {#if (status.device.kind === "ready" || status.device.kind === "locked") && status.device.firmware.length}
         <dl class="kv">
           {#each status.device.firmware as f (f.role)}
             <dt>{t(`ui.role.${f.role}`)}</dt>

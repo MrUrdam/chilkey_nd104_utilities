@@ -1,0 +1,14 @@
+# ND104 Studio – variant for systems without systemd-logind (e.g. Void,
+# Artix, Alpine): members of the group "plugdev" may open the Chilkey ND104.
+# Install: copy to /etc/udev/rules.d/70-nd104-studio.rules, add yourself to
+# the group (sudo usermod -aG plugdev $USER, then log in again), then:
+# sudo udevadm control --reload && sudo udevadm trigger
+#
+# The parent HID device is named BUS:VID:PID.N – bus 0003 USB, 0005 Bluetooth.
+
+# keyboard (USB cable and Bluetooth)
+SUBSYSTEM=="hidraw", KERNELS=="*:6D67:016C.*", GROUP="plugdev", MODE="0660"
+# display controller (USB cable)
+SUBSYSTEM=="hidraw", KERNELS=="*:5542:0001.*", GROUP="plugdev", MODE="0660"
+# 2.4 GHz receiver
+SUBSYSTEM=="hidraw", KERNELS=="*:6D66:8572.*", GROUP="plugdev", MODE="0660"

@@ -68,7 +68,47 @@ pub(crate) struct AppState {
     pub(crate) keymap_restore: Mutex<Option<keymap_backup::PendingRestore>>,
 }
 
+/// Linux + NVIDIA driver: WebKitGTK may show a blank window under Wayland;
+/// the known workaround is to switch off its DMA-BUF renderer. Set before
+/// any thread starts, and only if the user did not choose otherwise.
+#[cfg(target_os = "linux")]
+fn webkit_workarounds() {
+    if std::path::Path::new("/proc/driver/nvidia").exists()
+        && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none()
+    {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+}
+
+/// After an AppImage self-update the new copy is started with
+/// `--after-update <pid>` while the old one is still shutting down. Wait for
+/// that process to exit before the single-instance plugin runs: otherwise the
+/// new instance would only hand its arguments to the old one and exit, and the
+/// old one quits right after – nothing left running. Bounded, so a stuck old
+/// process cannot block the start forever.
+#[cfg(target_os = "linux")]
+fn wait_for_previous_instance() {
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        if arg != "--after-update" {
+            continue;
+        }
+        if let Some(pid) = args.next().and_then(|p| p.parse::<u32>().ok()) {
+            let proc_dir = std::path::PathBuf::from(format!("/proc/{pid}"));
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+            while proc_dir.exists() && std::time::Instant::now() < deadline {
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+        }
+        return;
+    }
+}
+
 fn main() {
+    #[cfg(target_os = "linux")]
+    wait_for_previous_instance();
+    #[cfg(target_os = "linux")]
+    webkit_workarounds();
     // before anything reads or writes data: take over nd104-sync's folders and keys
     let migrated = nd104_core::rebrand::migrate();
     let _log_guard = logging::init();
@@ -136,6 +176,7 @@ fn main() {
             commands::engine_command,
             commands::open_target,
             commands::install_update,
+            commands::install_udev_rule,
             hardware::light_read,
             hardware::light_apply,
             bluetooth::bluetooth_status,
@@ -425,6 +466,9 @@ async fn watch_status(app: AppHandle, mut status: watch::Receiver<Status>) {
         let items = state.items.lock().unwrap().clone();
         if let Some(items) = items {
             let _ = items.status.set_text(tray::status_line(&i18n, &current));
+            if let Some(detail) = &items.detail {
+                let _ = detail.set_text(tray::detail_line(&i18n, &current));
+            }
             let _ = items.pause.set_text(i18n.t(if current.paused {
                 "menu.resume"
             } else {
@@ -435,6 +479,12 @@ async fn watch_status(app: AppHandle, mut status: watch::Receiver<Status>) {
         // Notifications on transitions only.
         match (&previous.device, &current.device) {
             (DeviceState::Locked { .. }, DeviceState::Locked { .. }) => {}
+            (DeviceState::NoAccess { .. }, DeviceState::NoAccess { .. }) => {}
+            (_, DeviceState::NoAccess { path, .. }) => notify(
+                &app,
+                &i18n.t("notify.no_access_title"),
+                &i18n.tf("notify.no_access_body", &[("path", path)]),
+            ),
             (_, DeviceState::Locked { reason, .. }) => notify(
                 &app,
                 &i18n.t("notify.locked_title"),

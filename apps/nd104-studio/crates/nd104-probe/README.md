@@ -1,13 +1,16 @@
-﻿# nd104-probe
+# nd104-probe
 
-Diagnostic command-line tool for **milestone M0**. It checks the Chilkey ND104
-protocol on real hardware before the ND104 Studio app is built.
+Diagnostic command-line tool for the Chilkey ND104 protocol. It reads
+firmware versions, sends single test packets and checks new firmware on real
+hardware. It started as the test tool for milestone M0, before ND104 Studio
+existed, and ships with every release (portable zip and tarball).
 
-> ðŸ”Œ **USB cable, Bluetooth or 2.4 GHz** â€“ the same as ND104 Studio, see
-> [Connection modes](../../README.md#connection-modes) (`picture` and the screen version: cable only).
-> ðŸªŸ Tested target: Windows 10/11.
-> âš ï¸ Close the official web driver (nd104.chilkey.com) first. It holds the
-> same HID interfaces open.
+| | |
+|---|---|
+| 🔌 **Connections** | USB cable, Bluetooth or 2.4 GHz, like ND104 Studio ([Connection modes](../../README.md#connection-modes)). `picture` and the screen version: cable only |
+| 🪟 **Windows 10/11** | runs as is |
+| 🐧 **Linux** | needs the udev rule ([installation](../../docs/installation.md#keyboard-access--the-udev-rule)) or `sudo`. `descriptors` can stall on Linux |
+| ⚠️ **Before you start** | close the official web driver (nd104.chilkey.com) and quit ND104 Studio, both hold the same HID interfaces open |
 
 ## What it does
 
@@ -18,21 +21,21 @@ protocol on real hardware before the ND104 Studio app is built.
 | `listen` | Print every input report of a device for N seconds | no |
 | `time` | Send the current (or a given) local time | yes |
 | `weather` | Send icon + current/max/min temperature | yes |
-| `icons` | Cycle icons 0â€“9 (current temperature = icon index) | yes |
+| `icons` | Cycle icons 0–9 (current temperature = icon index) | yes |
 | `descriptors` | Every collection of keyboard, screen and receiver with usage, report IDs and report descriptor (fast device list) | no |
 | `descriptor` | Print the HID report descriptor of the vendor collection (shows the report ID used over Bluetooth) | no |
 | `query 08 03 01` | Send one **read** command (`01`, `02`, `08`, `12` or `14` only) and print the answers | no |
 | `light --zone backlight\|bottom` | Read effect, brightness, speed and colour; `--effect/--brightness/--speed/--color h,s` change them, `--store` keeps them | only with values (stored only with `--store`) |
 | `setting --name debounce-mode\|debounce-time\|sleep\|deep-sleep [value]` | Read a keyboard setting; a value changes it (only the values Chilkey's driver offers), `--store` keeps it | only with a value |
 | `key --layer L --row R --col C [--code XXXX]` | Read one key; `--code` changes it, reads it back and prints the command to undo it | only with `--code` (**stored immediately**) |
-| `knob --layer L --dir left\|right [--code XXXX]` | The same for the knob (layers 0â€“3) | only with `--code` (**stored immediately**) |
-| `keymap --layer L` | Print one layer of the keymap as an 8 Ã— 16 table | no |
+| `knob --layer L --dir left\|right [--code XXXX]` | The same for the knob (layers 0–3) | only with `--code` (**stored immediately**) |
+| `keymap --layer L` | Print one layer of the keymap as an 8 × 16 table | no |
 | `picture --file F [--fit fill\|contain] [--dry-run]` | Check and convert a picture/GIF like the app, then upload it to the screen (USB only) | yes (`--dry-run`: no) |
 
 All keyboard commands work over the USB cable **and over Bluetooth**: the tool
 reads the report ID from the descriptor (over Bluetooth the vendor collection
-uses report ID 2) and adds/removes it automatically. The screen controller â€“
-needed for `picture` and the screen version â€“ is reachable by cable only.
+uses report ID 2) and adds/removes it automatically. The screen controller –
+needed for `picture` and the screen version – is reachable by cable only.
 
 Over **2.4 GHz** the keyboard commands go through the receiver
 (`6D66:8572`, same vendor collection): when the keyboard is not on USB, the
@@ -84,28 +87,28 @@ Options for the writing commands:
 | `--force` | off | Write despite unknown firmware (verification only) |
 | `--report-len N` | 32 / 64 | Override the HID report length if Windows rejects the write |
 
-## M0 test plan
+## Test plan for new firmware
 
-Work through these in order and note the results in
-[docs/protocol.md Â§ 6](../../../../docs/protocol.md#6-open-points-for-m0-hardware-verification):
+Originally the M0 plan. Work through these in order and note the results in
+[docs/protocol.md § 6](../../../../docs/protocol.md#6-open-points-for-m0-hardware-verification):
 
 1. `list`: do both devices appear with usage page `ff60` and usage `0061`?
-2. `version`: which strings come back? Note the raw answers. â†’ fill in the
+2. `version`: which strings come back? Note the raw answers → fill in the
    README firmware table.
 3. `time --target keyboard`, then `time --target screen`: which one updates the clock?
 4. `weather --icon 0 --current 21.5 --max 24 --min 12`: are the values shown correctly?
 5. `weather --icon 5 --current -3.5 --max 1 --min -7.2`: are negative values right?
-6. `icons`: photograph or describe each icon 0â€“9.
+6. `icons`: photograph or describe each icon 0–9.
 7. `listen --device screen` while switching display pages with Fn + knob: what does the screen send?
 
 ## Build
 
-Requirements: Rust stable (MSVC toolchain) and the Visual Studio Build Tools
-(C++ workload). HID access uses the pure-Rust Windows backend of `hidapi`
-(`windows-native`), so no C compiler is needed for HID itself.
+Requirements: as in [Building from source](../../docs/building.md#prerequisites).
+On Windows, HID access uses the pure-Rust backend of `hidapi`
+(`windows-native`), on Linux its hidraw backend.
 
 ```bash
 cd apps/nd104-studio
-cargo build -p nd104-probe --release   # â†’ target/release/nd104-probe.exe
+cargo build -p nd104-probe --release   # → target/release/nd104-probe(.exe)
 cargo test -p nd104-protocol           # protocol unit tests, no hardware needed
 ```

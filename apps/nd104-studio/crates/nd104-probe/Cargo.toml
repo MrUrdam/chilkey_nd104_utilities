@@ -12,5 +12,10 @@ nd104-protocol.workspace = true
 nd104-core.workspace = true
 anyhow.workspace = true
 clap.workspace = true
-hidapi.workspace = true
 jiff.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+hidapi = { workspace = true, features = ["windows-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+hidapi = { workspace = true, features = ["linux-native-basic-udev"] }

@@ -4,7 +4,8 @@
 //! here is derived from the official web driver and the community notes, see
 //! `docs/protocol.md` in the repository.
 //!
-//! Scope: wired USB connection only.
+//! Transport-independent: the same packets go over the USB cable, Bluetooth
+//! and the 2.4 GHz receiver.
 
 mod checksum;
 mod device;

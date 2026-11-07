@@ -1,6 +1,6 @@
 [package]
 name = "nd104-cli"
-description = "Headless console runner for the ND104 Studio core (wired USB only)"
+description = "Headless console runner for the ND104 Studio core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

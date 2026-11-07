@@ -45,6 +45,12 @@ pub struct AppInfo {
     min_weather_interval: u32,
     /// "Install update" is possible (installed by nd104-studio-setup).
     self_update: bool,
+    /// `windows` or `linux` (`std::env::consts::OS`).
+    platform: &'static str,
+    /// The OS credential store is reachable. On Linux `false` means the Secret
+    /// Service is not running, so API keys use the 0600 fallback file and the
+    /// UI should warn.
+    secure_store: bool,
 }
 
 #[tauri::command]
@@ -72,6 +78,8 @@ pub fn app_info(state: State<'_, AppState>) -> AppInfo {
             .collect(),
         min_weather_interval: WeatherSettings::MIN_INTERVAL_MIN,
         self_update: crate::self_update::supported(),
+        platform: std::env::consts::OS,
+        secure_store: nd104_core::secrets::secure_store_available(),
     }
 }
 
@@ -91,6 +99,49 @@ pub async fn install_update(app: AppHandle) -> CmdResult<()> {
         .map_err(|e| format!("{e:#}"))?;
     crate::quit(&app);
     Ok(())
+}
+
+/// Installs the udev access rule with `pkexec` (for the AppImage / tarball on
+/// Linux, where no package manager placed it). Idempotent; the user confirms
+/// in the polkit dialog.
+#[cfg(target_os = "linux")]
+#[tauri::command]
+pub async fn install_udev_rule() -> CmdResult<()> {
+    const RULE: &str = include_str!("../../linux/70-nd104-studio.rules");
+    // The rule goes to the root shell over stdin: a file in the shared /tmp
+    // could be swapped by another local user between writing and installing.
+    const SCRIPT: &str = "umask 022 && \
+        cat > /etc/udev/rules.d/.70-nd104-studio.rules.new && \
+        mv -f /etc/udev/rules.d/.70-nd104-studio.rules.new /etc/udev/rules.d/70-nd104-studio.rules && \
+        udevadm control --reload && udevadm trigger --subsystem-match=hidraw";
+    tokio::task::spawn_blocking(move || -> CmdResult<()> {
+        use std::io::Write;
+        let mut child = std::process::Command::new("pkexec")
+            .arg("sh")
+            .arg("-c")
+            .arg(SCRIPT)
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("cannot run pkexec: {e}"))?;
+        // dropping stdin closes it, so `cat` sees the end of the rule
+        if let Some(mut stdin) = child.stdin.take() {
+            // a write error means pkexec was cancelled; the status below says so
+            let _ = stdin.write_all(RULE.as_bytes());
+        }
+        let status = child.wait().map_err(err)?;
+        if !status.success() {
+            return Err("installing the access rule was cancelled or failed".into());
+        }
+        Ok(())
+    })
+    .await
+    .map_err(err)?
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+pub async fn install_udev_rule() -> CmdResult<()> {
+    Err("installing the access rule is only available on Linux".into())
 }
 
 /// Locale texts for the UI (same files as the tray).

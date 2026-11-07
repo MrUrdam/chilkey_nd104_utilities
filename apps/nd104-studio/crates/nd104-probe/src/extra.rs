@@ -15,6 +15,18 @@ use nd104_protocol::{parse_picture_ack, PictureAck, Target};
 
 use crate::hid::{hex_dump, Device, Probe};
 
+/// A hidapi context for opening paths. Windows: without hidapi's slow scan of
+/// every HID device; Linux: hidapi reads sysfs (cheap), and the app's device
+/// list has already created a normal context, which "without scan" may not
+/// follow (hidapi panics then).
+fn hid_api() -> hidapi::HidResult<hidapi::HidApi> {
+    #[cfg(windows)]
+    #[allow(deprecated)]
+    return hidapi::HidApi::new_without_enumerate();
+    #[cfg(not(windows))]
+    return hidapi::HidApi::new();
+}
+
 const ANSWER: Duration = Duration::from_millis(1000);
 
 /// Sends one command and returns the first answer starting with the same
@@ -341,8 +353,7 @@ pub fn descriptors() -> Result<()> {
             b.usage_page,
         ))
     });
-    #[allow(deprecated)]
-    let api = hidapi::HidApi::new_without_enumerate()?;
+    let api = hid_api()?;
     for info in list {
         println!(
             "{:04x}:{:04x} if {:>2} usage {:04x}:{:04x}{}",
@@ -405,8 +416,7 @@ pub fn feature(usage: &str, id: &str) -> Result<()> {
         .into_iter()
         .find(|i| i.vid == 0x6D67 && !i.is_bluetooth() && i.usage_page == page && i.usage == use_)
         .ok_or_else(|| anyhow!("collection {page:04x}:{use_:04x} not found (USB cable?)"))?;
-    #[allow(deprecated)]
-    let api = hidapi::HidApi::new_without_enumerate()?;
+    let api = hid_api()?;
     let device = api.open_path(&std::ffi::CString::new(info.path)?)?;
     let mut buf = [0u8; 256];
     buf[0] = id;
@@ -439,8 +449,7 @@ fn lighting_channel() -> Result<hidapi::HidDevice> {
         .ok_or_else(|| {
             anyhow!("lighting channel (interface 4, FF59:0060) not found – USB cable?")
         })?;
-    #[allow(deprecated)]
-    let api = hidapi::HidApi::new_without_enumerate()?;
+    let api = hid_api()?;
     Ok(api.open_path(&std::ffi::CString::new(info.path)?)?)
 }
 
@@ -512,8 +521,7 @@ pub fn rgb(bytes: &[String]) -> Result<()> {
         .ok_or_else(|| {
             anyhow!("lighting channel (interface 4, FF59:0060) not found – USB cable?")
         })?;
-    #[allow(deprecated)]
-    let api = hidapi::HidApi::new_without_enumerate()?;
+    let api = hid_api()?;
     let device = api.open_path(&std::ffi::CString::new(info.path)?)?;
     // report ID 05 + 63 bytes
     let mut report = vec![0x05];

@@ -1,6 +1,6 @@
 [package]
 name = "nd104-studio"
-description = "ND104 Studio: display, lighting and keymap for the Chilkey ND104 (tray app, wired USB only)"
+description = "ND104 Studio: display, lighting and keymap for the Chilkey ND104 (tray app; USB, Bluetooth or 2.4 GHz)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -31,6 +31,12 @@ tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
+
+# Linux: Bluetooth connection and battery from BlueZ (D-Bus, system bus)
+[target.'cfg(target_os = "linux")'.dependencies]
+dbus = "0.9"
+# AppImage self-update: inherited fds close-on-exec before the restart
+libc = "0.2"
 
 [target.'cfg(windows)'.dependencies.windows]
 version = "0.62"

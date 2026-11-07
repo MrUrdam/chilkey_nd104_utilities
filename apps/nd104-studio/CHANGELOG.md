@@ -13,6 +13,142 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.4.0] – 2026-11-07
+
+**ND104 Studio on Linux.** Next to Windows 10/11, the app now runs on Linux
+x86-64 with the same features (minus SignalRGB, which exists for Windows
+only): USB cable, 2.4 GHz receiver and Bluetooth incl. battery, time and
+weather on the display, own pictures, lighting, keymap, keyboard settings and
+the OpenRGB interface. Windows users get the shared fixes below. This sums up
+the four betas; their sections below have the details.
+
+### Added
+- **Linux packages:** `.deb` (Debian, Ubuntu), `.rpm` (Fedora, openSUSE, RHEL
+  family; dependencies by library soname) and a self-updating AppImage, built
+  on Ubuntu 22.04 (glibc 2.35); a portable tarball with the tray app,
+  `nd104-cli`, `nd104-probe` and the udev rule. The `.deb`/`.rpm` also ship
+  `nd104-cli` and install the udev rule, so the logged-in user reaches the
+  keyboard without root.
+- **Linux desktop integration:** tray (StatusNotifierItem), launcher,
+  start at login, API keys in the Secret Service (GNOME Keyring, KWallet) with
+  a 0600-file fallback and a warning where none runs, Bluetooth battery from
+  BlueZ.
+- **"No access" help:** when the keyboard is found but not accessible, the
+  app says so and offers an "Install access rule" button (`pkexec`) for the
+  AppImage and the tarball.
+- **In-app update for the AppImage** (download, SHA-256 check, replace,
+  restart); `.deb`/`.rpm` are updated by the package manager.
+- **Beta channel:** an installed pre-release is offered newer pre-releases and
+  the next stable release; a stable install never sees a pre-release.
+- Releases publish the Linux assets next to the Windows ones under one
+  `SHA256SUMS.txt`; `THIRD-PARTY-NOTICES.txt` covers both builds and the
+  libraries bundled in the AppImage. CI install tests check the packages and
+  the AppImage on Ubuntu, Debian, Fedora, openSUSE and Arch.
+
+### Fixed
+- Versions compare by SemVer precedence including pre-releases (a beta
+  Windows setup took itself for older than the installed release).
+- **AppImage self-update:** the restarted app inherited the old copy's
+  environment (`PATH`, `LD_LIBRARY_PATH`, `XDG_DATA_DIRS` pointing into the old
+  mount), working directory and open file descriptors. The old AppImage's
+  mount and runtime process stayed alive as long as the new copy ran – one
+  more per update – and the new copy read files from the old version. It
+  now starts detached from the old mount. The window also opens again after
+  the restart (it started in the tray only). Takes effect for updates *from*
+  this release on.
+
+### Changed
+- The app description no longer says "Wired USB connection only".
+- READMEs restructured; the ND104 Studio README links to focused guides
+  (installation, usage, firmware, building, troubleshooting).
+
+## [2.4.0-beta.4] – 2026-11-07
+
+Fourth Linux beta. An installed beta.3 is offered this release by the update
+check (beta channel); the AppImage replaces itself and restarts.
+
+### Fixed
+- Linux: **"Install access rule"** no longer stages the udev rule as a file in
+  the shared `/tmp` before `pkexec` installs it as root – another local user
+  could have swapped it, and the file was left behind. The rule now goes to
+  the root shell directly.
+
+## [2.4.0-beta.3] – 2026-11-07
+
+Third Linux beta: the first build with the beta channel, so from here on an
+installed beta updates itself to the next one. Install it by hand once
+(installs of beta.2 and older only look for stable releases).
+
+### Added
+- **Beta channel:** an installed pre-release (`-beta.N`, `-rc.N`) is now offered
+  newer pre-releases by the update check, and the next stable release; a
+  stable install still never sees a pre-release.
+- Linux: the `.deb` and `.rpm` now include the console runner `nd104-cli`
+  (`/usr/bin/nd104-cli`); so far it was in the tarball only.
+
+### Fixed
+- Versions compare by SemVer precedence including pre-releases. A beta
+  Windows setup took itself for older than the installed release (it ignored
+  the pre-release part) and showed the "older setup" hint.
+
+## [2.4.0-beta.2] – 2026-11-06
+
+Second Linux beta. It closes the gaps a review of the first beta found; the
+Windows build is unchanged apart from the shared fixes below.
+
+### Added
+- **Linux: API keys without a system keyring.** When no Secret Service runs
+  (Sway, i3, Hyprland, headless), keys are kept in
+  `~/.config/nd104-studio/secrets` (mode 0600) and the Weather page says so.
+- **Linux: "Install access rule" button** on the Device page when the keyboard
+  is found but not accessible – installs the udev rule via `pkexec` (for the
+  AppImage and the tarball; the `.deb`/`.rpm` install it themselves).
+
+### Fixed
+- **AppImage self-update** could end with no instance running: the new
+  AppImage now waits for the old process to exit before it starts.
+- **`.rpm` on openSUSE:** dependencies are declared by library soname instead
+  of Fedora package names, so the package resolves on Fedora, openSUSE and the
+  RHEL family alike (not built for pre-releases, see the README).
+- `THIRD-PARTY-NOTICES.txt` now covers the Linux build too (127 Linux-only
+  crates) and describes the libraries the AppImage bundles.
+- Outdated "wired USB only" wording in crate descriptions and `--help` texts.
+
+### Changed
+- READMEs restructured for a quick overview; the ND104 Studio README links to
+  focused guides (installation, usage, firmware, building, troubleshooting).
+- CI: the Linux job checks the third-party notices and builds a `.deb` to
+  catch packaging mistakes before a release.
+
+## [2.4.0-beta.1] – 2026-11-03
+
+First **beta of the Linux version** of ND104 Studio, for testing. Windows is
+unchanged. On Linux the app connects to the ND104 over USB cable, the 2.4 GHz
+receiver and Bluetooth, keeps the display supplied with time and weather, shows
+your own pictures, sets the lighting, remaps keys and offers the OpenRGB
+interface – the same features as on Windows, minus SignalRGB (Windows only).
+See the [README](README.md) for installation and the udev access rule.
+
+### Added
+- **Linux support** (x86-64): `.deb` (Debian/Ubuntu), `.rpm` (Fedora/openSUSE)
+  and a portable, self-updating AppImage, built on Ubuntu 22.04 (glibc 2.35). A
+  portable tarball ships the tray app, `nd104-cli`, `nd104-probe` and the rule.
+- Device access over hidraw for USB, the 2.4 GHz receiver and Bluetooth. The
+  `.deb`/`.rpm` install a udev rule so the logged-in user reaches the keyboard
+  without root; when it is missing, a "found, no access" state names the rule
+  and how to apply it.
+- Desktop integration: StatusNotifierItem tray, `.desktop` launcher, autostart
+  at login, API keys in the Secret Service (with a 0600-file fallback), and the
+  Bluetooth battery read from BlueZ.
+- In-app self-update for the AppImage (download, SHA-256 check, replace,
+  restart); `.deb`/`.rpm` installs update through the system package manager.
+
+### Changed
+- The app description no longer says "Wired USB connection only" – it names the
+  USB, Bluetooth and 2.4 GHz connections.
+- The release workflow builds and publishes Linux assets next to the Windows
+  ones, under one `SHA256SUMS.txt`.
+
 ## [2.3.1] – 2026-11-02
 
 **OpenRGB, Artemis and Aurora** can now colour every LED of the ND104 too –
@@ -300,7 +436,7 @@ backups, API keys, autostart and shortcuts are taken over.
   colours.
 - **New locations:** `%LOCALAPPDATA%\Programs\nd104-studio` (program),
   `%APPDATA%\nd104-studio` (settings, profiles), `%LOCALAPPDATA%\nd104-studio`
-  (logs, automatic keymap backups); see [README → Files](README.md#files).
+  (logs, automatic keymap backups); see [Files](docs/usage.md#files).
 - **Release files** are named `nd104-studio_X.Y.Z_…` and tagged
   `nd104-studio-vX.Y.Z`. Each release is also published as
   `nd104-sync-vX.Y.Z`, so installed nd104-sync versions find it.
@@ -533,7 +669,7 @@ Updating from 1.0.0 is optional.
 ### Added
 - **Screenshots** of all settings pages (Dashboard, Weather, Clock,
   Device & Firmware, General) in
-  [`docs/images/nd104-sync/`](../../docs/images/nd104-sync/), with a list
+  `docs/images/nd104-sync/` (now [`docs/images/nd104-studio/`](../../docs/images/nd104-studio/)), with a list
   describing each image.
 - **Demo mode** for the settings window (`npm run build:demo`): runs in a
   normal browser with sample data, without app or keyboard. It is built into
@@ -820,7 +956,12 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.1...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0...HEAD
+[2.4.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.1...nd104-studio-v2.4.0
+[2.4.0-beta.4]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.3...nd104-studio-v2.4.0-beta.4
+[2.4.0-beta.3]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.2...nd104-studio-v2.4.0-beta.3
+[2.4.0-beta.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.1...nd104-studio-v2.4.0-beta.2
+[2.4.0-beta.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.1...nd104-studio-v2.4.0-beta.1
 [2.3.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.0...nd104-studio-v2.3.1
 [2.3.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.2.0...nd104-studio-v2.3.0
 [2.2.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.1.0...nd104-studio-v2.2.0

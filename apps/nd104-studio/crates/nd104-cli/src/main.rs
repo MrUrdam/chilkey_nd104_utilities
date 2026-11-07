@@ -1,6 +1,6 @@
 //! nd104-cli – headless console runner for the nd104-studio core (M1).
 //!
-//! Wired USB only. Uses the same configuration file as the app.
+//! Uses the same configuration file as the app.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -20,7 +20,7 @@ use nd104_core::{model, APP_VERSION};
 #[command(
     name = "nd104-cli",
     version = APP_VERSION,
-    about = "ND104 Studio core on the console (Chilkey ND104, wired USB only)"
+    about = "ND104 Studio core on the console (Chilkey ND104)"
 )]
 struct Cli {
     /// Config file (default: %APPDATA%\nd104-studio\config.toml)
@@ -419,6 +419,12 @@ fn print_device(state: &DeviceState) {
             }
             println!("Nothing is sent. Re-plug the keyboard or run again to re-check.");
         }
+        DeviceState::NoAccess { model_name, path } => {
+            println!("{model_name} found, but no access to {path}.");
+            println!(
+                "Install the udev rule (README → Linux), then unplug and replug the keyboard."
+            );
+        }
     }
 }
 
@@ -435,6 +441,7 @@ fn summary(s: &Status) -> String {
             }
         ),
         DeviceState::Locked { reason, .. } => format!("LOCKED: {reason}"),
+        DeviceState::NoAccess { path, .. } => format!("NO ACCESS to {path} (udev rule missing)"),
     };
     let time = s
         .last_sent_time
