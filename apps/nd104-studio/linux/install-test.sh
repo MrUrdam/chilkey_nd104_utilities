@@ -40,7 +40,13 @@ runs_for_20s() { # runs_for_20s <description> <command...>
     Xvfb :99 -screen 0 1280x800x24 >/tmp/xvfb.out 2>&1 &
     local xvfb=$!
     sleep 2
-    DISPLAY=:99 timeout 20 dbus-run-session -- "$@" >/tmp/gui.out 2>&1
+    # X11 explicitly (GDK_BACKEND): Xvfb is an X server, and X11 is what
+    # desktops not yet on Wayland run - this must keep working.
+    local bus=()
+    if command -v dbus-run-session >/dev/null; then bus=(dbus-run-session --)
+    elif command -v dbus-launch >/dev/null; then bus=(dbus-launch --exit-with-session)
+    fi
+    DISPLAY=:99 GDK_BACKEND=x11 timeout 20 "${bus[@]}" "$@" >/tmp/gui.out 2>&1
     local rc=$?
     kill "$xvfb" 2>/dev/null
     wait "$xvfb" 2>/dev/null
@@ -72,7 +78,7 @@ if command -v apt-get >/dev/null; then
         fi
     fi
 elif command -v dnf >/dev/null; then
-    dnf install -y -q xorg-x11-server-Xvfb dbus-daemon mesa-libGL fontconfig gtk3 >/dev/null || true
+    dnf install -y -q xorg-x11-server-Xvfb dbus-daemon dbus-x11 mesa-libGL mesa-libEGL libglvnd-gles \n        libgpg-error fontconfig gtk3 >/dev/null || true
     rpm=$(ls "$DIST"/nd104-studio*.rpm 2>/dev/null | head -1)
     if [ -n "$rpm" ]; then
         if dnf install -y "$rpm" >/tmp/install.out 2>&1; then
@@ -84,7 +90,9 @@ elif command -v dnf >/dev/null; then
         echo "   skip no .rpm in this release (pre-release) - testing the AppImage"
     fi
 elif command -v zypper >/dev/null; then
-    zypper --non-interactive --quiet install xorg-x11-server-Xvfb dbus-1 Mesa-libGL1 fontconfig libgtk-3-0 >/dev/null || true
+    for p in xorg-x11-server-Xvfb dbus-1 dbus-1-tools dbus-1-x11 Mesa-libGL1 Mesa-libEGL1              libGLESv2-2 libgpg-error0 fontconfig libgtk-3-0; do
+        zypper --non-interactive --quiet install "$p" >/dev/null 2>&1 || echo "   note no package $p here"
+    done
     rpm=$(ls "$DIST"/nd104-studio*.rpm 2>/dev/null | head -1)
     if [ -n "$rpm" ]; then
         if zypper --non-interactive install --allow-unsigned-rpm "$rpm" >/tmp/install.out 2>&1; then
@@ -110,7 +118,7 @@ if [ "$PKG" != none ]; then
     fi
     check "udev rule installed" test -f /usr/lib/udev/rules.d/70-nd104-studio.rules
     check "nd104-studio: no missing shared library" bash -c '! ldd "$(command -v nd104-studio)" | grep -q "not found"'
-    runs_for_20s "nd104-studio runs under Xvfb" nd104-studio --minimized
+    runs_for_20s "nd104-studio runs on X11 (Xvfb)" nd104-studio --minimized
 fi
 
 # --- 3. the AppImage (every distro; the only option where no package fits) -
@@ -121,7 +129,7 @@ if [ -n "$app" ]; then
     cp "$app" /tmp/appimage/app.AppImage && chmod +x /tmp/appimage/app.AppImage
     if (cd /tmp/appimage && ./app.AppImage --appimage-extract >/dev/null 2>&1); then
         pass "AppImage unpacks"
-        runs_for_20s "AppImage runs under Xvfb" /tmp/appimage/squashfs-root/AppRun --minimized
+        runs_for_20s "AppImage runs on X11 (Xvfb)" /tmp/appimage/squashfs-root/AppRun --minimized
     else
         fail "AppImage does not unpack"
     fi

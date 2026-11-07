@@ -252,7 +252,9 @@ Debian 12/13; the AppImage starts there too. **Findings to fix:**
   (`libwayland-client.so.0`, `libfribidi.so.0` missing): linuxdeploy leaves
   such base desktop libraries to the host on purpose. Decided: the AppImage
   requires a **desktop system with GTK 3** (documented in installation.md);
-  the test installs GTK 3 as that baseline. Revisit if users report it;
+  the test installs GTK 3 as that baseline (plus GLVND GLES/EGL and
+  libgpg-error on Fedora). The GUI start runs on **X11** (Xvfb,
+  `GDK_BACKEND=x11`), so X11 desktops stay covered. Revisit if users report it;
 - the **`.deb`/`.rpm` ship only the GUI**, `nd104-cli` is in the tarball only.
 Script bugs from that run (os-release clobbering `VERSION`, no `xvfb-run` on
 openSUSE) are fixed; openSUSE results are still to come.
