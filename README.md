@@ -50,7 +50,7 @@ lighting, keymap, and a heads-up when new firmware is out.
       <p>
         <img src="https://img.shields.io/github/v/release/MrUrdam/chilkey_nd104_utilities?filter=nd104-studio-v*&label=version&color=0969da" alt="version">
         <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white" alt="Windows 10 | 11">
-        <img src="https://img.shields.io/badge/Linux-x86--64%20(beta)-FCC624?logo=linux&logoColor=black" alt="Linux x86-64 (beta)">
+        <img src="https://img.shields.io/badge/Linux-x86--64-FCC624?logo=linux&logoColor=black" alt="Linux x86-64">
       </p>
       <p>
         📖 <a href="apps/nd104-studio/README.md">Documentation</a> ·
@@ -129,7 +129,7 @@ screen version is often wrong, see
 | 📡 [docs/protocol.md](docs/protocol.md) | HID protocol over USB, Bluetooth and 2.4 GHz |
 | 🧩 [docs/keyboard-api.md](docs/keyboard-api.md) | What the ND104 can do, and what ND104 Studio uses |
 | 💾 [docs/firmware.md](docs/firmware.md) | Where the newest firmware really comes from, screen variants (°C / °F) |
-| 🐧 [docs/linux-port.md](docs/linux-port.md) | Plan and status of the Linux version |
+| 🐧 [docs/linux-port.md](docs/linux-port.md) | How the Linux version was built and tested |
 | 👀 [`firmware/`](firmware/README.md) | Firmware version list and the daily firmware watcher (no vendor binaries) |
 | 🛠️ `scripts/` | Small scripts and experiments for display and keyboard |
 | 🖼️ `assets/`, `docs/images/` | Pictures and GIFs for the display (320 × 172), screenshots |
@@ -155,8 +155,9 @@ hardware, loss of data or any other harm caused by using it.
 - the Chilkey ND104,
 - the connections and features marked ✅ in [Connection modes](apps/nd104-studio/README.md#connection-modes),
 - the firmware versions marked ✅ in [Firmware](#firmware),
-- the platforms named in each tool's README (ND104 Studio: Windows 10/11,
-  Linux in beta, see its [Platform support](apps/nd104-studio/README.md#platform-support)).
+- the platforms named in each tool's README (ND104 Studio: Windows 10/11 and
+  Linux x86-64 – tested on Ubuntu 24.04, packages install-tested on Debian,
+  Ubuntu, Fedora, openSUSE and Arch; see its [Platform support](apps/nd104-studio/README.md#platform-support)).
 
 Everything else may work, but is untested. ND104 Studio has a safety lock that
 stops sending as soon as the keyboard behaves differently from what was tested,

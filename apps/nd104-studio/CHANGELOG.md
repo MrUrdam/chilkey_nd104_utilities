@@ -13,7 +13,41 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.4.0] – 2026-11-07
+
+**ND104 Studio on Linux.** Next to Windows 10/11, the app now runs on Linux
+x86-64 with the same features (minus SignalRGB, which exists for Windows
+only): USB cable, 2.4 GHz receiver and Bluetooth incl. battery, time and
+weather on the display, own pictures, lighting, keymap, keyboard settings and
+the OpenRGB interface. Windows users get the shared fixes below. This sums up
+the four betas; their sections below have the details.
+
+### Added
+- **Linux packages:** `.deb` (Debian, Ubuntu), `.rpm` (Fedora, openSUSE, RHEL
+  family; dependencies by library soname) and a self-updating AppImage, built
+  on Ubuntu 22.04 (glibc 2.35); a portable tarball with the tray app,
+  `nd104-cli`, `nd104-probe` and the udev rule. The `.deb`/`.rpm` also ship
+  `nd104-cli` and install the udev rule, so the logged-in user reaches the
+  keyboard without root.
+- **Linux desktop integration:** tray (StatusNotifierItem), launcher,
+  start at login, API keys in the Secret Service (GNOME Keyring, KWallet) with
+  a 0600-file fallback and a warning where none runs, Bluetooth battery from
+  BlueZ.
+- **"No access" help:** when the keyboard is found but not accessible, the
+  app says so and offers an "Install access rule" button (`pkexec`) for the
+  AppImage and the tarball.
+- **In-app update for the AppImage** (download, SHA-256 check, replace,
+  restart); `.deb`/`.rpm` are updated by the package manager.
+- **Beta channel:** an installed pre-release is offered newer pre-releases and
+  the next stable release; a stable install never sees a pre-release.
+- Releases publish the Linux assets next to the Windows ones under one
+  `SHA256SUMS.txt`; `THIRD-PARTY-NOTICES.txt` covers both builds and the
+  libraries bundled in the AppImage. CI install tests check the packages and
+  the AppImage on Ubuntu, Debian, Fedora, openSUSE and Arch.
+
 ### Fixed
+- Versions compare by SemVer precedence including pre-releases (a beta
+  Windows setup took itself for older than the installed release).
 - **AppImage self-update:** the restarted app inherited the old copy's
   environment (`PATH`, `LD_LIBRARY_PATH`, `XDG_DATA_DIRS` pointing into the old
   mount), working directory and open file descriptors. The old AppImage's
@@ -22,6 +56,11 @@ called nd104-sync. The format follows
   now starts detached from the old mount. The window also opens again after
   the restart (it started in the tray only). Takes effect for updates *from*
   this release on.
+
+### Changed
+- The app description no longer says "Wired USB connection only".
+- READMEs restructured; the ND104 Studio README links to focused guides
+  (installation, usage, firmware, building, troubleshooting).
 
 ## [2.4.0-beta.4] – 2026-11-07
 
@@ -917,7 +956,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.4...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0...HEAD
+[2.4.0]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.1...nd104-studio-v2.4.0
 [2.4.0-beta.4]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.3...nd104-studio-v2.4.0-beta.4
 [2.4.0-beta.3]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.2...nd104-studio-v2.4.0-beta.3
 [2.4.0-beta.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.1...nd104-studio-v2.4.0-beta.2

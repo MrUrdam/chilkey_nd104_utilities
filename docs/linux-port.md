@@ -9,13 +9,23 @@
 | 2 – the keyboard works | ✅ done, tested in the VM | USB, 2.4 GHz, Bluetooth incl. battery; time, weather, picture, lighting, keymap, settings, OpenRGB |
 | 3 – desktop integration | ✅ done | tray, launcher, autostart, Secret Service (0600 fallback + warning), pkexec rule button |
 | 4 – packages and updates | ✅ done | **2.4.0-beta.1** published 2026-11-04 (.deb, AppImage, tarball + Windows assets) |
-| 5 – install tests and release | ⏳ open | CI install tests, manual VM round, merge to `main` |
+| 5 – install tests and release | ✅ done (2026-11-07) | CI install tests on 8 distributions, VM round with beta.3/beta.4, **2.4.0** released from `main` |
 
 Open: `nd104-probe descriptors` stalls on Linux (diagnostic tool only).
 
 Review 2026-11-06: all points fixed (see § 6), incl. the CI package build.
-Beta channel and `nd104-cli` in the packages done 2026-11-07 (ship with the
-next pre-release).
+Beta channel and `nd104-cli` in the packages done 2026-11-07.
+
+**Released as 2.4.0 (2026-11-07)**, merged into `main`; Linux is a regular
+platform from here on (no "beta" label). This file stays as the record of
+how the port was done and tested. Still open:
+- AppImage self-update: the fix for the stale old mount (fds and
+  environment inherited by the restarted copy) is in 2.4.0 but was only
+  partly verified in the VM (window reopens, environment clean); the
+  disappearing old runtime is checked with the first update from 2.4.0.
+- the first `.rpm` is the one of 2.4.0 – the install tests run on it
+  automatically after the release.
+- the 25 s start stall under a private `dbus-run-session` (see § 5).
 
 <details>
 <summary><b>Test log of phase 2 (2026-11-03)</b></summary>

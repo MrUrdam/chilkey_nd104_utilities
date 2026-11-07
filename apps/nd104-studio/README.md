@@ -2,7 +2,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/MrUrdam/chilkey_nd104_utilities?filter=nd104-studio-v*&label=release&color=0969da)](https://github.com/MrUrdam/chilkey_nd104_utilities/releases)
 ![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
-![Linux x86-64 (beta)](https://img.shields.io/badge/Linux-x86--64%20(beta)-FCC624?logo=linux&logoColor=black)
+![Linux x86-64](https://img.shields.io/badge/Linux-x86--64-FCC624?logo=linux&logoColor=black)
 [![Connection modes: USB, Bluetooth, 2.4 GHz](https://img.shields.io/badge/connection%20modes-matrix-blue)](#connection-modes)
 [![CI](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-studio-ci.yml/badge.svg)](https://github.com/MrUrdam/chilkey_nd104_utilities/actions/workflows/nd104-studio-ci.yml)
 [![License: MIT](https://img.shields.io/github/license/MrUrdam/chilkey_nd104_utilities)](../../LICENSE)
@@ -30,7 +30,7 @@ Set it up once, then forget it.
 > **Unofficial hobby project, use at your own risk.** Not affiliated with
 > Chilkey, no warranty, no guaranteed support. Tested only with the firmware
 > under [Supported firmware](docs/firmware-safety.md#supported-firmware), on
-> Windows 10/11 and Linux (beta), with the connections marked ✅ in
+> Windows 10/11 and Linux (Ubuntu 24.04), with the connections marked ✅ in
 > [Connection modes](#connection-modes). Full text: [disclaimer](../../README.md#disclaimer).
 
 ## Features
@@ -129,7 +129,7 @@ Set it up once, then forget it.
 
 ## Quick start
 
-| | 🪟 Windows 10 / 11 | 🐧 Linux x86-64 (beta) |
+| | 🪟 Windows 10 / 11 | 🐧 Linux x86-64 |
 |---|---|---|
 | **Download** | `…_x64-setup.exe` | `.deb` (Debian, Ubuntu), `.rpm` (Fedora, openSUSE) or the AppImage |
 | **Install** | Run it. SmartScreen warns because it is not code-signed: *More info → Run anyway* | `.deb`: `sudo apt install ./….deb`. AppImage: install the [udev rule](docs/installation.md#keyboard-access--the-udev-rule) once |
@@ -210,11 +210,11 @@ as long as the keyboard is also connected via Bluetooth.
 
 ## Platform support
 
-ND104 Studio runs on **Windows 10/11** and, from 2.4.0, on **Linux (beta)**.
+ND104 Studio runs on **Windows 10/11** and, from 2.4.0, on **Linux** (x86-64).
 This table is the one place that says what differs between them. Everything
 else works the same.
 
-| Feature | 🪟 Windows 10/11 | 🐧 Linux (beta) |
+| Feature | 🪟 Windows 10/11 | 🐧 Linux |
 |---|:-:|:-:|
 | OpenRGB interface (OpenRGB, Artemis …) | ✅ | ✅ |
 | SignalRGB plugin | ✅ | ❌ ¹ |
@@ -237,8 +237,8 @@ ND104 Studio can also be opened from the app menu.<br>
 ⁴ The AppImage updates itself. `.deb`/`.rpm` packages are updated by the
 system's package manager, see [Updating](docs/installation.md#updating).
 
-The same overview is in the app: **Device → Operating systems**. Progress of
-the Linux port: [linux-port.md](../../docs/linux-port.md).
+The same overview is in the app: **Device → Operating systems**. How the
+Linux version was built and tested: [linux-port.md](../../docs/linux-port.md).
 
 ## PC lighting software (OpenRGB, SignalRGB)
 
@@ -262,7 +262,7 @@ Fn + Shift + L on the keyboard). Setup steps:
 - ❌ **No firmware flashing.** It only tells you an update exists.
 - ❌ **No risky communication.** If anything looks different, it stops and
   tells you why. There is no "ignore and continue" switch.
-- ❌ **No macOS.** Windows 10/11 and Linux (beta) only.
+- ❌ **No macOS.** Windows 10/11 and Linux only.
 - ❌ **No macros, tap/hold or combos.** Those stay with the official
   [Chilkey driver](https://chilkey.com/pages/console).
 - ❌ **No other keyboard models.** Only the Chilkey ND104.
