@@ -257,7 +257,11 @@ Debian 12/13; the AppImage starts there too. **Findings to fix:**
   `GDK_BACKEND=x11`), so X11 desktops stay covered. Revisit if users report it;
 - the **`.deb`/`.rpm` ship only the GUI**, `nd104-cli` is in the tarball only.
 Script bugs from that run (os-release clobbering `VERSION`, no `xvfb-run` on
-openSUSE) are fixed; openSUSE results are still to come.
+openSUSE) are fixed; 
+
+**Result against `2.4.0-beta.2` (2026-11-07, run 42351855103): all 8 pass** –
+`.deb` + AppImage on Ubuntu 22.04/24.04 and Debian 12/13, AppImage on
+Fedora 41/42, openSUSE Tumbleweed and Arch; every GUI start on X11.
 
 - CI install tests in containers: `ubuntu:22.04/24.04`, `debian:12/13`,
   `fedora:41/42`, `opensuse/tumbleweed`, `archlinux` – `ldd` complete,
