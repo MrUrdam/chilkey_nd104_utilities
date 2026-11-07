@@ -13,6 +13,17 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.4.0-beta.4] – 2026-11-07
+
+Fourth Linux beta. An installed beta.3 is offered this release by the update
+check (beta channel); the AppImage replaces itself and restarts.
+
+### Fixed
+- Linux: **"Install access rule"** no longer stages the udev rule as a file in
+  the shared `/tmp` before `pkexec` installs it as root – another local user
+  could have swapped it, and the file was left behind. The rule now goes to
+  the root shell directly.
+
 ## [2.4.0-beta.3] – 2026-11-07
 
 Third Linux beta: the first build with the beta channel, so from here on an
@@ -896,7 +907,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.3...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.4...HEAD
+[2.4.0-beta.4]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.3...nd104-studio-v2.4.0-beta.4
 [2.4.0-beta.3]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.2...nd104-studio-v2.4.0-beta.3
 [2.4.0-beta.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.1...nd104-studio-v2.4.0-beta.2
 [2.4.0-beta.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.1...nd104-studio-v2.4.0-beta.1
