@@ -79,7 +79,7 @@ if command -v apt-get >/dev/null; then
     fi
 elif command -v dnf >/dev/null; then
     # one by one: dnf installs all or nothing, one unknown name dropped the rest
-    for p in xorg-x11-server-Xvfb dbus-daemon dbus-x11 mesa-libGL mesa-libEGL libglvnd-gles \n             libgpg-error fontconfig gtk3; do
+    for p in xorg-x11-server-Xvfb dbus-daemon dbus-x11 mesa-libGL mesa-libEGL libglvnd-gles libgpg-error fontconfig gtk3; do
         dnf install -y -q "$p" >/dev/null 2>&1 || echo "   note no package $p here"
     done
     rpm=$(ls "$DIST"/nd104-studio*.rpm 2>/dev/null | head -1)
