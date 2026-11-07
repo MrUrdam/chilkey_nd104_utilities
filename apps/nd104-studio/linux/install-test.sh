@@ -113,7 +113,7 @@ fi
 
 # --- 2. the installed package --------------------------------------------
 if [ "$PKG" != none ]; then
-    # the .deb/.rpm ship the GUI only; nd104-cli is in the tarball (known gap)
+    # the .deb/.rpm ship nd104-cli since 2.4.0-beta.3; older releases lack it
     if command -v nd104-cli >/dev/null; then
         check "nd104-cli --version reports $APP_VERSION" bash -c "nd104-cli --version | grep -F '$APP_VERSION'"
     else

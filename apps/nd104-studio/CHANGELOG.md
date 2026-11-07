@@ -13,6 +13,18 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Beta channel:** an installed pre-release (`-beta.N`, `-rc.N`) is now offered
+  newer pre-releases by the update check, and the next stable release; a
+  stable install still never sees a pre-release.
+- Linux: the `.deb` and `.rpm` now include the console runner `nd104-cli`
+  (`/usr/bin/nd104-cli`); so far it was in the tarball only.
+
+### Fixed
+- Versions compare by SemVer precedence including pre-releases. A beta
+  Windows setup took itself for older than the installed release (it ignored
+  the pre-release part) and showed the "older setup" hint.
+
 ## [2.4.0-beta.2] – 2026-11-06
 
 Second Linux beta. It closes the gaps a review of the first beta found; the

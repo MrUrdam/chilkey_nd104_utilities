@@ -114,9 +114,12 @@ jobs:
       # AppImage is left to the release workflow (linuxdeploy download).
       - name: Package check (.deb)
         run: |
+          # the packages ship /usr/bin/nd104-cli from the release build
+          cargo build --release --locked -p nd104-cli
           npx tauri build --debug --bundles deb
           deb=$(ls target/debug/bundle/deb/*.deb)
           dpkg-deb -c "$deb" | grep -q 'usr/lib/udev/rules.d/70-nd104-studio.rules'
           dpkg-deb --ctrl-tarfile "$deb" | tar -t | grep -qE '(^|/)postinst$'
           dpkg-deb --ctrl-tarfile "$deb" | tar -t | grep -qE '(^|/)postrm$'
+          dpkg-deb -c "$deb" | grep -q 'usr/bin/nd104-cli'
           dpkg-deb -f "$deb" Depends

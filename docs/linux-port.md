@@ -13,8 +13,9 @@
 
 Open: `nd104-probe descriptors` stalls on Linux (diagnostic tool only).
 
-Review 2026-11-06: four points fixed (see § 6); remaining: Linux CI package
-build, beta channel.
+Review 2026-11-06: all points fixed (see § 6), incl. the CI package build.
+Beta channel and `nd104-cli` in the packages done 2026-11-07 (ship with the
+next pre-release).
 
 <details>
 <summary><b>Test log of phase 2 (2026-11-03)</b></summary>
@@ -204,8 +205,9 @@ implemented and match the docs (2026-11-06).
 (`--after-update <pid>`, see § 6); the `.rpm` now depends by soname, so it
 resolves on Fedora and openSUSE alike (see § 6); `THIRD-PARTY-NOTICES.txt`
 covers both builds and the AppImage's bundled libraries (see § 6). **Still
-open:** the AppImage self-update over two releases is still untested – betas
-are pre-releases the update check ignores, so it needs the beta channel.
+open:** the AppImage self-update over two releases is still untested; the beta
+channel now exists, so it can be exercised from beta.3 to beta.4 (installs of
+beta.2 and older do not see pre-releases).
 
 Implemented (2026-11-03), released as **2.4.0-beta.1**:
 - `tauri.conf.json`: `deb`/`rpm`/`appimage` targets, runtime deps
@@ -226,10 +228,11 @@ Implemented (2026-11-03), released as **2.4.0-beta.1**:
   pre-release – so betas ship `.deb` + AppImage + tarball (use the AppImage on
   Fedora/openSUSE).
 
-Open: AppImage self-update verified across two releases (beta.1 → a later
-build). Betas are GitHub pre-releases, which the in-app check ignores, so a
-**beta channel** (a pre-release install also sees newer pre-releases) is a
-small follow-up for that test.
+Open: AppImage self-update verified across two releases. The **beta channel**
+is done (2026-11-07): an installed pre-release is offered newer pre-releases
+and the next stable release, a stable install never a pre-release; versions
+compare by SemVer precedence. The first release with it is beta.3, so the
+end-to-end test is beta.3 → beta.4.
 
 ### Phase 5 – install tests and release
 
@@ -255,7 +258,8 @@ Debian 12/13; the AppImage starts there too. **Findings to fix:**
   the test installs GTK 3 as that baseline (plus GLVND GLES/EGL and
   libgpg-error on Fedora). The GUI start runs on **X11** (Xvfb,
   `GDK_BACKEND=x11`), so X11 desktops stay covered. Revisit if users report it;
-- the **`.deb`/`.rpm` ship only the GUI**, `nd104-cli` is in the tarball only.
+- ✅ the `.deb`/`.rpm` shipped only the GUI – since 2026-11-07 they include
+  `/usr/bin/nd104-cli` (CI asserts it in the `.deb`).
 Script bugs from that run (os-release clobbering `VERSION`, no `xvfb-run` on
 openSUSE) are fixed; 
 
@@ -386,5 +390,4 @@ Packaging / release:
 
 Still open from earlier:
 - `nd104-probe descriptors` hangs on Linux (diagnostic tool only).
-- **Beta/pre-release update channel** missing, so the AppImage self-update
-  cannot be exercised beta → beta.
+- ✅ **Beta/pre-release update channel** – done 2026-11-07 (see Phase 4).

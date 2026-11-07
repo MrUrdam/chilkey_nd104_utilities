@@ -76,7 +76,7 @@ cargo build --release -p nd104-studio-setup
 ```bash
 cargo build --release -p nd104-cli -p nd104-probe
                            # → target/release/nd104-cli, nd104-probe
-npx tauri build --bundles deb,rpm,appimage
+npx tauri build --bundles deb,rpm,appimage   # after nd104-cli: the packages ship it
                            # → target/release/bundle/{deb,rpm,appimage}/
 ```
 

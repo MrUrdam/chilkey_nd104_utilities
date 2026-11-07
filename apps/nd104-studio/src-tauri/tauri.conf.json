@@ -47,6 +47,7 @@
           "librsvg2-2"
         ],
         "files": {
+          "/usr/bin/nd104-cli": "../target/release/nd104-cli",
           "/usr/lib/udev/rules.d/70-nd104-studio.rules": "../linux/70-nd104-studio.rules"
         },
         "postInstallScript": "../linux/postinst.sh",
@@ -57,6 +58,7 @@
           "librsvg-2.so.2()(64bit)"
         ],
         "files": {
+          "/usr/bin/nd104-cli": "../target/release/nd104-cli",
           "/usr/lib/udev/rules.d/70-nd104-studio.rules": "../linux/70-nd104-studio.rules"
         },
         "postInstallScript": "../linux/postinst.sh",
