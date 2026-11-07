@@ -49,7 +49,7 @@
 | Problem | Fix |
 |---|---|
 | "Install update" is missing | It is offered only for the Windows setup install (1.1.0+) and the Linux AppImage. With the MSI, the zip or a `.deb`/`.rpm`, update as in [Updating](installation.md#updating) |
-| A beta is not offered | Pre-releases are ignored by the update check on purpose. Get them from the [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases) |
+| A beta is not offered | Only an installed pre-release is offered newer pre-releases; a stable install never is. Install the first beta from the [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases) |
 
 ## Privacy / network access
 

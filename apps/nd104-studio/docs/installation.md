@@ -244,9 +244,14 @@ notification. Nothing is downloaded or installed automatically. Check by hand:
 - Settings window → General → **Check for updates** (always shows a result)
 - Console: `nd104-cli check-update`
 
-Only releases tagged `nd104-studio-vX.Y.Z` count; **drafts and pre-releases
-are ignored**, so a beta (e.g. `2.4.0-beta.1`) is not offered automatically –
-get it from the [releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
+Only releases tagged `nd104-studio-vX.Y.Z` count, drafts are ignored.
+**Beta channel:** a stable install is never offered a pre-release (`-beta.N`,
+`-rc.N`). An installed pre-release is also offered newer pre-releases, and the
+next stable release – so once you run a beta you stay on the betas until the
+release, and then move on with it. To try the first beta, install it from the
+[releases page](https://github.com/MrUrdam/chilkey_nd104_utilities/releases).
+(Installs of `2.4.0-beta.2` and older ignore pre-releases; they only see the
+next stable release.)
 
 **How to update:**
 

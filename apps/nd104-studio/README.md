@@ -306,8 +306,9 @@ MINOR = new features, PATCH = fixes. Release tags are `nd104-studio-vX.Y.Z`.
   app UI read it from there.
 - **Tags:** `nd104-studio-vX.Y.Z` (up to 1.5.0: `nd104-sync-vX.Y.Z`). The
   prefix is needed because this repository hosts several tools.
-- **Pre-releases** (`X.Y.Z-beta.N`, `X.Y.Z-rc.N`) are GitHub pre-releases and
-  not offered by the in-app update check.
+- **Pre-releases** (`X.Y.Z-beta.N`, `X.Y.Z-rc.N`) are GitHub pre-releases.
+  The in-app update check offers them only to an installed pre-release (beta
+  channel), never to a stable install.
 - **Changes:** listed per version in [CHANGELOG.md](CHANGELOG.md).
 
 </details>
