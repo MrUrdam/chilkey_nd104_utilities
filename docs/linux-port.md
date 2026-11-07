@@ -308,17 +308,38 @@ extension), Kubuntu (KDE).
 
 **Manual checklist per test round:**
 
-- [ ] keyboard by cable found without sudo; "no access" shown correctly
-      when the udev rule is missing
-- [ ] time and weather on the display, picture upload
-- [ ] lighting, PC lighting switch, OpenRGB interface (OpenRGB on Linux)
-- [ ] keymap read/write/backup, keyboard settings
+- [x] keyboard by cable found without sudo; "no access" shown correctly
+      when the udev rule is missing; "Install access rule" (pkexec) fixes it
+      without replugging
+- [x] time and weather on the display, picture upload
+- [x] lighting, PC lighting switch; [ ] OpenRGB interface (OpenRGB not
+      installed in the VM yet)
+- [x] keymap read/write/backup, keyboard settings
 - [x] 2.4 GHz receiver; Bluetooth (with dongle) incl. battery
-- [ ] unplug/replug, suspend/resume → time synced again
-- [ ] tray visible (GNOME/Ubuntu) or launcher + single instance
-- [ ] autostart after reboot
-- [ ] API key kept after reboot (Secret Service)
-- [ ] update path for the install type (AppImage replaces, .deb notifies)
+- [x] unplug/replug, suspend/resume → time synced again
+- [x] tray visible (GNOME/Ubuntu) or launcher + single instance
+- [x] autostart after reboot
+- [x] API key kept after reboot (Secret Service); 0600 fallback warning shown
+      without a Secret Service
+- [ ] update path for the install type: .deb check says "up to date" ✅,
+      AppImage self-replace open (beta.3 → beta.4)
+
+**Round 2026-11-07, `2.4.0-beta.3` `.deb`, Ubuntu 24.04 VM:** all items above
+pass except OpenRGB (untested) and the AppImage update (needs beta.4).
+Notes from the round:
+- guest standby (`systemctl suspend`) does not wake in VMware; tested with a
+  host-side `vmrun suspend`/`start` instead – the app logs "Resumed from
+  sleep" and syncs. VMware drops the USB devices on suspend; after
+  reattaching, time and weather are sent at once. The first weather fetch
+  right after resume fails (network not up yet), the retry succeeds.
+- fixed after the round: "Install access rule" wrote the rule to a fixed path
+  in the shared `/tmp` before `pkexec` installed it (another local user could
+  swap it, and it was left behind); it now goes to the root shell over stdin.
+  Re-test with beta.4.
+- open: under a private `dbus-run-session` the start stalled 25 s (D-Bus
+  activation timeout of `org.freedesktop.secrets`, likely the keyring calls
+  at startup). Probably an artefact of that setup – a desktop without a
+  Secret Service fails at once – but check on a real minimal WM.
 
 **CI:** Linux job (phase 1), install tests (phase 5).
 

@@ -108,20 +108,27 @@ pub async fn install_update(app: AppHandle) -> CmdResult<()> {
 #[tauri::command]
 pub async fn install_udev_rule() -> CmdResult<()> {
     const RULE: &str = include_str!("../../linux/70-nd104-studio.rules");
+    // The rule goes to the root shell over stdin: a file in the shared /tmp
+    // could be swapped by another local user between writing and installing.
+    const SCRIPT: &str = "umask 022 && \
+        cat > /etc/udev/rules.d/.70-nd104-studio.rules.new && \
+        mv -f /etc/udev/rules.d/.70-nd104-studio.rules.new /etc/udev/rules.d/70-nd104-studio.rules && \
+        udevadm control --reload && udevadm trigger --subsystem-match=hidraw";
     tokio::task::spawn_blocking(move || -> CmdResult<()> {
-        let tmp = std::env::temp_dir().join("70-nd104-studio.rules");
-        std::fs::write(&tmp, RULE).map_err(err)?;
-        let script = format!(
-            "install -m 0644 '{}' /etc/udev/rules.d/70-nd104-studio.rules && \
-             udevadm control --reload && udevadm trigger --subsystem-match=hidraw",
-            tmp.display()
-        );
-        let status = std::process::Command::new("pkexec")
+        use std::io::Write;
+        let mut child = std::process::Command::new("pkexec")
             .arg("sh")
             .arg("-c")
-            .arg(&script)
-            .status()
+            .arg(SCRIPT)
+            .stdin(std::process::Stdio::piped())
+            .spawn()
             .map_err(|e| format!("cannot run pkexec: {e}"))?;
+        // dropping stdin closes it, so `cat` sees the end of the rule
+        if let Some(mut stdin) = child.stdin.take() {
+            // a write error means pkexec was cancelled; the status below says so
+            let _ = stdin.write_all(RULE.as_bytes());
+        }
+        let status = child.wait().map_err(err)?;
         if !status.success() {
             return Err("installing the access rule was cancelled or failed".into());
         }
