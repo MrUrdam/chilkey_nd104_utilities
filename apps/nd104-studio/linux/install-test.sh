@@ -27,12 +27,23 @@ check() { # check <description> <command...>
     fi
 }
 
-# Starts a GUI command under Xvfb with a session bus; a tray app has to be
-# still running when the timeout hits (rc 124), anything else is a crash.
+# Starts a GUI command on its own Xvfb display with a session bus; a tray
+# app has to be still running when the timeout hits (rc 124), anything else
+# is a crash. Xvfb is started directly - the xvfb-run wrapper is not packaged
+# the same way everywhere.
 runs_for_20s() { # runs_for_20s <description> <command...>
     local what=$1; shift
-    timeout 20 xvfb-run -a dbus-run-session -- "$@" >/tmp/gui.out 2>&1
+    if ! command -v Xvfb >/dev/null; then
+        fail "$what: Xvfb not installed (test tooling)"
+        return
+    fi
+    Xvfb :99 -screen 0 1280x800x24 >/tmp/xvfb.out 2>&1 &
+    local xvfb=$!
+    sleep 2
+    DISPLAY=:99 timeout 20 dbus-run-session -- "$@" >/tmp/gui.out 2>&1
     local rc=$?
+    kill "$xvfb" 2>/dev/null
+    wait "$xvfb" 2>/dev/null
     if [ "$rc" -eq 124 ]; then
         pass "$what (still up after 20 s)"
     else
@@ -42,8 +53,11 @@ runs_for_20s() { # runs_for_20s <description> <command...>
 }
 
 # --- 1. test tooling, and the package the distribution can take ------------
-# Xvfb + a session bus for the GUI start; libGL and fontconfig are what
-# linuxdeploy leaves to the system, so the AppImage needs them from here.
+# Xvfb + a session bus for the GUI start. GTK 3 is the desktop baseline the
+# AppImage expects from the host: linuxdeploy deliberately leaves base
+# libraries such as libwayland-client, fribidi and libGL to the system, and
+# any desktop that can show a tray app has them - minimal containers do not.
+# Errors of the tooling install are shown, not hidden.
 PKG=none
 if command -v apt-get >/dev/null; then
     export DEBIAN_FRONTEND=noninteractive
@@ -58,7 +72,7 @@ if command -v apt-get >/dev/null; then
         fi
     fi
 elif command -v dnf >/dev/null; then
-    dnf install -y -q xorg-x11-server-Xvfb dbus-x11 mesa-libGL fontconfig >/dev/null 2>&1 || true
+    dnf install -y -q xorg-x11-server-Xvfb dbus-daemon mesa-libGL fontconfig gtk3 >/dev/null || true
     rpm=$(ls "$DIST"/nd104-studio*.rpm 2>/dev/null | head -1)
     if [ -n "$rpm" ]; then
         if dnf install -y "$rpm" >/tmp/install.out 2>&1; then
@@ -70,7 +84,7 @@ elif command -v dnf >/dev/null; then
         echo "   skip no .rpm in this release (pre-release) - testing the AppImage"
     fi
 elif command -v zypper >/dev/null; then
-    zypper --non-interactive --quiet install xvfb-run xorg-x11-server-Xvfb dbus-1-x11 Mesa-libGL1 fontconfig >/dev/null 2>&1 || true
+    zypper --non-interactive --quiet install xorg-x11-server-Xvfb dbus-1 Mesa-libGL1 fontconfig libgtk-3-0 >/dev/null || true
     rpm=$(ls "$DIST"/nd104-studio*.rpm 2>/dev/null | head -1)
     if [ -n "$rpm" ]; then
         if zypper --non-interactive install --allow-unsigned-rpm "$rpm" >/tmp/install.out 2>&1; then
@@ -82,7 +96,7 @@ elif command -v zypper >/dev/null; then
         echo "   skip no .rpm in this release (pre-release) - testing the AppImage"
     fi
 elif command -v pacman >/dev/null; then
-    pacman -Syu --noconfirm --quiet xorg-server-xvfb dbus mesa fontconfig >/dev/null 2>&1 || true
+    pacman -Syu --noconfirm --quiet xorg-server-xvfb dbus mesa fontconfig gtk3 >/dev/null || true
     echo "   skip no package for Arch - testing the AppImage"
 fi
 

@@ -248,9 +248,11 @@ effect once the file is on `main`. The manual VM round and the merge are open.
 First run (2026-11-06, against `2.4.0-beta.1`): `.deb` installs, has the udev
 rule, no missing library and starts under Xvfb on Ubuntu 22.04/24.04 and
 Debian 12/13; the AppImage starts there too. **Findings to fix:**
-- the **AppImage lacks system libraries** it expects from the host:
-  `libwayland-client.so.0` on Fedora 41/42, `libfribidi.so.0` on Arch
-  (linuxdeploy excludes them) – bundle them or document them;
+- the AppImage did not start in the bare Fedora/Arch images
+  (`libwayland-client.so.0`, `libfribidi.so.0` missing): linuxdeploy leaves
+  such base desktop libraries to the host on purpose. Decided: the AppImage
+  requires a **desktop system with GTK 3** (documented in installation.md);
+  the test installs GTK 3 as that baseline. Revisit if users report it;
 - the **`.deb`/`.rpm` ship only the GUI**, `nd104-cli` is in the tarball only.
 Script bugs from that run (os-release clobbering `VERSION`, no `xvfb-run` on
 openSUSE) are fixed; openSUSE results are still to come.

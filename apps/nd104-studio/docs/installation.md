@@ -201,6 +201,9 @@ chmod +x nd104-studio_X.Y.Z_amd64.AppImage
 The AppImage needs no installation and **updates itself** (see
 [Updating](#updating)). Install the udev rule once (above). Keep the file where
 you can write to it (e.g. `~/Applications/`) so the self-update can replace it.
+It needs a desktop system with **GTK 3** (any GNOME, KDE, Xfce … desktop has
+it): base libraries such as Wayland, fribidi and OpenGL come from your system,
+not from the AppImage.
 
 ### Option D – portable tarball
 
