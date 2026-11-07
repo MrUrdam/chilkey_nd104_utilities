@@ -13,6 +13,12 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+## [2.4.0-beta.3] – 2026-11-07
+
+Third Linux beta: the first build with the beta channel, so from here on an
+installed beta updates itself to the next one. Install it by hand once
+(installs of beta.2 and older only look for stable releases).
+
 ### Added
 - **Beta channel:** an installed pre-release (`-beta.N`, `-rc.N`) is now offered
   newer pre-releases by the update check, and the next stable release; a
@@ -890,7 +896,8 @@ Updating from 1.0.0 is optional.
 - The keyboard occasionally sends status messages with unknown meaning
   (`0x35`, `0x3A`); they are logged and ignored.
 
-[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.2...HEAD
+[Unreleased]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.3...HEAD
+[2.4.0-beta.3]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.2...nd104-studio-v2.4.0-beta.3
 [2.4.0-beta.2]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.4.0-beta.1...nd104-studio-v2.4.0-beta.2
 [2.4.0-beta.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.1...nd104-studio-v2.4.0-beta.1
 [2.3.1]: https://github.com/MrUrdam/chilkey_nd104_utilities/compare/nd104-studio-v2.3.0...nd104-studio-v2.3.1
