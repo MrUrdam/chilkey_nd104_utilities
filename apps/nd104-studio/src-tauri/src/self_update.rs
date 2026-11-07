@@ -153,13 +153,83 @@ pub async fn download_and_start(release: &Release) -> Result<()> {
     // process is still alive, or it would only hand its arguments to us and
     // exit (and we quit right after). `--after-update <pid>` makes it wait
     // for this process to end first (see `wait_for_previous_instance`).
-    std::process::Command::new(&current)
+    // `--settings`: the update was started from the window, so bring it back.
+    let mut restart = std::process::Command::new(&current);
+    restart
         .arg("--after-update")
         .arg(std::process::id().to_string())
-        .spawn()
-        .context("cannot restart the app")?;
+        .arg("--settings");
+    detach_from_appdir(&mut restart);
+    restart.spawn().context("cannot restart the app")?;
     tracing::info!("update to {} started", release.version);
     Ok(())
+}
+
+/// Keeps the restarted AppImage off this copy's mount (`$APPDIR`). AppRun put
+/// the mount into `PATH`, `LD_LIBRARY_PATH`, `XDG_DATA_DIRS` and more, the
+/// working directory is inside it, and the AppImage runtime left fds open (its
+/// keep-alive pipe and the mount). Inherited, these keep the old mount (and its
+/// runtime process) alive
+/// as long as the new copy runs – one more stale mount per update – and the
+/// new copy would load files from the old version.
+#[cfg(target_os = "linux")]
+fn detach_from_appdir(cmd: &mut std::process::Command) {
+    use std::os::unix::ffi::OsStrExt;
+
+    let Some(appdir) = std::env::var_os("APPDIR") else {
+        return;
+    };
+    let appdir = appdir.as_bytes().to_vec();
+    if appdir.is_empty() {
+        return;
+    }
+    let inside = |entry: &[u8]| entry.starts_with(&appdir);
+
+    // the runtime sets these afresh for the new copy
+    for var in ["APPDIR", "APPIMAGE", "ARGV0", "OWD"] {
+        cmd.env_remove(var);
+    }
+    for (key, value) in std::env::vars_os() {
+        let bytes = value.as_bytes();
+        if !bytes.windows(appdir.len()).any(|w| w == appdir.as_slice()) {
+            continue;
+        }
+        // a path list: drop the entries in the mount, keep the user's own
+        let kept: Vec<&[u8]> = bytes
+            .split(|&b| b == b':')
+            .filter(|e| !e.is_empty() && !inside(e))
+            .collect();
+        if kept.is_empty() {
+            cmd.env_remove(&key);
+        } else {
+            cmd.env(&key, std::ffi::OsStr::from_bytes(&kept.join(&b':')));
+        }
+    }
+    let home = std::env::var_os("HOME").unwrap_or_else(|| "/".into());
+    cmd.current_dir(&home).env("PWD", &home);
+
+    // No inherited fd beyond stdio may reach the new process. The runtime
+    // keeps its mount until the read end of its keep-alive pipe (fd 3 here)
+    // and its fd on the mount are closed in every process – inherited by the
+    // new copy (and its WebKit children) they never would be. This process
+    // quits right after the restart, so close-on-exec costs it nothing.
+    let fds: Vec<i32> = std::fs::read_dir("/proc/self/fd")
+        .map(|dir| {
+            dir.flatten()
+                .filter_map(|e| e.file_name().to_str()?.parse().ok())
+                .collect()
+        })
+        .unwrap_or_default();
+    for n in fds.into_iter().filter(|&n| n > 2) {
+        // SAFETY: fcntl on an fd number of this process; only its flags change
+        // (an fd closed meanwhile, such as the read_dir's own, just fails)
+        unsafe {
+            let flags = libc::fcntl(n, libc::F_GETFD);
+            if flags >= 0 {
+                libc::fcntl(n, libc::F_SETFD, flags | libc::FD_CLOEXEC);
+            }
+        }
+    }
 }
 
 #[cfg(not(any(windows, target_os = "linux")))]

@@ -13,6 +13,16 @@ called nd104-sync. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- **AppImage self-update:** the restarted app inherited the old copy's
+  environment (`PATH`, `LD_LIBRARY_PATH`, `XDG_DATA_DIRS` pointing into the old
+  mount), working directory and open file descriptors. The old AppImage's
+  mount and runtime process stayed alive as long as the new copy ran – one
+  more per update – and the new copy read files from the old version. It
+  now starts detached from the old mount. The window also opens again after
+  the restart (it started in the tray only). Takes effect for updates *from*
+  this release on.
+
 ## [2.4.0-beta.4] – 2026-11-07
 
 Fourth Linux beta. An installed beta.3 is offered this release by the update

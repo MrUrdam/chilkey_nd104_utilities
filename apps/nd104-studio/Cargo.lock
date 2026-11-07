@@ -2549,6 +2549,7 @@ dependencies = [
  "dbus",
  "directories",
  "jiff",
+ "libc",
  "nd104-core",
  "reqwest 0.12.28",
  "serde",

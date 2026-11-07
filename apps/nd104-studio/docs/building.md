@@ -110,8 +110,9 @@ Stable releases follow SemVer (`MAJOR.MINOR.PATCH`); pre-releases use
    portable tarball), writes one `SHA256SUMS.txt` over all of them and
    publishes the GitHub release. The notes are the CHANGELOG section for that
    version plus a download list of the files that were actually produced.
-   - `X.Y.Z-beta.N` / `X.Y.Z-rc.N` → GitHub **pre-release**, ignored by the app
-     update check. The Windows **MSI** is skipped (WiX needs a plain version)
+   - `X.Y.Z-beta.N` / `X.Y.Z-rc.N` → GitHub **pre-release**, offered by the app
+     update check only to an installed pre-release (beta channel), never to a
+     stable install. The Windows **MSI** is skipped (WiX needs a plain version)
      and the Linux **`.rpm`** is skipped (RPM's version grammar has no place
      for a pre-release); the `.deb`, AppImage, tarball, setup and zip are built.
    - `0.x` versions get a "(beta)" title but are **not** GitHub pre-releases, so
